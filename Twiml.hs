@@ -1,14 +1,13 @@
 module Twiml
-  (
-  -- $example
-    Twiml
+  ( Twiml
+  , Response
+  , response
   -- * Primary Verbs
   -- ** @\<Say\>@
-  -- $say
+  , Say
   , Voice(..)
   , Lang(..)
   , LangAlice(..)
-  , say
   , sayMan
   , sayMan'
   , sayWoman
@@ -16,46 +15,56 @@ module Twiml
   , sayAlice
   , sayAlice'
   -- ** @\<Play\>@
-  -- $play
+  , Play
   , play
-  , playLoop
+  , play'
   -- ** @\<Gather\>@
+  , Gather
+  , GatherNoun
   , gather
   -- ** @\<Record\>@
+  , Record
   , record
-  -- ** @\<Reject\>@
-  , reject
-  , Reason(..)
-  -- ** @\<Pause\>@
-  , pause
   -- ** @\<Sms\>@
+  , Sms
   , sms
   -- ** @\<Dial\>@
-  , dial
-  , DialNoun(..)
+  , Dial
+  , DialNoun
   -- * Secondary Verbs
   -- ** @\<Enqueue\>@
-  , enqueue
+  , Enqueue
   -- ** @\<Leave\>@
-  , leave
+  , Leave
   -- ** @\<Hangup\>@
-  , hangup
+  , Hangup
   -- ** @\<Redirect\>@
-  , redirect
-  , end
-  -- * Types
-  , Method(..)
-  , URL
-  , parseURL
-  , toXml
+  , Redirect
+  -- ** @\<Reject\>@
+  , Reject
+  , Reason
+  , reject
+  , reject'
+  -- ** @\<Pause\>@
+  , Pause
+  , pause
+  , pause'
   ) where
 
-import Control.Applicative(Applicative(..), (<$>))
-import Data.Maybe (fromMaybe, fromJust)
-import Network.URI (URI(..), parseURIReference)
-import Text.XML.HXT.Core
+import Data.Maybe (catMaybes)
+import Data.Natural (Natural)
+import Data.Traversable (Traversable)
+import Text.XML.HXT.Core (ArrowXml, XmlTree, eelem, mkelem, sattr, selem)
 
--- $example TwiML is a set of instructions you can use to tell Twilio what to do
+data URL = URL { getURL :: String }
+
+instance Show URL where
+  show = getURL
+
+data Method = GET | POST
+  deriving Show
+
+-- | TwiML is a set of instructions you can use to tell Twilio what to do
 -- when you receive an incoming call or SMS. See
 -- <https://www.twilio.com/docs/api/twiml>.
 --
@@ -81,90 +90,74 @@ import Text.XML.HXT.Core
 --     \<Hangup/\>
 -- \</Response\>
 -- @
+class Twiml t where
+  toTwimlF :: t -> TwimlF
 
-data URL = URL { getURL :: String }
+data TwimlF
+  = NullF
+  | SayF SayOpts TwimlF
+  | PlayF Play TwimlF
+  | GatherF Gather TwimlF TwimlF
+  | RecordF Record TwimlF
+  | SmsF Sms TwimlF
+  | DialF Dial TwimlF
+  | EnqueueF Enqueue TwimlF
+  | LeaveF Leave
+  | HangupF Hangup
+  | RedirectF Redirect
+  | RejectF Reject
+  | PauseF Pause TwimlF
 
-instance Show URL where
-  show = getURL
+newtype Response = Response { getResponse :: TwimlF }
 
-parseURL :: String -> Maybe URL
-parseURL url = parseURIReference url
-           >>= (\uri -> if isHttp uri then Just (URL url) else Nothing)
+response :: Twiml t => t -> Response
+response = Response . toTwimlF
 
-data Method = GET | POST
-  deriving Show
+{-
+toXmlArrow :: ArrowXml a => Response -> [n a XmlTree]
+toXmlArrow (Response (Twiml' (Fix (NullF)))) = []
+toXmlArrow (Response (Twiml' (Fix ((SayF _ a))))) = []
+toXmlArrow (Response (Twiml' (Fix ((PlayF _ a))))) = []
+toXmlArrow (Response (Twiml' (Fix ((GatherF _ a b))))) = []
+toXmlArrow (Response (Twiml' (Fix ((RecordF _ a))))) = []
+toXmlArrow (Response (Twiml' (Fix ((SmsF _ a))))) = []
+toXmlArrow (Response (Twiml' (Fix ((DialF _ a))))) = []
+toXmlArrow (Response (Twiml' (Fix ((EnqueueF _ a))))) = []
+toXmlArrow (Response (Twiml' (Fix ((LeaveF Leave))))) = []
+toXmlArrow (Response (Twiml' (Fix ((HangupF Hangup))))) = []
+toXmlArrow (Response (Twiml' (Fix ((RedirectF _))))) = []
+toXmlArrow (Response (Twiml' (Fix ((RejectF _))))) = []
+toXmlArrow (Response (Twiml' (Fix ((PauseF _ a))))) = []
+-}
 
-{- Utilities -}
+toXml :: Twiml t => t -> TwimlF
+toXml = toTwimlF
 
--- | Checks whether a given @RequestMethod@ is supported, i.e. is either @GET@
--- or @POST@.
-suppMeth :: a -> Bool
-suppMeth _  = True
+{-
+instance Twiml t => Show t where
+  show = (\t -> unlines . (flip runLA ()) $ (root [] $ toXml t) >>> writeDocumentToString [])
+-}
 
--- | Checks whether a @URI@'s scheme, if any, is one of @"http:"@ or @"https:"@.
-isHttp :: URI -> Bool
-isHttp uri = case uriScheme uri of
-  ""       -> True
-  "http:"  -> True
-  "https:" -> True
-  _        -> False
+example
+  = sayMan   "Hello, world"
+  . sayWoman "Goodybye, world"
+  $ ()
 
--- | Perform an action if the given @URI@ satisfies 'isHttp'.
-ifHttp :: URI -> a -> Maybe a
-ifHttp uri = if isHttp uri then Just else const Nothing
-data DialNoun
-  = Number String
-  | Client String
-  | Sip String
-  | Conference String
-  | Queue String
+-- | Useful for terminating 'Twiml'.
+instance Twiml () where
+  toTwimlF _ = NullF
 
-{- Datatypes -}
-
--- | A 'Reason' for use with @\<Reject\>@.
-data Reason
-  = Rejected
-  | Busy
-
-data Twiml
-  = Null
-  | Say String Twiml
-  | Play (Maybe Int) URL Twiml
-  | Gather Twiml Twiml
-  | Record Twiml
-  | Sms { smsTo             :: Maybe String
-        , smsFrom           :: Maybe String
-        , smsAction         :: Maybe URL
-        , smsMethod         :: Maybe Method
-        , smsStatusCallback :: Maybe URL
-        , smsNoun           :: String
-        , smsNext           :: Twiml }
-  | Dial { dialAction       :: Maybe URL
-         , dialMethod       :: Maybe Method
-         , dialTimeout      :: Maybe Int
-         , dialHangupOnStar :: Maybe Bool
-         , dialTimeLimit    :: Maybe Int
-         , dialCallerId     :: Maybe String
-         , dialRecord       :: Maybe Bool
-         , dialNoun         :: Either DialNoun String
-         , dialNext         :: Twiml }
-  | Enqueue String Twiml
-  | Leave
-  | Hangup
-  | Redirect (Maybe Method) URL
-  | Reject (Maybe Reason)
-  | Pause (Maybe Int) Twiml
-
-instance Show Twiml where
-  show twiml = concat $ runLA (toXml twiml >>> writeDocumentToString []) ()
-
-{- Smart Constructors -}
-
--- | Voices supported by @\<Say\>@.
+-- | Voices supported by @\<Say\>@. See
+-- <https://www.twilio.com/docs/api/twiml/say#attributes-voice>.
 data Voice
   = Man   (Maybe Lang)
   | Woman (Maybe Lang)
   | Alice (Maybe LangAlice)
+
+voiceToStrings :: Voice -> (String, Maybe String)
+voiceToStrings (Man   lang) = ("man",   fmap show lang)
+voiceToStrings (Woman lang) = ("woman", fmap show lang)
+voiceToStrings (Alice lang) = ("alice", fmap show lang)
 
 -- | Languages spoken by voices 'Man' and 'Woman'. See
 -- <https://www.twilio.com/docs/api/twiml/say#attributes-manwoman>.
@@ -175,6 +168,14 @@ data Lang
   | French
   | German
   | Italian
+
+instance Show Lang where
+  show English   = "en"
+  show EnglishUK = "en-gb"
+  show Spanish   = "es"
+  show French    = "fr"
+  show German    = "de"
+  show Italian   = "it"
 
 -- | Languages spoken by 'Alice'. See
 -- <https://www.twilio.com/docs/api/twiml/say#attributes-alice>.
@@ -206,147 +207,290 @@ data LangAlice
   | ZhHK -- ^ Chinese (Cantonese)
   | ZhTW -- ^ Chinese (Taiwanese Mandarin)
 
--- $say The @\<Say\>@ verb converts text to speech that is read back to the
--- caller. See <https://www.twilio.com/docs/api/twiml/say>.
+instance Show LangAlice where
+  show DaDK = "da-DK"
+  show DeDE = "de-DE"
+  show EnAU = "en-AU"
+  show EnCA = "en-CA"
+  show EnGB = "en-GB"
+  show EnIN = "en-IN"
+  show EnUS = "en-US"
+  show CaES = "ca-ES"
+  show EsES = "es-ES"
+  show EsMX = "es-MX"
+  show FiFI = "fi-FI"
+  show FrCA = "fr-CA"
+  show FrFR = "fr-FR"
+  show ItIT = "it-IT"
+  show JaJP = "ja-JP"
+  show KoKR = "ko-KR"
+  show NbNO = "nb-NO"
+  show NlNL = "nl-NL"
+  show PlPL = "pl-PL"
+  show PtBR = "pt-BR"
+  show PtPT = "pt-PT"
+  show RuRU = "ru-RU"
+  show SvSE = "sv-SE"
+  show ZhCN = "zh-CN"
+  show ZhHK = "zh-HK"
+  show ZhTW = "zh-TW"
 
-say :: Maybe Voice -> String -> Twiml -> Twiml
-say _ str = Say str
+data SayOpts = SayOpts
+  { voice      :: Maybe Voice
+  , sayLoop    :: Maybe Natural
+  , sayMessage :: String
+  }
+{-
+  -- , saySibling :: [LA () XmlTree]
+  , saySibling :: TwimlF
+  }
+-}
 
-sayMan :: String -> Twiml -> Twiml
-sayMan = undefined
+-- | The @\<Say\>@ verb converts text to speech that is read back to the caller
+-- See <https://www.twilio.com/docs/api/twiml/say>.
+newtype Say = Say (SayOpts, TwimlF)
 
-sayMan' :: Lang -> String -> Twiml -> Twiml
-sayMan' = undefined
+instance Twiml Say where
+  toTwimlF (Say (s, n)) = SayF s n
+  {-
+  toXml t =
+    mkelem "Say" (catMaybes
+       [              fmap (sattr "voice"     . fst . voiceToStrings) $ voice   t
+       , join . fmap (fmap (sattr "language") . snd . voiceToStrings) $ voice   t
+       ,              fmap (sattr "loop" . show)                      $ sayLoop t
+       ]) [txt $ sayMessage t]
+    : saySibling t
+  -}
 
-sayWoman :: String -> Twiml -> Twiml
-sayWoman = undefined
+sayMan :: Twiml t => String -> t -> Say
+sayMan message n = Say (SayOpts (Just $ Man Nothing) Nothing message, toXml n)
 
-sayWoman' :: Lang -> String -> Twiml -> Twiml
-sayWoman' = undefined
+sayMan' :: Twiml t => Lang -> String -> t -> Say
+sayMan' lang message n = Say (SayOpts (Just $ Man (Just lang)) Nothing message, toXml n)
 
-sayAlice :: String ->Twiml -> Twiml
-sayAlice = undefined
+sayWoman :: Twiml t => String -> t -> Say
+sayWoman message n = Say (SayOpts (Just $ Woman Nothing) Nothing message, toXml n)
 
-sayAlice' :: LangAlice -> String -> Twiml -> Twiml
-sayAlice' = undefined
+sayWoman' :: Twiml t => Lang -> String -> t -> Say
+sayWoman' lang message n = Say (SayOpts (Just $ Woman (Just lang)) Nothing message, toXml n)
 
--- $play The @\<Play\>@ verb plays an audio file back to the caller. Twilio
+sayAlice :: Twiml t => String -> t -> Say
+sayAlice message n = Say (SayOpts (Just $ Alice Nothing) Nothing message, toXml n)
+
+sayAlice' :: Twiml t => LangAlice -> String -> t -> Say
+sayAlice' lang message n = Say (SayOpts (Just $ Alice (Just lang)) Nothing message, toXml n)
+
+-- | The @\<Play\>@ verb plays an audio file back to the caller. Twilio
 -- retrieves the file from a URL that you provide. See
 -- <https://www.twilio.com/docs/api/twiml/play>.
+data Play = Play
+  { playLoop    :: Maybe Natural
+  , url         :: URL
+  -- , playSibling :: [LA () XmlTree]
+  , playSibling :: TwimlF
+  }
 
--- | This function returns @Nothing@ if the @URL@ specifies a scheme other than
--- @HTTP@ or @HTTPS@.
-play :: URL -> Twiml -> Twiml
-play url = Play Nothing url
+instance Twiml Play where
+  toTwimlF p = PlayF p $ playSibling p
+  {-
+  toXml t =
+    mkelem "Play" (catMaybes
+       [ fmap (sattr "loop" . show) $ playLoop t
+    ]) [txt . getURL $ url t] 
+    : playSibling t
+  -}
 
--- | This function returns @Nothing@ if the loop parameter is less than zero, or
--- if the @URL@ specifies a scheme other than @HTTP@ or @HTTPS@.
-playLoop :: Int -> URL -> Twiml -> Maybe Twiml
-playLoop i url | i >= 0    = Just . Play (Just i) url
-               | otherwise = const Nothing
+play :: Twiml t => URL -> t -> Play
+play url = Play Nothing url . toXml
+
+play' :: Twiml t => Natural -> URL -> t -> Play
+play' i url = Play (Just i) url . toXml
 
 -- | The @\<Gather\>@ verb collects digits that a caller enters into his or her
 -- telephone keypad. See <https://www.twilio.com/docs/api/twiml/gather>.
-gather :: Twiml -> Twiml -> Maybe Twiml
-gather body@(Say _ _) = Just . Gather body
-gather body@(Play _ _ _) = Just . Gather body
-gather body@(Pause _ _) = Just . Gather body
-gather _ = const Nothing
+data Gather = Gather
+  -- { gatherSubtree :: [LA () XmlTree]
+  -- , gatherSibling :: [LA () XmlTree]
+  { gatherSubtree :: TwimlF
+  , gatherSibling :: TwimlF
+  }
+
+instance Twiml Gather where
+  toTwimlF g = GatherF g (gatherSubtree g) (gatherSibling g)
+  {-
+  toXml t = mkelem "Gather" [] (gatherSubtree t) : gatherSibling t
+  -}
+
+class Twiml t => GatherNoun t
+
+instance GatherNoun Say
+
+instance GatherNoun Play
+
+instance GatherNoun Pause
+
+gather :: (Twiml n, GatherNoun n, Twiml t) => n -> t -> Gather
+gather n t = Gather (toXml n) (toXml t)
 
 -- | The @\<Record\>@ verb records the caller's voice and returns to you the URL
 -- of a file containing the audio recording. See
 -- <https://www.twilio.com/docs/api/twiml/record>.
-record :: Twiml -> Twiml
-record = Record
+data Record = Record
+  -- { recordSibling :: [LA () XmlTree]
+  { recordSibling :: TwimlF
+  }
+
+instance Twiml Record where
+  toTwimlF r = RecordF r $ recordSibling r
+  {-
+  toXml t = mkelem "Record" [] [] : recordSibling t
+  -}
+
+record :: Twiml t => t -> Record
+record = Record . toXml
 
 -- | The @\<Sms\>@ verb sends an SMS message to a phone number during a phone
 -- call. See <https://www.twilio.com/docs/api/twiml/sms>.
-sms :: Maybe URL -> String -> Maybe Method -> Twiml -> Maybe Twiml
-sms action msg method next
-  | length msg < 160
-  = Just $ Sms Nothing Nothing action method Nothing msg next
-  | otherwise = Nothing
+data Sms = Sms
+  { smsTo             :: Maybe String
+  , smsFrom           :: Maybe String
+  , smsAction         :: Maybe URL
+  , smsMethod         :: Maybe Method
+  , smsStatusCallback :: Maybe URL
+  , smsMessage        :: String
+  -- , smsSibling        :: [LA () XmlTree]
+  , smsSibling        :: TwimlF
+  }
+
+instance Twiml Sms where
+  toTwimlF s = SmsF s $ smsSibling s
+  {-
+  toXml t =
+    mkelem "Sms" (catMaybes
+       [ fmap (sattr "to"             . show) $ smsTo t
+       , fmap (sattr "from"           . show) $ smsFrom t
+       , fmap (sattr "action"         . getURL) $ smsAction t
+       , fmap (sattr "method"         . show) $ smsMethod t
+       , fmap (sattr "statusCallback" . getURL) $ smsStatusCallback t
+    ]) [txt $ smsMessage t]
+    : smsSibling t
+  -}
+
+sms :: Twiml t => String -> t -> Sms
+sms message = Sms Nothing Nothing Nothing Nothing Nothing message . toXml
+
+data DialNoun = DialNoun
 
 -- | The @\<Dial\>@ verb connects the current caller to another phone. See
 -- <https://www.twilio.com/docs/api/twiml/dial>.
-dial :: Either DialNoun String -> Twiml -> Twiml
-dial = dial' Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-
-dial' :: Maybe URL
-      -> Maybe Method
-      -> Maybe Int
-      -> Maybe Bool
-      -> Maybe Int
-      -> Maybe String
-      -> Maybe Bool
-      -> Either DialNoun String
-      -> Twiml
-      -> Twiml
-dial' = Dial
+data Dial = Dial
+  { dialAction       :: Maybe URL
+  , dialMethod       :: Maybe Method
+  , dialTimeout      :: Maybe Natural
+  , dialHangupOnStar :: Maybe Bool
+  , dialTimeLimit    :: Maybe Natural
+  , dialCallerId     :: Maybe String
+  , dialRecord       :: Maybe Bool
+  , dialNoun         :: Either DialNoun String
+  -- , dialSibling      :: [LA () XmlTree]
+  , dialSibling      :: TwimlF
+  }
 
 -- | The @\<Enqueue\>@ verb enqueues the current call in a call queue. See
 -- <https://www.twilio.com/docs/api/twiml/enqueue>.
-enqueue :: String -> Twiml -> Twiml
-enqueue queue = Enqueue queue
+data Enqueue = Enqueue
+  { enqueueName    :: String
+  -- , enqueueSibling :: [LA () XmlTree]
+  , enqueueSibling :: TwimlF
+  }
 
 -- | The @\<Leave\>@ verb transfers control of a call that is in a queue so that
 -- the caller exits the queue and execution continues with the next verb after
 -- the original @\<Enqueue\>@. See
 -- <https://www.twilio.com/docs/api/twiml/leave>.
-leave :: Twiml
-leave = Leave
+data Leave = Leave
+
+instance Twiml Leave where
+  toTwimlF = LeaveF
+  {-
+  toXml _ = [eelem "Leave"]
+  -}
 
 -- | The @\<Hangup\>@ verb ends a call. See
 -- <https://www.twilio.com/docs/api/twiml/hangup>.
-hangup :: Twiml
-hangup = Hangup
+data Hangup = Hangup
+
+instance Twiml Hangup where
+  toTwimlF = HangupF
+  {-
+  toXml _ = [eelem "Hangup"]
+  -}
 
 -- | The @\<Redirect\>@ verb transfers control of a call to the TwiML at a
 -- different URL. See <https://www.twilio.com/docs/api/twiml/redirect>.
-redirect :: Maybe Method -> URL -> Twiml
-redirect = Redirect
+data Redirect = Redirect
+  { redirectMethod :: Maybe Method
+  , redirectURL    :: URL
+  }
+
+instance Twiml Redirect where
+  toTwimlF = RedirectF
+  {-
+  toXml t = [ selem "Redirect" (catMaybes
+    [ fmap  (sattr "method" . show ) $ redirectMethod t
+    , Just . sattr "url"    . getURL $ redirectURL    t
+    ]) ]
+  -}
+
+redirect :: URL -> Redirect
+redirect = Redirect Nothing
+
+redirect' :: Method -> URL -> Redirect
+redirect' method = Redirect (Just method)
+
+data Reason = Rejected | Busy
+
+instance Show Reason where
+  show Rejected = "rejected"
+  show Busy     = "busy"
 
 -- | The @\<Reject\>@ verb rejects an incoming call to your Twilio number
 -- without billing you. See
 -- <https://www.twilio.com/docs/api/2010-04-01/twiml/reject>.
-reject :: Maybe Reason -> Twiml
-reject = Reject
+data Reject = Reject { rejectReason :: Maybe Reason }
+
+instance Twiml Reject where
+  toTwimlF = RejectF
+  {-
+  toXml t = [ selem "Reject" (catMaybes
+    [ fmap (sattr "reason" . show) $ rejectReason t
+    ]) ]
+  -}
+
+reject :: Reject
+reject = Reject Nothing
+
+reject' :: Reason -> Reject
+reject' = Reject . Just
 
 -- | The @\<Pause\>@ verb waits silently for a specific number of seconds. See
 -- <https://www.twilio.com/docs/api/twiml/pause>.
-pause :: Maybe Int -> Twiml -> Twiml
-pause = Pause
+data Pause = Pause
+  { pauseDuration :: Maybe Natural
+  -- , pauseSibling  :: [LA () XmlTree]
+  , pauseSibling  :: TwimlF
+  }
 
--- | Terminate 'Twiml'.
-end = Null
+instance Twiml Pause where
+  toTwimlF p = PauseF p $ pauseSibling p
+  {-
+  toXml t =
+    selem "Pause" (catMaybes
+      [ fmap (sattr "FUCK" . show) $ pauseDuration t ]) : pauseSibling t
+  -}
 
-example
-  = sayMan "Hello, world"
-  . sayMan "205-413-7965"
-  $ hangup
+pause :: Twiml t => t -> Pause
+pause = Pause Nothing . toXml
 
-example2
-  =  sayMan "Hello, world"
- <$> gather Null hangup
-
-toXml :: ArrowXml a => Twiml -> a n XmlTree
-toXml = root [] . return . selem "Response" . go []
--- toXml = selem "Response" . go []
-  where
-    go es Null = es
-    go es (Say    str  mu) = go (es ++ [selem "Say"  [txt str]]) mu
-    --go es (Play   url  mu) = go (es ++ [selem "Play" [txt url]]) mu
-    go es (Gather body mu) = go (es ++ [selem "Gather" $ go []   body])
-                                                                 mu
-    go es (Record      mu) = go (es ++ [eelem "Record"])         mu
-    --go es (Sms    str  mu) = go (es ++ [selem "Sms"  [txt str]]) mu
-    --go es (Dial (Right number) mu) =
-    --  go (es ++ [selem "Dial" [txt number]]) mu
-    --go es (Dial (Left  body)   mu) =
-    --  go (es ++ [selem "Dial" $ go [] body]) mu
-    go es Hangup = es
-
-main :: IO ()
-main = do
-  lines <- runX $ toXml example >>> writeDocumentToString []
-  mapM_ putStrLn lines
+pause' :: Twiml t => Natural -> t -> Pause
+pause' duration = Pause (Just duration) . toXml

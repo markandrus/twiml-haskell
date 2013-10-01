@@ -1,10 +1,12 @@
-{-#LANGUAGE NoMonomorphismRestriction #-}
+{-#LANGUAGE FlexibleContexts, FlexibleInstances, FunctionalDependencies,
+  MultiParamTypeClasses, NoMonomorphismRestriction, Rank2Types, TypeOperators,
+  UndecidableInstances #-}
 
 module Twiml
   ( Twiml
   , Null
   , Response
-  , response
+  , respond
   , toArrowXml
   -- * Primary Verbs
   -- ** @\<Say\>@
@@ -24,20 +26,9 @@ module Twiml
   , play'
   -- ** @\<Gather\>@
   , Gather
-  , GatherNoun
+  -- , GatherNoun
+  , gatherNull
   , gather
-  -- *** Nouns
-  , gNull
-  , gSayMan
-  , gSayMan'
-  , gSayWoman
-  , gSayWoman'
-  , gSayAlice
-  , gSayAlice'
-  , gPlay
-  , gPlay'
-  , gPause
-  , gPause'
   -- ** @\<Record\>@
   , Record
   , record
@@ -52,8 +43,10 @@ module Twiml
   , Enqueue
   -- ** @\<Leave\>@
   , Leave
+  , leave
   -- ** @\<Hangup\>@
   , Hangup
+  , hangup
   -- ** @\<Redirect\>@
   , Redirect
   -- ** @\<Reject\>@
@@ -68,6 +61,7 @@ module Twiml
   ) where
 
 import Control.Arrow ((>>>))
+import Data.Functor.Identity (Identity(..))
 import Data.Maybe (catMaybes)
 import Data.Natural (Natural)
 import Text.XML.HXT.Core
@@ -79,6 +73,28 @@ instance Show URL where
 
 data Method = GET | POST
   deriving Show
+
+-- The following allows us to place the constraint @(f a :/~ GatherNoun a)@ on
+-- TwiML verbs that cannot be embedded in @\<Gather\>@. See
+-- <http://stackoverflow.com/a/17794490>.
+
+data Yes
+
+data No
+
+class TypeCast a b | a -> b
+
+instance TypeCast a a
+
+class TypeEq a b c | a b -> c
+
+instance TypeEq x x Yes
+
+instance TypeCast No b => TypeEq x y b
+
+class TypeEq x y No => (:/~) x y
+
+instance TypeEq x y No => (:/~) x y
 
 {- | TwiML is a set of instructions you can use to tell Twilio what to do
    when you receive an incoming call or SMS. See
@@ -113,6 +129,8 @@ example
 
 class Twiml t where
   toTwimlF :: t -> TwimlF
+
+newtype Twiml' p t = Twiml' { fromTwiml' :: t }
 
 data TwimlF
   = NullF
@@ -187,8 +205,8 @@ instance Show Response where
       , withIndent True
       ]
 
-response :: Twiml t => t -> Response
-response = Response . toTwimlF
+respond :: Twiml t => (forall a. f a -> a) -> f t -> Response
+respond f = Response . toTwimlF . f
 
 -- | Convert a 'Response' into an @ArrowXml@ to be used with HXT. See
 -- <http://hackage.haskell.org/package/hxt>.
@@ -246,7 +264,10 @@ toArrowXml = root [] . return . selem "Response" . go . fromResponse where
       ) : go (pauseNext t)
 
 -- | Useful for terminating 'Twiml'.
-newtype Null = Null { getNull :: () }
+newtype Null = Null { fromNull :: TwimlF }
+
+null :: Identity Null
+null = Identity $ Null NullF
 
 instance Twiml Null where
   toTwimlF _ = NullF
@@ -345,30 +366,30 @@ newtype Say = Say { fromSay :: TwimlF }
 
 instance Twiml Say where
   toTwimlF = fromSay
- 
-sayMan :: Twiml t => String -> t -> Say
+
+sayMan :: (Functor f, Twiml t) => String -> f t -> f Say
 sayMan message
-  = Say . SayF (Just $ Man Nothing) Nothing message . toTwimlF
+  = fmap (Say . SayF (Just $ Man Nothing) Nothing message . toTwimlF)
 
-sayMan' :: Twiml t => Lang -> String -> t -> Say
+sayMan' :: (Functor f, Twiml t) => Lang -> String -> f t -> f Say
 sayMan' lang message
-  = Say . SayF (Just . Man $ Just lang) Nothing message . toTwimlF
+  = fmap (Say . SayF (Just . Man $ Just lang) Nothing message . toTwimlF)
 
-sayWoman :: Twiml t => String -> t -> Say
+sayWoman :: (Functor f, Twiml t) => String -> f t -> f Say
 sayWoman message
-  = Say . SayF (Just $ Woman Nothing) Nothing message . toTwimlF
+  = fmap (Say . SayF (Just $ Woman Nothing) Nothing message . toTwimlF)
 
-sayWoman' :: Twiml t => Lang -> String -> t -> Say
+sayWoman' :: (Functor f, Twiml t) => Lang -> String -> f t -> f Say
 sayWoman' lang message
-  = Say . SayF (Just . Woman $ Just lang) Nothing message . toTwimlF
+  = fmap (Say . SayF (Just . Woman $ Just lang) Nothing message . toTwimlF)
 
-sayAlice :: Twiml t => String -> t -> Say
+sayAlice :: (Functor f, Twiml t) => String -> f t -> f Say
 sayAlice message
-  = Say . SayF (Just $ Alice Nothing) Nothing message . toTwimlF
+  = fmap (Say . SayF (Just $ Alice Nothing) Nothing message . toTwimlF)
 
-sayAlice' :: Twiml t => LangAlice -> String -> t -> Say
+sayAlice' :: (Functor f, Twiml t) => LangAlice -> String -> f t -> f Say
 sayAlice' lang message
-  = Say . SayF (Just . Alice $ Just lang) Nothing message . toTwimlF
+  = fmap (Say . SayF (Just . Alice $ Just lang) Nothing message . toTwimlF)
 
 -- | The @\<Play\>@ verb plays an audio file back to the caller. Twilio
 -- retrieves the file from a URL that you provide. See
@@ -378,11 +399,11 @@ newtype Play = Play { fromPlay :: TwimlF }
 instance Twiml Play where
   toTwimlF = fromPlay
 
-play :: Twiml t => URL -> t -> Play
-play url = Play . PlayF Nothing url . toTwimlF
+play :: (Functor f, Twiml t) => URL -> f t -> f Play
+play url = fmap (Play . PlayF Nothing url . toTwimlF)
 
-play' :: Twiml t => Natural -> URL -> t -> Play
-play' i url = Play . PlayF (Just i) url . toTwimlF
+play' :: (Functor f, Twiml t) => Natural -> URL -> f t -> f Play
+play' i url = fmap (Play . PlayF (Just i) url . toTwimlF)
 
 -- | The @\<Gather\>@ verb collects digits that a caller enters into his or her
 -- telephone keypad. See <https://www.twilio.com/docs/api/twiml/gather>.
@@ -390,9 +411,7 @@ play' i url = Play . PlayF (Just i) url . toTwimlF
 -- You can nest @\<Say\>@, @\<Play\>@, and @\<Pause\>@ in @\<Gather\>@. See
 -- <https://www.twilio.com/docs/api/twiml/gather#nesting-rules>.
 --
--- Nesting rules are made explicit via the 'GatherNoun' constructor, and the
--- following section lifts previously-defined functions such as 'sayMan' and
--- 'play' into the 'GatherNoun' type.
+-- Nesting rules are made explicit via an unexported functor, 'GatherNoun'.
 newtype Gather = Gather { fromGather :: TwimlF }
 
 instance Twiml Gather where
@@ -400,44 +419,15 @@ instance Twiml Gather where
 
 newtype GatherNoun t = GatherNoun { fromGatherNoun :: t }
 
-instance Twiml t => Twiml (GatherNoun t) where
-  toTwimlF = toTwimlF . fromGatherNoun
+instance Functor GatherNoun where
+  fmap f = GatherNoun . f . fromGatherNoun
 
-gather :: (Twiml n, Twiml t) => GatherNoun n -> t -> Gather
-gather (GatherNoun n) = Gather . GatherF (toTwimlF n) . toTwimlF
+gather :: (Functor f, f a :/~ GatherNoun a, Twiml n, Twiml t)
+       => GatherNoun n -> f t -> f Gather
+gather (GatherNoun n) = fmap (Gather . GatherF (toTwimlF n) . toTwimlF)
 
-gNull :: GatherNoun Null
-gNull = GatherNoun $ Null ()
-
-gSayMan :: Twiml t => String -> GatherNoun t -> GatherNoun Say
-gSayMan message = GatherNoun . sayMan message . fromGatherNoun
-
-gSayMan' :: Twiml t => Lang -> String -> GatherNoun t -> GatherNoun Say
-gSayMan' lang message = GatherNoun . sayMan' lang message . fromGatherNoun
-
-gSayWoman :: Twiml t => String -> GatherNoun t -> GatherNoun Say
-gSayWoman message = GatherNoun . sayWoman message . fromGatherNoun
-
-gSayWoman' :: Twiml t => Lang -> String -> GatherNoun t -> GatherNoun Say
-gSayWoman' lang message = GatherNoun . sayWoman' lang message . fromGatherNoun
-
-gSayAlice :: Twiml t => String -> GatherNoun t -> GatherNoun Say
-gSayAlice message = GatherNoun . sayAlice message . fromGatherNoun
-
-gSayAlice' :: Twiml t => LangAlice -> String -> GatherNoun t -> GatherNoun Say
-gSayAlice' lang message = GatherNoun . sayAlice' lang message . fromGatherNoun
-
-gPlay :: Twiml t => URL -> GatherNoun t -> GatherNoun Play
-gPlay url = GatherNoun . play url . fromGatherNoun
-
-gPlay' :: Twiml t => Natural -> URL -> GatherNoun t -> GatherNoun Play
-gPlay' i url = GatherNoun . play' i url . fromGatherNoun
-
-gPause :: Twiml t => GatherNoun t -> GatherNoun Pause
-gPause = GatherNoun . pause . fromGatherNoun
-
-gPause' :: Twiml t => Natural -> GatherNoun t -> GatherNoun Pause
-gPause' duration = GatherNoun . pause' duration . fromGatherNoun
+gatherNull :: GatherNoun Null
+gatherNull = GatherNoun $ Null NullF
 
 -- | The @\<Record\>@ verb records the caller's voice and returns to you the URL
 -- of a file containing the audio recording. See
@@ -448,8 +438,8 @@ instance Twiml Record where
   toTwimlF = fromRecord
 
 -- FIXME: ...
-record :: Twiml t => t -> Record
-record = Record . RecordF . toTwimlF
+record :: (Functor f, f a :/~ GatherNoun a, Twiml t) => f t -> f Record
+record = fmap (Record . RecordF . toTwimlF)
 
 -- | The @\<Sms\>@ verb sends an SMS message to a phone number during a phone
 -- call. See <https://www.twilio.com/docs/api/twiml/sms>.
@@ -458,8 +448,8 @@ newtype Sms = Sms { fromSms :: TwimlF }
 instance Twiml Sms where
   toTwimlF = fromSms
 
-sms :: Twiml t => String -> t -> Sms
-sms message = Sms . SmsF Nothing Nothing Nothing Nothing Nothing message . toTwimlF
+sms :: (Functor f, f a :/~ GatherNoun a, Twiml t) => String -> f t -> f Sms
+sms message = fmap (Sms . SmsF Nothing Nothing Nothing Nothing Nothing message . toTwimlF)
 
 -- FIXME: ...
 data DialNoun = DialNoun
@@ -478,8 +468,8 @@ newtype Enqueue = Enqueue { fromEnqueue :: TwimlF }
 -- <https://www.twilio.com/docs/api/twiml/leave>.
 newtype Leave = Leave { fromLeave :: TwimlF }
 
-leave :: Leave
-leave = Leave $ LeaveF
+leave :: (f a :/~ GatherNoun a) => (forall a. a -> f a) -> f Leave
+leave f = f $ Leave LeaveF
 
 instance Twiml Leave where
   toTwimlF = fromLeave
@@ -488,7 +478,8 @@ instance Twiml Leave where
 -- <https://www.twilio.com/docs/api/twiml/hangup>.
 newtype Hangup = Hangup { fromHangup :: TwimlF }
 
-hangup = Hangup $ HangupF
+hangup :: (f a :/~ GatherNoun a) => (forall a. a -> f a) -> f Hangup
+hangup f = f $ Hangup HangupF
 
 instance Twiml Hangup where
   toTwimlF = fromHangup
@@ -500,11 +491,12 @@ newtype Redirect = Redirect { fromRedirect :: TwimlF }
 instance Twiml Redirect where
   toTwimlF = fromRedirect
 
-redirect :: URL -> Redirect
-redirect = Redirect . RedirectF Nothing
+redirect :: (f a :/~ GatherNoun a) => (forall a. a -> f a) -> URL -> f Redirect
+redirect f = f . Redirect . RedirectF Nothing
 
-redirect' :: Method -> URL -> Redirect
-redirect' method = Redirect . RedirectF (Just method)
+redirect' :: (f a :/~ GatherNoun a)
+          => (forall a. a -> f a) -> Method -> URL -> f Redirect
+redirect' f method = f . Redirect . RedirectF (Just method)
 
 -- | The reason attribute takes the values "rejected" and "busy." This tells
 -- Twilio what message to play when rejecting a call. Selecting "busy" will play
@@ -525,11 +517,11 @@ newtype Reject = Reject { fromReject :: TwimlF }
 instance Twiml Reject where
   toTwimlF = fromReject
 
-reject :: Reject
-reject = Reject $ RejectF Nothing
+reject :: (f a :/~ GatherNoun a) => (forall a. a -> f a) -> f Reject
+reject f = f . Reject $ RejectF Nothing
 
-reject' :: Reason -> Reject
-reject' = Reject . RejectF . Just
+reject' :: (f a :/~ GatherNoun a) => (forall a. a -> f a) -> Reason -> f Reject
+reject' f = f . Reject . RejectF . Just
 
 -- | The @\<Pause\>@ verb waits silently for a specific number of seconds. See
 -- <https://www.twilio.com/docs/api/twiml/pause>.
@@ -538,8 +530,9 @@ newtype Pause = Pause { fromPause :: TwimlF }
 instance Twiml Pause where
   toTwimlF = fromPause
 
-pause :: Twiml t => t -> Pause
-pause = Pause . PauseF Nothing . toTwimlF
+pause :: (Functor f, f a :/~ GatherNoun a, Twiml t) => f t -> f Pause
+pause = fmap (Pause . PauseF Nothing . toTwimlF)
 
-pause' :: Twiml t => Natural -> t -> Pause
-pause' duration = Pause . PauseF (Just duration) . toTwimlF
+pause' :: (Functor f, f a :/~ GatherNoun a, Twiml t)
+       => Natural -> f t -> f Pause
+pause' duration = fmap (Pause . PauseF (Just duration) . toTwimlF)

@@ -35,12 +35,15 @@ module Twiml
   -- ** @\<Sms\>@
   , Sms
   , sms
+  , sms'
   -- ** @\<Dial\>@
   , Dial
   , DialNoun
+  , dial
   -- * Secondary Verbs
   -- ** @\<Enqueue\>@
   , Enqueue
+  , enqueue
   -- ** @\<Leave\>@
   , Leave
   , leave
@@ -49,6 +52,8 @@ module Twiml
   , hangup
   -- ** @\<Redirect\>@
   , Redirect
+  , redirect
+  , redirect'
   -- ** @\<Reject\>@
   , Reject
   , Reason
@@ -127,6 +132,34 @@ example
 
 -}
 
+data Key
+  = K0      -- ^ @0@
+  | K1      -- ^ @1@
+  | K2      -- ^ @2@
+  | K3      -- ^ @3@
+  | K4      -- ^ @4@
+  | K5      -- ^ @5@
+  | K6      -- ^ @6@
+  | K7      -- ^ @7@
+  | K8      -- ^ @8@
+  | K9      -- ^ @9@
+  | KStar   -- ^ @*@
+  | KPound  -- ^ @#@
+
+instance Show Key where
+  show K0     = "0"
+  show K1     = "1"
+  show K2     = "2"
+  show K3     = "3"
+  show K4     = "4"
+  show K5     = "5"
+  show K6     = "6"
+  show K7     = "7"
+  show K8     = "8"
+  show K9     = "9"
+  show KStar  = "*"
+  show KPound = "#"
+
 class Twiml t where
   toTwimlF :: t -> TwimlF
 
@@ -135,58 +168,71 @@ newtype Twiml' p t = Twiml' { fromTwiml' :: t }
 data TwimlF
   = NullF
   | SayF
-      { sayVoice          :: Maybe Voice
-      , sayLoop           :: Maybe Natural
-      , sayMessage        :: String
-      , sayNext           :: TwimlF
+      { sayVoice                 :: Maybe Voice
+      , sayLoop                  :: Maybe Natural
+      , sayMessage               :: String
+      , sayNext                  :: TwimlF
       }
   | PlayF
-      { playLoop          :: Maybe Natural
-      , playURL           :: URL
-      , playNext          :: TwimlF
+      { playLoop                 :: Maybe Natural
+      , playURL                  :: URL
+      , playNext                 :: TwimlF
       }
   | GatherF
-      { gatherNouns       :: TwimlF
-      , gatherNext        :: TwimlF
+      { gatherAction             :: Maybe URL
+      , gatherMethod             :: Maybe Method
+      , gatherTimeout            :: Maybe Natural
+      , gatherFinishOnKey        :: Maybe Key
+      , gatherNumDigits          :: Maybe Natural
+      , gatherNouns              :: TwimlF
+      , gatherNext               :: TwimlF
       }
   | RecordF
-      { recordNext        :: TwimlF
+      { recordAction             :: Maybe URL
+      , recordMethod             :: Maybe Method
+      , recordTimeout            :: Maybe Natural
+      , recordFinishOnKey        :: Maybe Key
+      , recordMaxLength          :: Maybe Natural
+      , recordTranscribe         :: Maybe Bool
+      , recordTranscribeCallback :: Maybe URL
+      , recordPlayBeep           :: Maybe Bool
+      , recordNext               :: TwimlF
       }
   | SmsF
-      { smsTo             :: Maybe String
-      , smsFrom           :: Maybe String
-      , smsAction         :: Maybe URL
-      , smsMethod         :: Maybe Method
-      , smsStatusCallback :: Maybe URL
-      , smsMessage        :: String
-      , smsNext           :: TwimlF
+      { smsTo                    :: Maybe String
+      , smsFrom                  :: Maybe String
+      , smsAction                :: Maybe URL
+      , smsMethod                :: Maybe Method
+      , smsStatusCallback        :: Maybe URL
+      , smsNoun                  :: String
+      , smsNext                  :: TwimlF
       }
   | DialF
-      { dialAction        :: Maybe URL
-      , dialMethod        :: Maybe Method
-      , dialTimeout       :: Maybe Natural
-      , dialHangupOnStar  :: Maybe Bool
-      , dialTimeLimit     :: Maybe Natural
-      , dialCallerId      :: Maybe String
-      , dialRecord        :: Maybe Bool
-      , dialNoun          :: Either DialNoun String
-      , dialNext          :: TwimlF
+      { dialAction               :: Maybe URL
+      , dialMethod               :: Maybe Method
+      , dialTimeout              :: Maybe Natural
+      , dialHangupOnStar         :: Maybe Bool
+      , dialTimeLimit            :: Maybe Natural
+      , dialCallerId             :: Maybe String
+      , dialRecord               :: Maybe Bool
+      , dialNoun                 :: Either DialNoun String
+      , dialNext                 :: TwimlF
       }
   | EnqueueF
-      { enqueueName       :: String
-      , enqueueNext       :: TwimlF
+      { enqueueName              :: String
+      , enqueueNext              :: TwimlF
       }
   | LeaveF
   | HangupF
   | RedirectF
-      { redirectMethod    :: Maybe Method
-      , redirectURL       :: URL
+      { redirectMethod           :: Maybe Method
+      , redirectURL              :: URL
       }
   | RejectF
-      { rejectReason      :: Maybe Reason }
+      { rejectReason             :: Maybe Reason }
   | PauseF
-      { pauseLength       :: Maybe Natural
-      , pauseNext         :: TwimlF
+      { pauseLength              :: Maybe Natural
+      , pauseNext                :: TwimlF
       }
 
 -- | The root element of Twilio's XML Markup is the @\<Response\>@ element. In
@@ -212,6 +258,7 @@ respond f = Response . toTwimlF . f
 -- <http://hackage.haskell.org/package/hxt>.
 toArrowXml :: ArrowXml a => Response -> a n XmlTree
 toArrowXml = root [] . return . selem "Response" . go . fromResponse where
+  -- FIXME: We're not printing the correct TwiML for each tag!
   go NullF = []
   go t@(SayF {}) =
     mkelem "Say"
@@ -228,7 +275,6 @@ toArrowXml = root [] . return . selem "Response" . go . fromResponse where
       ) [ txt . getURL $ playURL t ] : go (playNext t)
   go t@(GatherF {}) =
     mkelem "Gather" [] (go $ gatherNouns t) : go (gatherNext t)
-  -- FIXME: ...
   go t@(RecordF {}) =
     mkelem "Record" [] [] : go (recordNext t)
   go t@(SmsF {}) =
@@ -240,7 +286,7 @@ toArrowXml = root [] . return . selem "Response" . go . fromResponse where
         , fmap (sattr "method"         . show  ) $ smsMethod         t
         , fmap (sattr "statusCallback" . getURL) $ smsStatusCallback t
         ]
-      ) [ txt $ smsMessage t ] : go (smsNext t)
+      ) [ txt $ smsNoun t ] : go (smsNext t)
   go t@(HangupF {}) =
     [ eelem "Hangup" ]
   go t@(RedirectF {}) =
@@ -256,7 +302,6 @@ toArrowXml = root [] . return . selem "Response" . go . fromResponse where
         [ fmap (sattr "reason" . show) $ rejectReason t ]
       )
     ]
-  -- FIXME: ...
   go t@(PauseF {}) =
     selem "Pause"
       ( catMaybes
@@ -422,9 +467,17 @@ newtype GatherNoun t = GatherNoun { fromGatherNoun :: t }
 instance Functor GatherNoun where
   fmap f = GatherNoun . f . fromGatherNoun
 
+-- TODO: Document this.
 gather :: (Functor f, f a :/~ GatherNoun a, Twiml n, Twiml t)
-       => GatherNoun n -> f t -> f Gather
-gather (GatherNoun n) = fmap (Gather . GatherF (toTwimlF n) . toTwimlF)
+       => Maybe URL
+       -> Maybe Method
+       -> Maybe Natural
+       -> Maybe Key
+       -> Maybe Natural
+       -> GatherNoun n
+       -> f t
+       -> f Gather
+gather a b c d e (GatherNoun n) = fmap (Gather . GatherF a b c d e (toTwimlF n) . toTwimlF)
 
 gatherNull :: GatherNoun Null
 gatherNull = GatherNoun $ Null NullF
@@ -437,9 +490,19 @@ newtype Record = Record { fromRecord :: TwimlF }
 instance Twiml Record where
   toTwimlF = fromRecord
 
--- FIXME: ...
-record :: (Functor f, f a :/~ GatherNoun a, Twiml t) => f t -> f Record
-record = fmap (Record . RecordF . toTwimlF)
+-- TODO: Document this.
+record :: (Functor f, f a :/~ GatherNoun a, Twiml t)
+       => Maybe URL
+       -> Maybe Method
+       -> Maybe Natural
+       -> Maybe Key
+       -> Maybe Natural
+       -> Maybe Bool
+       -> Maybe URL
+       -> Maybe Bool
+       -> f t
+       -> f Record
+record a b c d e f g h = fmap (Record . RecordF a b c d e f g h . toTwimlF)
 
 -- | The @\<Sms\>@ verb sends an SMS message to a phone number during a phone
 -- call. See <https://www.twilio.com/docs/api/twiml/sms>.
@@ -448,19 +511,49 @@ newtype Sms = Sms { fromSms :: TwimlF }
 instance Twiml Sms where
   toTwimlF = fromSms
 
-sms :: (Functor f, f a :/~ GatherNoun a, Twiml t) => String -> f t -> f Sms
-sms message = fmap (Sms . SmsF Nothing Nothing Nothing Nothing Nothing message . toTwimlF)
+sms' :: (Functor f, f a :/~ GatherNoun a, Twiml t) => String -> f t -> f Sms
+sms' noun = fmap (Sms . SmsF Nothing Nothing Nothing Nothing Nothing noun . toTwimlF)
 
--- FIXME: ...
+-- TODO: Document this.
+sms :: (Functor f, f a :/~ GatherNoun a, Twiml t)
+    => Maybe String
+    -> Maybe String
+    -> Maybe URL
+    -> Maybe Method
+    -> Maybe URL
+    -> String
+    -> f t
+    -> f Sms
+sms a b c d e f = fmap (Sms . SmsF a b c d e f . toTwimlF)
+
+-- FIXME: Unimplemented!
 data DialNoun = DialNoun
 
 -- | The @\<Dial\>@ verb connects the current caller to another phone. See
 -- <https://www.twilio.com/docs/api/twiml/dial>.
 newtype Dial = Dial { fromDial :: TwimlF }
 
+-- TODO: Document this.
+dial :: (Functor f, f a :/~ GatherNoun a, Twiml t)
+     => Maybe URL
+     -> Maybe Method
+     -> Maybe Natural
+     -> Maybe Bool
+     -> Maybe Natural
+     -> Maybe String
+     -> Maybe Bool
+     -> Either DialNoun String
+     -> f t
+     -> f Dial
+dial a b c d e f g h = fmap (Dial . DialF a b c d e f g h . toTwimlF)
+
 -- | The @\<Enqueue\>@ verb enqueues the current call in a call queue. See
 -- <https://www.twilio.com/docs/api/twiml/enqueue>.
 newtype Enqueue = Enqueue { fromEnqueue :: TwimlF }
+
+enqueue :: (Functor f, f a :/~ GatherNoun a, Twiml t)
+        => String -> f t -> f Enqueue
+enqueue name = fmap (Enqueue . EnqueueF name . toTwimlF)
 
 -- | The @\<Leave\>@ verb transfers control of a call that is in a queue so that
 -- the caller exits the queue and execution continues with the next verb after

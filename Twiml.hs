@@ -1,15 +1,23 @@
-{-#LANGUAGE DeriveFunctor #-}
-{-#LANGUAGE FlexibleContexts, FlexibleInstances, FunctionalDependencies,
-  MultiParamTypeClasses, NoMonomorphismRestriction, Rank2Types, TypeFamilies,
-  TypeOperators, UndecidableInstances #-}
+{-#LANGUAGE FlexibleContexts #-}
+{-#LANGUAGE FlexibleInstances #-}
+{-#LANGUAGE FunctionalDependencies #-}
+{-#LANGUAGE GADTs #-}
+{-#LANGUAGE MultiParamTypeClasses #-}
+{-#LANGUAGE NoMonomorphismRestriction #-}
+{-#LANGUAGE Rank2Types #-}
+{-#LANGUAGE TypeFamilies #-}
+{-#LANGUAGE UndecidableInstances #-}
 
 module Twiml
   ( Twiml
-  , Null
+  , URL
+  , Method
   , Key
+  -- ** @\<Response\>@
   , Response
   , respond
-  , toArrowXml
+  , End
+  , end
   -- * Primary Verbs
   -- ** @\<Say\>@
   , Say
@@ -17,39 +25,61 @@ module Twiml
   , Voice(..)
   , Lang(..)
   , LangAlice(..)
-  , sayMan
-  , sayMan'
-  , sayWoman
-  , sayWoman'
-  , sayAlice
-  , sayAlice'
+  , sayAttributes
+  , say
+  , say'
+  -- *** Lenses
+  , voice
   -- ** @\<Play\>@
   , Play
   , PlayAttributes(..)
+  , playAttributes
   , play
   , play'
   -- ** @\<Gather\>@
   , Gather
   , GatherAttributes(..)
-  , gatherNull
+  , gatherAttributes
   , gather
+  , gather'
+  -- *** Lenses
+  , numDigits
   -- ** @\<Record\>@
   , Record
   , RecordAttributes(..)
+  , recordAttributes
   , record
+  , record'
+  -- *** Lenses
+  , maxLength
+  , transcribe
+  , transcribeCallback
+  , playBeep
   -- ** @\<Sms\>@
   , Sms
   , SmsAttributes(..)
+  , smsAttributes
   , sms
+  , sms'
+  -- *** Lenses
+  , Twiml.to
+  , Twiml.from
+  , statusCallback
   -- ** @\<Dial\>@
   , Dial
   , DialAttributes(..)
   , DialNoun
+  , dialAttributes
   , dial
+  , dial'
+  -- *** Lenses
+  , hangupOnStar
+  , timeLimit
+  , callerId
+  , recordA
   -- * Secondary Verbs
   -- ** @\<Enqueue\>@
   , Enqueue
-  , EnqueueAttributes(..)
   , enqueue
   -- ** @\<Leave\>@
   , Leave
@@ -60,41 +90,45 @@ module Twiml
   -- ** @\<Redirect\>@
   , Redirect
   , RedirectAttributes(..)
+  , redirectAttributes
   , redirect
   , redirect'
   -- ** @\<Reject\>@
   , Reject
   , RejectAttributes(..)
   , Reason
+  , rejectAttributes
   , reject
   , reject'
+  -- *** Lenses
+  , reason
   -- ** @\<Pause\>@
   , Pause
   , PauseAttributes(..)
+  , pauseAttributes
   , pause
   , pause'
+  -- *** Lenses
+  , Twiml.length
+  -- * Lenses
+  , HasLoop
+  , loop
+  , HasAction
+  , action
+  , HasMethod
+  , method
+  , HasTimeout
+  , timeout
+  , HasFinishOnKey
+  , finishOnKey
   ) where
 
-import Control.Arrow ((>>>))
-import Data.Functor.Identity (Identity(..))
+import Control.Applicative (Applicative(..), (<$>))
+-- import Control.Lens.Combinators ((&), (<&>))
+import Control.Lens as L
 import Data.Functor.Foldable (Base, Fix(..), Foldable(..))
-import Data.Maybe (catMaybes)
+import Data.Functor.Identity (Identity(..))
 import Data.Natural (Natural)
-import Text.XML.HXT.Core
-
-data URL = URL { getURL :: String }
-
-instance Show URL where
-  show = getURL
-
-data Method = GET | POST
-  deriving Show
-
-type instance Base Twiml' = TwimlF
-
--- The following allows us to place the constraint @(f a :/~ GatherNoun a)@ on
--- TwiML verbs that cannot be embedded in @\<Gather\>@. See
--- <http://stackoverflow.com/a/17794490>.
 
 data Yes
 
@@ -110,40 +144,15 @@ instance TypeEq x x Yes
 
 instance TypeCast No b => TypeEq x y b
 
-class TypeEq x y No => (:/~) x y
+{- Twiml Types -}
 
-instance TypeEq x y No => (:/~) x y
+data URL = URL { getURL :: String }
 
-{- | TwiML is a set of instructions you can use to tell Twilio what to do
-   when you receive an incoming call or SMS. See
-   <https://www.twilio.com/docs/api/twiml>.
+instance Show URL where
+  show = getURL
 
-   This library provides a number of smart constructors for creating 'Twiml', as
-   well as conversion functions for interop with other Haskell XML libraries,
-   including HXT.
-
-   As an example, the following Haskell code,
-
-@
-example
-  = response
-  . sayMan \"Hello, world\"
-  . sayWoman \"Goodbye, world\"
-  $ hangup
-@
-
-   Is transformed into,
-
-@
-\<?xml version=\"1.0\" encoding=\"UTF-8\"?\>
-\<Response\>
-  \<Say voice=\"man\">Hello, world\</Say\>
-  \<Say voice=\"woman\">Goodbye, world\</Say\>
-  \<Hangup/\>
-\</Response\>
-@
-
--}
+data Method = GET | POST
+  deriving Show
 
 data Key
   = K0      -- ^ @0@
@@ -173,266 +182,12 @@ instance Show Key where
   show KStar  = "*"
   show KPound = "#"
 
-class Twiml t where
-  -- toTwiml' :: t -> Twiml' ()
-  toTwiml' :: t -> Twiml'
-
--- TODO: Document the options.
-
--- | See <https://www.twilio.com/docs/api/twiml/say#attributes>.
-data SayAttributes = SayAttributes
-  { sayVoice   :: Maybe Voice
-  , sayLoop    :: Maybe Natural
-  }
-
--- | See <https://www.twilio.com/docs/api/twiml/play#attributes>.
-data PlayAttributes = PlayAttributes
-  { playLoop :: Maybe Natural
-  , playURL  :: URL
-  }
-
--- | See <https://www.twilio.com/docs/api/twiml/gather#attributes>.
-data GatherAttributes = GatherAttributes
-  { gatherAction      :: Maybe URL
-  , gatherMethod      :: Maybe Method
-  , gatherTimeout     :: Maybe Natural
-  , gatherFinishOnKey :: Maybe Key
-  , gatherNumDigits   :: Maybe Natural
-  -- , gatherNouns       :: Twiml' ()
-  , gatherNouns       :: Twiml'
-  }
-
--- | See <https://www.twilio.com/docs/api/twiml/record#attributes>.
-data RecordAttributes = RecordAttributes
-  { recordAction             :: Maybe URL
-  , recordMethod             :: Maybe Method
-  , recordTimeout            :: Maybe Natural
-  , recordFinishOnKey        :: Maybe Key
-  , recordMaxLength          :: Maybe Natural
-  , recordTranscribe         :: Maybe Bool
-  , recordTranscribeCallback :: Maybe URL
-  , recordPlayBeep           :: Maybe Bool
-  }
-
--- | See <https://www.twilio.com/docs/api/twiml/sms#attributes>.
-data SmsAttributes = SmsAttributes
-  { smsTo             :: Maybe String
-  , smsFrom           :: Maybe String
-  , smsAction         :: Maybe URL
-  , smsMethod         :: Maybe Method
-  , smsStatusCallback :: Maybe URL
-  }
-
--- | See <https://www.twilio.com/docs/api/twiml/dial#attributes>.
-data DialAttributes = DialAttributes
-  { dialAction       :: Maybe URL
-  , dialMethod       :: Maybe Method
-  , dialTimeout      :: Maybe Natural
-  , dialHangupOnStar :: Maybe Bool
-  , dialTimeLimit    :: Maybe Natural
-  , dialCallerId     :: Maybe String
-  , dialRecord       :: Maybe Bool
-  , dialNoun         :: Either DialNoun String
-  }
-
--- | See <https://www.twilio.com/docs/api/twiml/enqueue#attributes>.
-data EnqueueAttributes = EnqueueAttributes
-  { enqueueName :: String
-  }
-
--- | See <https://www.twilio.com/docs/api/twiml/redirect#attributes>.
-data RedirectAttributes = RedirectAttributes
-  { redirectMethod :: Maybe Method
-  , redirectURL    :: URL
-  }
-
--- | See <https://www.twilio.com/docs/api/twiml/reject#attributes>.
-data RejectAttributes = RejectAttributes
-  { rejectReason :: Maybe Reason }
-
--- | See <https://www.twilio.com/docs/api/twiml/pause#attributes>.
-data PauseAttributes = PauseAttributes
-  { pauseLength :: Maybe Natural
-  }
-
-data TwimlF a
-  = NullF
-  | SayF      SayAttributes                      String  a
-  | PlayF     PlayAttributes                             a
-  | GatherF   GatherAttributes                           a
-  | RecordF   RecordAttributes                           a
-  | SmsF      SmsAttributes                      String  a
-  | DialF     DialAttributes    (Either DialNoun String) a
-  | EnqueueF  EnqueueAttributes                          a
-  | LeaveF
-  | HangupF
-  | RedirectF RedirectAttributes
-  | RejectF   RejectAttributes
-  | PauseF    PauseAttributes                            a
-  deriving Functor
-
-newtype Twiml' = Twiml' { fromTwiml' :: Fix TwimlF }
-
-instance Foldable Twiml' where
-  project (Twiml' (Fix NullF))
-    = NullF
-  project (Twiml' (Fix (SayF options noun next)))
-    = SayF options noun $ Twiml' next
-  project (Twiml' (Fix (PlayF options next)))
-    = PlayF options $ Twiml' next
-  project (Twiml' (Fix (GatherF options next)))
-    = GatherF options $ Twiml' next
-  project (Twiml' (Fix (RecordF options next)))
-    = RecordF options $ Twiml' next
-  project (Twiml' (Fix (SmsF options noun next)))
-    = SmsF options noun $ Twiml' next
-  project (Twiml' (Fix (DialF options noun next)))
-    = DialF options noun $ Twiml' next
-  project (Twiml' (Fix (EnqueueF options next)))
-    = EnqueueF options $ Twiml' next
-  project (Twiml' (Fix LeaveF))
-    = LeaveF
-  project (Twiml' (Fix HangupF))
-    = HangupF
-  project (Twiml' (Fix (RedirectF options)))
-    = RedirectF options
-  project (Twiml' (Fix (RejectF options)))
-    = RejectF   options
-  project (Twiml' (Fix (PauseF options next)))
-    = PauseF options $ Twiml' next
-
-toArrowXmls :: ArrowXml a => TwimlF [a n XmlTree] -> [a n XmlTree]
-toArrowXmls (SayF options noun arrows)
-  = mkelem "Say" [] []
-  : arrows
-toArrowXmls (PlayF options arrows)
-  = selem "Play" []
-  : arrows
-toArrowXmls (GatherF options arrows)
-  = mkelem "Gather" [] []
-  : arrows
-toArrowXmls (RecordF options arrows)
-  = selem "Record" []
-  : arrows
-toArrowXmls (SmsF options noun arrows)
-  = mkelem "Sms" [] []
-  : arrows
-toArrowXmls (DialF options noun arrows)
-  = mkelem "Dial" [] []
-  : arrows
-toArrowXmls (EnqueueF options arrows)
-  = selem "Enqueue" []
-  : arrows
-toArrowXmls (LeaveF)
-  = [ eelem "Leave" ]
-toArrowXmls (HangupF)
-  = [ eelem "Hangup" ]
-toArrowXmls (RedirectF options)
-  = [ selem "Redirect" []
-    ]
-toArrowXmls (RejectF options)
-  = [ selem "Reject" []
-    ]
-toArrowXmls (PauseF options arrows)
-  = selem "Pause" []
-  : arrows
-
--- | The root element of Twilio's XML Markup is the @\<Response\>@ element. In
--- any TwiML response to a Twilio request, all verb elements must be nested
--- within this element. Any other structure is considered invalid. See
--- <https://www.twilio.com/docs/api/twiml/your_response#response-element>.
-newtype Response = Response { fromResponse :: Twiml' }
-
-instance Show Response where
-  show t
-    = unlines
-    . flip runLA ()
-    $ toArrowXml t >>> writeDocumentToString
-      [ withXmlPi True
-      , withOutputEncoding utf8
-      , withIndent True
-      ]
-
-respond :: Twiml t => (forall a. f a -> a) -> f t -> Response
-respond f = Response . toTwiml' . f
-
--- | Convert a 'Response' into an @ArrowXml@ to be used with HXT. See
--- <http://hackage.haskell.org/package/hxt>.
-toArrowXml :: ArrowXml a => Response -> a n XmlTree
-toArrowXml = root [] . return . selem "Response" . cata toArrowXmls . fromResponse
-{-
-toArrowXml = root [] . return . selem "Response" . go . fromResponse where
-  -- FIXME: We're not printing the correct TwiML for each tag!
-  go NullF = []
-  go (SayF t next) =
-    mkelem "Say"
-      ( catMaybes
-        [ fmap (sattr "voice" . fst . voiceToStrings) $ sayVoice t
-        , sayVoice t >>= fmap (sattr "language") . snd . voiceToStrings
-        , fmap (sattr "loop" . show) $ sayLoop t
-        ]
-      ) [ txt $ sayMessage t ] : go next
-  go (PlayF t next) =
-    mkelem "Play"
-      ( catMaybes
-        [ fmap (sattr "loop" . show) $ playLoop t ]
-      ) [ txt . getURL $ playURL t ] : go next
-  go (GatherF t next) =
-    mkelem "Gather" [] (go $ gatherNouns t) : go next
-  go (RecordF t next) =
-    mkelem "Record" [] [] : go next
-  go (SmsF t noun next) =
-    mkelem "Sms"
-      ( catMaybes
-        [ fmap (sattr "to"             . show  ) $ smsTo             t
-        , fmap (sattr "from"           . show  ) $ smsFrom           t
-        , fmap (sattr "action"         . getURL) $ smsAction         t
-        , fmap (sattr "method"         . show  ) $ smsMethod         t
-        , fmap (sattr "statusCallback" . getURL) $ smsStatusCallback t
-        ]
-      ) [ txt noun ] : go next
-  go HangupF =
-    [ eelem "Hangup" ]
-  go (RedirectF t) =
-    [ selem "Redirect"
-      ( catMaybes
-        [ fmap  (sattr "method" . show)  $ redirectMethod t
-        , Just . sattr "url"    . getURL $ redirectURL    t ]
-      )
-    ]
-  go (RejectF t) =
-    [ selem "Reject"
-      ( catMaybes
-        [ fmap (sattr "reason" . show) $ rejectReason t ]
-      )
-    ]
-  go (PauseF t next) =
-    selem "Pause"
-      ( catMaybes
-        [ fmap (sattr "length" . show) $ pauseLength t ]
-      ) : go next
--}
-
--- | Useful for terminating 'Twiml'.
-newtype Null = Null { fromNull :: Twiml' }
-
-null :: Identity Null
-null = Identity . Null . Twiml' $ Fix NullF
-
-instance Twiml Null where
-  toTwiml' _ = Twiml' $ Fix NullF
-
 -- | Voices supported by @\<Say\>@. See
 -- <https://www.twilio.com/docs/api/twiml/say#attributes-voice>.
 data Voice
   = Man   (Maybe Lang)
   | Woman (Maybe Lang)
   | Alice (Maybe LangAlice)
-
-voiceToStrings :: Voice -> (String, Maybe String)
-voiceToStrings (Man   lang) = ("man",   fmap show lang)
-voiceToStrings (Woman lang) = ("woman", fmap show lang)
-voiceToStrings (Alice lang) = ("alice", fmap show lang)
 
 -- | Languages spoken by voices 'Man' and 'Woman'. See
 -- <https://www.twilio.com/docs/api/twiml/say#attributes-manwoman>.
@@ -510,158 +265,8 @@ instance Show LangAlice where
   show ZhHK = "zh-HK"
   show ZhTW = "zh-TW"
 
--- | The @\<Say\>@ verb converts text to speech that is read back to the caller.
--- See <https://www.twilio.com/docs/api/twiml/say>.
-newtype Say = Say { fromSay :: Twiml' }
-
-instance Twiml Say where
-  toTwiml' = fromSay
-
-sayMan :: (Functor f, Twiml t) => String -> f t -> f Say
-sayMan noun
-  = fmap (Say . Twiml' . Fix . SayF (SayAttributes (Just $ Man Nothing) Nothing) noun . fromTwiml' . toTwiml')
-
-sayMan' :: (Functor f, Twiml t) => Lang -> String -> f t -> f Say
-sayMan' lang noun
-  = fmap (Say . Twiml' . Fix . SayF (SayAttributes (Just . Man $ Just lang) Nothing) noun . fromTwiml' . toTwiml')
-
-sayWoman :: (Functor f, Twiml t) => String -> f t -> f Say
-sayWoman noun
-  = fmap (Say . Twiml' . Fix . SayF (SayAttributes (Just $ Woman Nothing) Nothing) noun . fromTwiml' . toTwiml')
-
-sayWoman' :: (Functor f, Twiml t) => Lang -> String -> f t -> f Say
-sayWoman' lang noun
-  = fmap (Say . Twiml' . Fix . SayF (SayAttributes (Just . Woman $ Just lang) Nothing) noun . fromTwiml' . toTwiml')
-
-sayAlice :: (Functor f, Twiml t) => String -> f t -> f Say
-sayAlice noun
-  = fmap (Say . Twiml' . Fix . SayF (SayAttributes (Just $ Alice Nothing) Nothing) noun . fromTwiml' . toTwiml')
-
-sayAlice' :: (Functor f, Twiml t) => LangAlice -> String -> f t -> f Say
-sayAlice' lang noun
-  = fmap (Say . Twiml' . Fix . SayF (SayAttributes (Just . Alice $ Just lang) Nothing) noun . fromTwiml' . toTwiml')
-
--- | The @\<Play\>@ verb plays an audio file back to the caller. Twilio
--- retrieves the file from a URL that you provide. See
--- <https://www.twilio.com/docs/api/twiml/play>.
-newtype Play = Play { fromPlay :: Twiml' }
-
-instance Twiml Play where
-  toTwiml' = fromPlay
-
-play :: (Functor f, Twiml t) => URL -> f t -> f Play
-play url = fmap (Play . Twiml' . Fix . PlayF (PlayAttributes Nothing url) . fromTwiml' . toTwiml')
-
-play' :: (Functor f, Twiml t) => Natural -> URL -> f t -> f Play
-play' i url = fmap (Play . Twiml' . Fix . PlayF (PlayAttributes (Just i) url) . fromTwiml' . toTwiml')
-
--- | The @\<Gather\>@ verb collects digits that a caller enters into his or her
--- telephone keypad. See <https://www.twilio.com/docs/api/twiml/gather>.
---
--- You can nest @\<Say\>@, @\<Play\>@, and @\<Pause\>@ in @\<Gather\>@. See
--- <https://www.twilio.com/docs/api/twiml/gather#nesting-rules>.
---
--- Nesting rules are made explicit via an unexported functor, 'GatherNoun'.
-newtype Gather = Gather { fromGather :: Twiml' }
-
-instance Twiml Gather where
-  toTwiml' = fromGather
-
-newtype GatherNoun t = GatherNoun { fromGatherNoun :: t }
-
-instance Functor GatherNoun where
-  fmap f = GatherNoun . f . fromGatherNoun
-
-gather :: (Functor f, f a :/~ GatherNoun a, Twiml t) => GatherAttributes -> f t -> f Gather
-gather options = fmap (Gather . Twiml' . Fix . GatherF options . fromTwiml' . toTwiml')
-
-gatherNull :: GatherNoun Null
-gatherNull = GatherNoun . Null . Twiml' $ Fix NullF
-
--- | The @\<Record\>@ verb records the caller's voice and returns to you the URL
--- of a file containing the audio recording. See
--- <https://www.twilio.com/docs/api/twiml/record>.
-newtype Record = Record { fromRecord :: Twiml' }
-
-instance Twiml Record where
-  toTwiml' = fromRecord
-
-record :: (Functor f, f a :/~ GatherNoun a, Twiml t) => RecordAttributes -> f t -> f Record
-record options = fmap (Record . Twiml' . Fix . RecordF options . fromTwiml' . toTwiml')
-
--- | The @\<Sms\>@ verb sends an SMS message to a phone number during a phone
--- call. See <https://www.twilio.com/docs/api/twiml/sms>.
-newtype Sms = Sms { fromSms :: Twiml' }
-
-instance Twiml Sms where
-  toTwiml' = fromSms
-
-sms :: (Functor f, f a :/~ GatherNoun a, Twiml t)
-    => SmsAttributes
-    -> String
-    -> f t
-    -> Maybe (f Sms)
-sms options noun
-  | length noun < 160 = Just . fmap (Sms . Twiml' . Fix . SmsF options noun . fromTwiml' . toTwiml')
-  | otherwise         = const Nothing
-
--- FIXME: Unimplemented!
 data DialNoun = DialNoun
 
--- | The @\<Dial\>@ verb connects the current caller to another phone. See
--- <https://www.twilio.com/docs/api/twiml/dial>.
-newtype Dial = Dial { fromDial :: Twiml' }
-
-dial :: (Functor f, f a :/~ GatherNoun a, Twiml t)
-     => DialAttributes
-     -> Either DialNoun String
-     -> f t
-     -> f Dial
-dial options noun = fmap (Dial . Twiml' . Fix . DialF options noun . fromTwiml' . toTwiml')
-
--- | The @\<Enqueue\>@ verb enqueues the current call in a call queue. See
--- <https://www.twilio.com/docs/api/twiml/enqueue>.
-newtype Enqueue = Enqueue { fromEnqueue :: Twiml' }
-
-enqueue :: (Functor f, f a :/~ GatherNoun a, Twiml t)
-        => EnqueueAttributes -> f t -> f Enqueue
-enqueue options = fmap (Enqueue . Twiml' . Fix . EnqueueF options . fromTwiml' . toTwiml')
-
--- | The @\<Leave\>@ verb transfers control of a call that is in a queue so that
--- the caller exits the queue and execution continues with the next verb after
--- the original @\<Enqueue\>@. See
--- <https://www.twilio.com/docs/api/twiml/leave>.
-newtype Leave = Leave { fromLeave :: Twiml' }
-
-leave :: (f a :/~ GatherNoun a) => (forall a. a -> f a) -> f Leave
-leave f = f . Leave . Twiml' $ Fix LeaveF
-
-instance Twiml Leave where
-  toTwiml' = fromLeave
-
--- | The @\<Hangup\>@ verb ends a call. See
--- <https://www.twilio.com/docs/api/twiml/hangup>.
-newtype Hangup = Hangup { fromHangup :: Twiml' }
-
-hangup :: (f a :/~ GatherNoun a) => (forall a. a -> f a) -> f Hangup
-hangup f = f . Hangup . Twiml' $ Fix HangupF
-
-instance Twiml Hangup where
-  toTwiml' = fromHangup
-
--- | The @\<Redirect\>@ verb transfers control of a call to the TwiML at a
--- different URL. See <https://www.twilio.com/docs/api/twiml/redirect>.
-newtype Redirect = Redirect { fromRedirect :: Twiml' }
-
-instance Twiml Redirect where
-  toTwiml' = fromRedirect
-
-redirect :: (f a :/~ GatherNoun a) => (forall a. a -> f a) -> URL -> f Redirect
-redirect f = f . Redirect . Twiml' . Fix . RedirectF . RedirectAttributes Nothing
-
-redirect' :: (f a :/~ GatherNoun a)
-          => (forall a. a -> f a) -> Method -> URL -> f Redirect
-redirect' f method = f . Redirect . Twiml' . Fix . RedirectF . RedirectAttributes (Just method)
 -- | The reason attribute takes the values "rejected" and "busy." This tells
 -- Twilio what message to play when rejecting a call. Selecting "busy" will play
 -- a busy signal to the caller, while selecting "rejected" will play a standard
@@ -673,30 +278,733 @@ instance Show Reason where
   show Rejected = "rejected"
   show Busy     = "busy"
 
+data GatherNoun
+
+class TypeEq x GatherNoun No => NotGatherNoun x
+
+instance TypeEq x GatherNoun No => NotGatherNoun x
+
+{- Twiml Attributes -}
+
+-- | See <https://www.twilio.com/docs/api/twiml/say#attributes>.
+data SayAttributes = SayAttributes
+  { sayVoice :: Maybe Voice
+  , sayLoop  :: Maybe Natural
+  }
+
+defaultSayAttributes :: SayAttributes
+defaultSayAttributes = SayAttributes
+  { sayVoice = Nothing
+  , sayLoop  = Nothing
+  }
+
+sayAttributes :: Lens' (Say p) SayAttributes
+sayAttributes = lens
+  (\(Say (Twiml' (Fix (SayF attributes _ _)))) -> attributes)
+  (\(Say (Twiml' (Fix (SayF _          n a))))    attributes ->
+     Say (Twiml' (Fix (SayF attributes n a))))
+
+setSayVoice :: SayAttributes -> Voice -> SayAttributes
+setSayVoice attrs voice = attrs { sayVoice = Just voice }
+
+setSayLoop :: SayAttributes -> Natural -> SayAttributes
+setSayLoop attrs loop = attrs { sayLoop = Just loop }
+
+voice :: Lens (Say p) (Say p) (Maybe Voice) Voice
+voice = lens (^. sayAttributes . L.to sayVoice)
+  (\t v -> over sayAttributes (flip setSayVoice v) t)
+
+instance HasLoop (Say p) where
+  getLoop = (^. sayAttributes . L.to sayLoop)
+  setLoop t v = over sayAttributes (flip setSayLoop v) t
+
+-- | See <https://www.twilio.com/docs/api/twiml/play#attributes>.
+data PlayAttributes = PlayAttributes
+  { playLoop :: Maybe Natural
+  }
+
+defaultPlayAttributes :: PlayAttributes
+defaultPlayAttributes = PlayAttributes
+  { playLoop = Nothing
+  }
+
+playAttributes :: Lens' (Play p) PlayAttributes
+playAttributes = lens
+  (\(Play (Twiml' (Fix (PlayF attributes _ _)))) -> attributes)
+  (\(Play (Twiml' (Fix (PlayF _          n a))))    attributes ->
+     Play (Twiml' (Fix (PlayF attributes n a))))
+
+setPlayLoop :: PlayAttributes -> Natural -> PlayAttributes
+setPlayLoop attrs loop = attrs { playLoop = Just loop }
+
+instance HasLoop (Play p) where
+  getLoop = (^. playAttributes . L.to playLoop)
+  setLoop t v = over playAttributes (flip setPlayLoop v) t
+
+-- | See <https://www.twilio.com/docs/api/twiml/gather#attributes>.
+data GatherAttributes = GatherAttributes
+  { gatherAction      :: Maybe URL
+  , gatherMethod      :: Maybe Method
+  , gatherTimeout     :: Maybe Natural
+  , gatherFinishOnKey :: Maybe Key
+  , gatherNumDigits   :: Maybe Natural
+  }
+
+defaultGatherAttributes :: GatherAttributes
+defaultGatherAttributes = GatherAttributes
+  { gatherAction      = Nothing
+  , gatherMethod      = Nothing
+  , gatherTimeout     = Nothing
+  , gatherFinishOnKey = Nothing
+  , gatherNumDigits   = Nothing
+  }
+
+setGatherAction :: GatherAttributes -> URL -> GatherAttributes
+setGatherAction attrs action = attrs { gatherAction = Just action }
+
+instance HasAction (Gather p) where
+  getAction = (^. gatherAttributes . L.to gatherAction)
+  setAction t v = over gatherAttributes (flip setGatherAction v) t
+
+setGatherMethod :: GatherAttributes -> Method -> GatherAttributes
+setGatherMethod attrs method = attrs { gatherMethod = Just method }
+
+instance HasMethod (Gather p) where
+  getMethod = (^. gatherAttributes . L.to gatherMethod)
+  setMethod t v = over gatherAttributes (flip setGatherMethod v) t
+
+setGatherTimeout :: GatherAttributes -> Natural -> GatherAttributes
+setGatherTimeout attrs timeout = attrs { gatherTimeout = Just timeout }
+
+instance HasTimeout (Gather p) where
+  getTimeout = (^. gatherAttributes . L.to gatherTimeout)
+  setTimeout t v = over gatherAttributes (flip setGatherTimeout v) t
+
+setGatherFinishOnKey :: GatherAttributes -> Key -> GatherAttributes
+setGatherFinishOnKey attrs finishOnKey
+  = attrs { gatherFinishOnKey = Just finishOnKey }
+
+instance HasFinishOnKey (Gather p) where
+  getFinishOnKey = (^. gatherAttributes . L.to gatherFinishOnKey)
+  setFinishOnKey t v = over gatherAttributes (flip setGatherFinishOnKey v) t
+
+setGatherNumDigits :: GatherAttributes -> Natural -> GatherAttributes
+setGatherNumDigits attrs numDigits = attrs { gatherNumDigits = Just numDigits }
+
+numDigits :: Lens (Gather p) (Gather p) (Maybe Natural) Natural
+numDigits = lens (^. gatherAttributes . L.to gatherNumDigits)
+  (\t v -> over gatherAttributes (flip setGatherNumDigits v) t)
+
+gatherAttributes :: Lens' (Gather p) GatherAttributes
+gatherAttributes = lens
+  (\(Gather (Twiml' (Fix (GatherF attributes _ _)))) -> attributes)
+  (\(Gather (Twiml' (Fix (GatherF _          n a))))    attributes ->
+     Gather (Twiml' (Fix (GatherF attributes n a))))
+
+-- | See <https://www.twilio.com/docs/api/twiml/record#attributes>.
+data RecordAttributes = RecordAttributes
+  { recordAction             :: Maybe URL
+  , recordMethod             :: Maybe Method
+  , recordTimeout            :: Maybe Natural
+  , recordFinishOnKey        :: Maybe Key
+  , recordMaxLength          :: Maybe Natural
+  , recordTranscribe         :: Maybe Bool
+  , recordTranscribeCallback :: Maybe URL
+  , recordPlayBeep           :: Maybe Bool
+  }
+
+defaultRecordAttributes :: RecordAttributes
+defaultRecordAttributes = RecordAttributes
+  { recordAction             = Nothing
+  , recordMethod             = Nothing
+  , recordTimeout            = Nothing
+  , recordFinishOnKey        = Nothing
+  , recordMaxLength          = Nothing
+  , recordTranscribe         = Nothing
+  , recordTranscribeCallback = Nothing
+  , recordPlayBeep           = Nothing
+  }
+
+setRecordAction :: RecordAttributes -> URL -> RecordAttributes
+setRecordAction attrs action = attrs { recordAction = Just action }
+
+instance HasAction (Record p) where
+  getAction = (^. recordAttributes . L.to recordAction)
+  setAction t v = over recordAttributes (flip setRecordAction v) t
+
+setRecordMethod :: RecordAttributes -> Method -> RecordAttributes
+setRecordMethod attrs method = attrs { recordMethod = Just method }
+
+instance HasMethod (Record p) where
+  getMethod = (^. recordAttributes . L.to recordMethod)
+  setMethod t v = over recordAttributes (flip setRecordMethod v) t
+
+setRecordTimeout :: RecordAttributes -> Natural -> RecordAttributes
+setRecordTimeout attrs timeout = attrs { recordTimeout = Just timeout }
+
+instance HasTimeout (Record p) where
+  getTimeout = (^. recordAttributes . L.to recordTimeout)
+  setTimeout t v = over recordAttributes (flip setRecordTimeout v) t
+
+setRecordFinishOnKey :: RecordAttributes -> Key -> RecordAttributes
+setRecordFinishOnKey attrs key = attrs { recordFinishOnKey = Just key }
+
+instance HasFinishOnKey (Record p) where
+  getFinishOnKey = (^. recordAttributes . L.to recordFinishOnKey)
+  setFinishOnKey t v = over recordAttributes (flip setRecordFinishOnKey v) t
+
+setRecordMaxLength :: RecordAttributes -> Natural -> RecordAttributes
+setRecordMaxLength attrs length = attrs { recordMaxLength = Just length }
+
+maxLength :: Lens (Record p) (Record p) (Maybe Natural) Natural
+maxLength = lens (^. recordAttributes . L.to recordMaxLength)
+  (\t v -> over recordAttributes (flip setRecordMaxLength v) t)
+
+setRecordTranscribe :: RecordAttributes -> Bool -> RecordAttributes
+setRecordTranscribe attrs transcribe
+  = attrs { recordTranscribe = Just transcribe }
+
+transcribe :: Lens (Record p) (Record p) (Maybe Bool) Bool
+transcribe = lens (^. recordAttributes . L.to recordTranscribe)
+  (\t v -> over recordAttributes (flip setRecordTranscribe v) t)
+
+setRecordTranscribeCallback :: RecordAttributes -> URL -> RecordAttributes
+setRecordTranscribeCallback attrs transcribeCallback
+  = attrs { recordTranscribeCallback = Just transcribeCallback }
+
+transcribeCallback :: Lens (Record p) (Record p) (Maybe URL) URL
+transcribeCallback = lens (^. recordAttributes . L.to recordTranscribeCallback)
+  (\t v -> over recordAttributes (flip setRecordTranscribeCallback v) t)
+
+setRecordPlayBeep :: RecordAttributes -> Bool -> RecordAttributes
+setRecordPlayBeep attrs playBeep = attrs { recordPlayBeep = Just playBeep }
+
+playBeep :: Lens (Record p) (Record p) (Maybe Bool) Bool
+playBeep = lens (^. recordAttributes . L.to recordPlayBeep)
+  (\t v -> over recordAttributes (flip setRecordPlayBeep v) t)
+
+recordAttributes :: Lens' (Record p) RecordAttributes
+recordAttributes = lens
+  (\(Record (Twiml' (Fix (RecordF attributes _ _)))) -> attributes)
+  (\(Record (Twiml' (Fix (RecordF _          n a))))    attributes ->
+     Record (Twiml' (Fix (RecordF attributes n a))))
+
+-- | See <https://www.twilio.com/docs/api/twiml/sms#attributes>.
+data SmsAttributes = SmsAttributes
+  { smsTo             :: Maybe String
+  , smsFrom           :: Maybe String
+  , smsAction         :: Maybe URL
+  , smsMethod         :: Maybe Method
+  , smsStatusCallback :: Maybe URL
+  }
+
+defaultSmsAttributes :: SmsAttributes
+defaultSmsAttributes = SmsAttributes
+  { smsTo             = Nothing
+  , smsFrom           = Nothing
+  , smsAction         = Nothing
+  , smsMethod         = Nothing
+  , smsStatusCallback = Nothing
+  }
+
+setSmsTo :: SmsAttributes -> String -> SmsAttributes
+setSmsTo attrs to = attrs { smsTo = Just to }
+
+to :: Lens (Sms p) (Sms p) (Maybe String) String
+to = lens (^. smsAttributes . L.to smsTo)
+  (\t v -> over smsAttributes (flip setSmsTo v) t)
+
+setSmsFrom :: SmsAttributes -> String -> SmsAttributes
+setSmsFrom attrs from = attrs { smsFrom = Just from }
+
+from :: Lens (Sms p) (Sms p) (Maybe String) String
+from = lens (^. smsAttributes . L.to smsFrom)
+  (\t v -> over smsAttributes (flip setSmsFrom v) t)
+
+setSmsAction :: SmsAttributes -> URL -> SmsAttributes
+setSmsAction attrs action = attrs { smsAction = Just action }
+
+instance HasAction (Sms p) where
+  getAction = (^. smsAttributes . L.to smsAction)
+  setAction t v = over smsAttributes (flip setSmsAction v) t
+
+setSmsMethod :: SmsAttributes -> Method -> SmsAttributes
+setSmsMethod attrs method = attrs { smsMethod = Just method }
+
+instance HasMethod (Sms p) where
+  getMethod = (^. smsAttributes . L.to smsMethod)
+  setMethod t v = over smsAttributes (flip setSmsMethod v) t
+
+setSmsStatusCallback :: SmsAttributes -> URL -> SmsAttributes
+setSmsStatusCallback attrs statusCallback
+  = attrs { smsStatusCallback = Just statusCallback }
+
+statusCallback :: Lens (Sms p) (Sms p) (Maybe URL) URL
+statusCallback = lens (^. smsAttributes . L.to smsStatusCallback)
+  (\t v -> over smsAttributes (flip setSmsStatusCallback v) t)
+
+smsAttributes :: Lens' (Sms p) SmsAttributes
+smsAttributes = lens
+  (\(Sms (Twiml' (Fix (SmsF attributes _ _)))) -> attributes)
+  (\(Sms (Twiml' (Fix (SmsF _          n a))))    attributes ->
+     Sms (Twiml' (Fix (SmsF attributes n a))))
+
+-- | See <https://www.twilio.com/docs/api/twiml/dial#attributes>.
+data DialAttributes = DialAttributes
+  { dialAction       :: Maybe URL
+  , dialMethod       :: Maybe Method
+  , dialTimeout      :: Maybe Natural
+  , dialHangupOnStar :: Maybe Bool
+  , dialTimeLimit    :: Maybe Natural
+  , dialCallerId     :: Maybe String
+  , dialRecord       :: Maybe Bool
+  }
+
+defaultDialAttributes :: DialAttributes
+defaultDialAttributes = DialAttributes
+  { dialAction       = Nothing
+  , dialMethod       = Nothing
+  , dialTimeout      = Nothing
+  , dialHangupOnStar = Nothing
+  , dialTimeLimit    = Nothing
+  , dialCallerId     = Nothing
+  , dialRecord       = Nothing
+  }
+
+setDialAction :: DialAttributes -> URL -> DialAttributes
+setDialAction attrs action = attrs { dialAction = Just action }
+
+instance HasAction (Dial p) where
+  getAction = (^. dialAttributes . L.to dialAction)
+  setAction t v = over dialAttributes (flip setDialAction v) t
+
+setDialMethod :: DialAttributes -> Method -> DialAttributes
+setDialMethod attrs method = attrs { dialMethod = Just method }
+
+instance HasMethod (Dial p) where
+  getMethod = (^. dialAttributes . L.to dialMethod)
+  setMethod t v = over dialAttributes (flip setDialMethod v) t
+
+setDialTimeout :: DialAttributes -> Natural -> DialAttributes
+setDialTimeout attrs timeout = attrs { dialTimeout = Just timeout }
+
+instance HasTimeout (Dial p) where
+  getTimeout = (^. dialAttributes . L.to dialTimeout)
+  setTimeout t v = over dialAttributes (flip setDialTimeout v) t
+
+setDialHangupOnStar :: DialAttributes -> Bool -> DialAttributes
+setDialHangupOnStar attrs hangupOnStar
+  = attrs { dialHangupOnStar = Just hangupOnStar }
+
+hangupOnStar :: Lens (Dial p) (Dial p) (Maybe Bool) Bool
+hangupOnStar = lens (^. dialAttributes . L.to dialHangupOnStar)
+  (\t v -> over dialAttributes (flip setDialHangupOnStar v) t)
+
+setDialTimeLimit :: DialAttributes -> Natural -> DialAttributes
+setDialTimeLimit attrs timeLimit = attrs { dialTimeLimit = Just timeLimit }
+
+timeLimit :: Lens (Dial p) (Dial p) (Maybe Natural) Natural
+timeLimit = lens (^. dialAttributes . L.to dialTimeLimit)
+  (\t v -> over dialAttributes (flip setDialTimeLimit v) t)
+
+setDialCallerId :: DialAttributes -> String -> DialAttributes
+setDialCallerId attrs callerId = attrs { dialCallerId = Just callerId }
+
+callerId :: Lens (Dial p) (Dial p) (Maybe String) String
+callerId = lens (^. dialAttributes . L.to dialCallerId)
+  (\t v -> over dialAttributes (flip setDialCallerId v) t)
+
+setDialRecord :: DialAttributes -> Bool -> DialAttributes
+setDialRecord attrs record = attrs { dialRecord = Just record }
+
+recordA :: Lens (Dial p) (Dial p) (Maybe Bool) Bool
+recordA = lens (^. dialAttributes . L.to dialRecord)
+  (\t v -> over dialAttributes (flip setDialRecord v) t)
+
+dialAttributes :: Lens' (Dial p) DialAttributes
+dialAttributes = lens
+  (\(Dial (Twiml' (Fix (DialF attributes _ _)))) -> attributes)
+  (\(Dial (Twiml' (Fix (DialF _          n a))))    attributes ->
+     Dial (Twiml' (Fix (DialF attributes n a))))
+
+-- | See <https://www.twilio.com/docs/api/twiml/redirect#attributes>.
+data RedirectAttributes = RedirectAttributes
+  { redirectMethod :: Maybe Method
+  }
+
+defaultRedirectAttributes :: RedirectAttributes
+defaultRedirectAttributes = RedirectAttributes
+  { redirectMethod = Nothing
+  }
+
+setRedirectMethod :: RedirectAttributes -> Method -> RedirectAttributes
+setRedirectMethod attrs method = attrs { redirectMethod = Just method }
+
+instance HasMethod (Redirect p) where
+  getMethod = (^. redirectAttributes . L.to redirectMethod)
+  setMethod t v = over redirectAttributes (flip setRedirectMethod v) t
+
+redirectAttributes :: Lens' (Redirect p) RedirectAttributes
+redirectAttributes = lens
+  (\(Redirect (Twiml' (Fix (RedirectF attributes _)))) -> attributes)
+  (\(Redirect (Twiml' (Fix (RedirectF _          n))))    attributes ->
+     Redirect (Twiml' (Fix (RedirectF attributes n))))
+
+-- | See <https://www.twilio.com/docs/api/twiml/reject#attributes>.
+data RejectAttributes = RejectAttributes
+  { rejectReason :: Maybe Reason
+  }
+
+defaultRejectAttributes :: RejectAttributes
+defaultRejectAttributes = RejectAttributes
+  { rejectReason = Nothing
+  }
+
+setRejectReason :: RejectAttributes -> Reason -> RejectAttributes
+setRejectReason attrs reason = attrs { rejectReason = Just reason }
+
+reason :: Lens (Reject p) (Reject p) (Maybe Reason) Reason
+reason = lens (^. rejectAttributes . L.to rejectReason)
+  (\t v -> over rejectAttributes (flip setRejectReason v) t)
+
+rejectAttributes :: Lens' (Reject p) RejectAttributes
+rejectAttributes = lens
+  (\(Reject (Twiml' (Fix (RejectF attributes)))) -> attributes)
+  (\(Reject (Twiml' (Fix (RejectF _         ))))    attributes ->
+     Reject (Twiml' (Fix (RejectF attributes))))
+
+-- | See <https://www.twilio.com/docs/api/twiml/pause#attributes>.
+data PauseAttributes = PauseAttributes
+  { pauseLength :: Maybe Natural
+  }
+
+defaultPauseAttributes :: PauseAttributes
+defaultPauseAttributes = PauseAttributes
+  { pauseLength = Nothing
+  }
+
+setPauseLength :: PauseAttributes -> Natural -> PauseAttributes
+setPauseLength attrs length = attrs { pauseLength = Just length }
+
+length :: Lens (Pause p) (Pause p) (Maybe Natural) Natural
+length = lens (^. pauseAttributes . L.to pauseLength)
+  (\t v -> over pauseAttributes (flip setPauseLength v) t)
+
+pauseAttributes :: Lens' (Pause p) PauseAttributes
+pauseAttributes = lens
+  (\(Pause (Twiml' (Fix (PauseF attributes _)))) -> attributes)
+  (\(Pause (Twiml' (Fix (PauseF _          a))))    attributes ->
+     Pause (Twiml' (Fix (PauseF attributes a))))
+
+{- Twiml -}
+
+data TwimlF p a where
+  EndF      :: TwimlF p a
+  SayF      :: SayAttributes
+            -> String
+            -> a
+            -> TwimlF p a
+  PlayF     :: PlayAttributes
+            -> URL
+            -> a
+            -> TwimlF p a
+  GatherF   :: (Twiml GatherNoun t, NotGatherNoun p)
+            => GatherAttributes
+            -> t
+            -> a
+            -> TwimlF p a
+  RecordF   :: NotGatherNoun p
+            => RecordAttributes
+            -> URL
+            -> a
+            -> TwimlF p a
+  SmsF      :: NotGatherNoun p
+            => SmsAttributes
+            -> String
+            -> a
+            -> TwimlF p a
+  DialF     :: NotGatherNoun p
+            => DialAttributes
+            -> Either DialNoun String
+            -> a
+            -> TwimlF p a
+  EnqueueF  :: NotGatherNoun p
+            => String
+            -> a
+            -> TwimlF p a
+  LeaveF    :: NotGatherNoun p
+            => TwimlF p a
+  HangupF   :: NotGatherNoun p
+            => TwimlF p a
+  RedirectF :: NotGatherNoun p
+            => RedirectAttributes
+            -> URL
+            -> TwimlF p a
+  RejectF   :: NotGatherNoun p
+            => RejectAttributes
+            -> TwimlF p a
+  PauseF    :: PauseAttributes
+            -> a
+            -> TwimlF p a
+
+instance Functor (TwimlF p) where
+  fmap = undefined
+{-
+  fmap _  EndF         = EndF
+  fmap f (SayF      a) = SayF      $ f a
+  fmap f (PlayF     a) = PlayF     $ f a
+  fmap f (GatherF n a) = GatherF n $ f a
+-}
+
+newtype Twiml' p = Twiml' { fromTwiml' :: Fix (TwimlF p) }
+
+class Twiml p t | t -> p where
+  toTwiml' :: t -> Twiml' p
+
+type instance Base (Twiml' p) = TwimlF p
+
+instance forall p. Foldable (Twiml' p) where
+  project (Twiml' (Fix t)) = go t
+    where
+      go = undefined
+{-
+      go  EndF         = EndF
+      go (SayF      a) = SayF      $ Twiml' a
+      go (PlayF     a) = PlayF     $ Twiml' a
+      go (GatherF n a) = GatherF n $ Twiml' a
+-}
+
+-- | Useful for terminating 'Twiml'.
+newtype End p = End { fromEnd :: Twiml' p }
+
+instance Twiml p (End p) where toTwiml' = fromEnd
+
+end :: End p
+end = End . Twiml' $ Fix EndF
+
+-- | The @\<Say\>@ verb converts text to speech that is read back to the caller.
+-- See <https://www.twilio.com/docs/api/twiml/say>.
+newtype Say p = Say { fromSay :: Twiml' p }
+
+instance Twiml p (Say p) where toTwiml' = fromSay
+
+say :: Twiml p t => String -> t -> Say p
+say = say' defaultSayAttributes
+
+say' :: Twiml p t => SayAttributes -> String -> t -> Say p
+say' attrs n = Say . Twiml' . Fix . SayF attrs n . fromTwiml' . toTwiml'
+
+-- | The @\<Play\>@ verb plays an audio file back to the caller. Twilio
+-- retrieves the file from a URL that you provide. See
+-- <https://www.twilio.com/docs/api/twiml/play>.
+newtype Play p = Play { fromPlay :: Twiml' p }
+
+instance Twiml p (Play p) where toTwiml' = fromPlay
+
+play :: Twiml p t => URL -> t -> Play p
+play = play' defaultPlayAttributes
+
+play' :: Twiml p t => PlayAttributes -> URL -> t -> Play p
+play' attrs n = Play . Twiml' . Fix . PlayF attrs n . fromTwiml' . toTwiml'
+
+-- | The @\<Gather\>@ verb collects digits that a caller enters into his or her
+-- telephone keypad. See <https://www.twilio.com/docs/api/twiml/gather>.
+--
+-- You can nest @\<Say\>@, @\<Play\>@, and @\<Pause\>@ in @\<Gather\>@. See
+-- <https://www.twilio.com/docs/api/twiml/gather#nesting-rules>.
+--
+-- Nesting rules are made explicit via an unexported functor, 'GatherNoun'.
+newtype Gather p = Gather { fromGather :: Twiml' p }
+
+instance Twiml p (Gather p) where toTwiml' = fromGather
+
+gather :: (Twiml GatherNoun n, Twiml p t, NotGatherNoun p) => n -> t -> Gather p
+gather = gather' defaultGatherAttributes
+
+gather' :: (Twiml GatherNoun n, Twiml p t, NotGatherNoun p)
+        => GatherAttributes -> n -> t -> Gather p
+gather' attrs n
+  = Gather . Twiml' . Fix . GatherF attrs n . fromTwiml' . toTwiml'
+
+-- | The @\<Record\>@ verb records the caller's voice and returns to you the URL
+-- of a file containing the audio recording. See
+-- <https://www.twilio.com/docs/api/twiml/record>.
+newtype Record p = Record { fromRecord :: Twiml' p }
+
+instance Twiml p (Record p) where toTwiml' = fromRecord
+
+record :: (Twiml p t, NotGatherNoun p) => URL -> t -> Record p
+record = record' defaultRecordAttributes
+
+record' :: (Twiml p t, NotGatherNoun p)
+        => RecordAttributes -> URL -> t -> Record p
+record' attrs url
+  = Record . Twiml' . Fix . RecordF attrs url . fromTwiml' . toTwiml'
+
+-- | The @\<Sms\>@ verb sends an SMS message to a phone number during a phone
+-- call. See <https://www.twilio.com/docs/api/twiml/sms>.
+newtype Sms p = Sms { fromSms :: Twiml' p }
+
+instance Twiml p (Sms p) where toTwiml' = fromSms
+
+sms :: (Twiml p t, NotGatherNoun p) => String -> t -> Sms p
+sms = sms' defaultSmsAttributes
+
+sms' :: (Twiml p t, NotGatherNoun p) => SmsAttributes -> String -> t -> Sms p
+sms' attrs n = Sms . Twiml' . Fix . SmsF attrs n . fromTwiml' . toTwiml'
+
+-- | The @\<Dial\>@ verb connects the current caller to another phone. See
+-- <https://www.twilio.com/docs/api/twiml/dial>.
+newtype Dial p = Dial { fromDial :: Twiml' p }
+
+instance Twiml p (Dial p) where toTwiml' = fromDial
+
+dial :: (Twiml p t, NotGatherNoun p) => Either DialNoun String -> t -> Dial p
+dial = dial' defaultDialAttributes
+
+dial' :: (Twiml p t, NotGatherNoun p)
+      => DialAttributes -> Either DialNoun String -> t -> Dial p
+dial' attrs n = Dial . Twiml' . Fix . DialF attrs n . fromTwiml' . toTwiml'
+
+-- | The @\<Enqueue\>@ verb enqueues the current call in a call queue. See
+-- <https://www.twilio.com/docs/api/twiml/enqueue>.
+newtype Enqueue p = Enqueue { fromEnqueue :: Twiml' p }
+
+instance Twiml p (Enqueue p) where toTwiml' = fromEnqueue
+
+enqueue :: (Twiml p t, NotGatherNoun p) => String -> t -> Enqueue p
+enqueue name = Enqueue . Twiml' . Fix . EnqueueF name . fromTwiml' . toTwiml'
+
+-- | The @\<Leave\>@ verb transfers control of a call that is in a queue so that
+-- the caller exits the queue and execution continues with the next verb after
+-- the original @\<Enqueue\>@. See
+-- <https://www.twilio.com/docs/api/twiml/leave>.
+newtype Leave p = Leave { fromLeave :: Twiml' p }
+
+instance Twiml p (Leave p) where toTwiml' = fromLeave
+
+leave :: (Twiml p t, NotGatherNoun p) => Leave p
+leave = Leave . Twiml' $ Fix LeaveF
+
+-- | The @\<Hangup\>@ verb ends a call. See
+-- <https://www.twilio.com/docs/api/twiml/hangup>.
+newtype Hangup p = Hangup { fromHangup :: Twiml' p }
+
+instance Twiml p (Hangup p) where toTwiml' = fromHangup
+
+hangup :: (Twiml p t, NotGatherNoun p) => Hangup p
+hangup = Hangup . Twiml' $ Fix HangupF
+
+-- | The @\<Redirect\>@ verb transfers control of a call to the TwiML at a
+-- different URL. See <https://www.twilio.com/docs/api/twiml/redirect>.
+newtype Redirect p = Redirect { fromRedirect :: Twiml' p }
+
+instance Twiml p (Redirect p) where toTwiml' = fromRedirect
+
+redirect :: NotGatherNoun p => URL -> Redirect p
+redirect = redirect' defaultRedirectAttributes
+
+redirect' :: NotGatherNoun p => RedirectAttributes -> URL -> Redirect p
+redirect' attrs url = Redirect . Twiml' . Fix $ RedirectF attrs url
+
 -- | The @\<Reject\>@ verb rejects an incoming call to your Twilio number
 -- without billing you. See
 -- <https://www.twilio.com/docs/api/2010-04-01/twiml/reject>.
-newtype Reject = Reject { fromReject :: Twiml' }
+newtype Reject p = Reject { fromReject :: Twiml' p }
 
-instance Twiml Reject where
-  toTwiml' = fromReject
+instance Twiml p (Reject p) where toTwiml' = fromReject
 
-reject :: (f a :/~ GatherNoun a) => (forall a. a -> f a) -> f Reject
-reject f = f . Reject . Twiml' . Fix . RejectF $ RejectAttributes Nothing
+reject :: NotGatherNoun p => Reject p
+reject = reject' defaultRejectAttributes
 
-reject' :: (f a :/~ GatherNoun a) => (forall a. a -> f a) -> Reason -> f Reject
-reject' f = f . Reject . Twiml' . Fix . RejectF . RejectAttributes . Just
+reject' :: NotGatherNoun p => RejectAttributes -> Reject p
+reject' attrs = Reject . Twiml' . Fix $ RejectF attrs
 
 -- | The @\<Pause\>@ verb waits silently for a specific number of seconds. See
 -- <https://www.twilio.com/docs/api/twiml/pause>.
-newtype Pause = Pause { fromPause :: Twiml' }
+newtype Pause p = Pause { fromPause :: Twiml' p }
 
-instance Twiml Pause where
-  toTwiml' = fromPause
+instance Twiml p (Pause p) where toTwiml' = fromPause
 
-pause :: (Functor f, f a :/~ GatherNoun a, Twiml t) => f t -> f Pause
-pause = fmap (Pause . Twiml' . Fix . PauseF (PauseAttributes Nothing) . fromTwiml' . toTwiml')
+pause :: Twiml p t => t -> Pause p
+pause = pause' defaultPauseAttributes
 
-pause' :: (Functor f, f a :/~ GatherNoun a, Twiml t)
-       => Natural -> f t -> f Pause
-pause' duration = fmap (Pause . Twiml' . Fix . PauseF (PauseAttributes $ Just duration) . fromTwiml' . toTwiml')
+pause' :: Twiml p t => PauseAttributes -> t -> Pause p
+pause' attrs = Pause . Twiml' . Fix . PauseF attrs . fromTwiml' . toTwiml'
+
+{- Response -}
+
+-- | The root element of Twilio's XML Markup is the @\<Response\>@ element. In
+-- any TwiML response to a Twilio request, all verb elements must be nested
+-- within this element. Any other structure is considered invalid. See
+-- <https://www.twilio.com/docs/api/twiml/your_response#response-element>.
+newtype Response = Response { fromResponse :: Twiml' Response }
+
+respond :: Twiml Response t => t -> Response
+respond = Response . toTwiml'
+
+instance Show Response where
+  show = unlines . cata f . fromResponse
+    where
+      f :: TwimlF p [String] -> [String]
+      f = undefined
+{-
+      f  EndF         = ["End"]
+      f (SayF a)      =  "Say"    : a
+      f (PlayF a)     =  "Play"   : a
+      f (GatherF n a) =  "Gather" : map ((:) '\t') (cata f $ toTwiml' n) ++ a
+-}
+{- Lenses -}
+
+class HasLoop t where
+  getLoop :: t -> Maybe Natural
+  setLoop :: t -> Natural -> t
+
+loop :: HasLoop t => Lens t t (Maybe Natural) Natural
+loop = lens getLoop setLoop
+
+class HasAction t where
+  getAction :: t -> Maybe URL
+  setAction :: t -> URL -> t
+
+action :: HasAction t => Lens t t (Maybe URL) URL
+action = lens getAction setAction
+
+class HasMethod t where
+  getMethod :: t -> Maybe Method
+  setMethod :: t -> Method -> t
+
+method :: HasMethod t => Lens t t (Maybe Method) Method
+method = lens getMethod setMethod
+
+class HasTimeout t where
+  getTimeout :: t -> Maybe Natural
+  setTimeout :: t -> Natural -> t
+
+timeout :: HasTimeout t => Lens t t (Maybe Natural) Natural
+timeout = lens getTimeout setTimeout
+
+class HasFinishOnKey t where
+  getFinishOnKey :: t -> Maybe Key
+  setFinishOnKey :: t -> Key -> t
+
+finishOnKey :: HasFinishOnKey t => Lens t t (Maybe Key) Key
+finishOnKey = lens getFinishOnKey setFinishOnKey
+
+{- Examples -}
+
+{-
+example
+  = respond
+  . gather
+    ( say
+    $ end )
+  . say
+  $ end
+
+example2
+  = respond
+  . (play <&> loop .~ 2)
+  . say
+  $ end
+-}

@@ -78,7 +78,7 @@ module Text.XML.Twiml
   -- ** @\<Dial\>@
   , Dial
   , DialAttributes(..)
-  , DialNoun
+  , DialNoun(..)
   , dial
   , dial'
   , hangupOnStar

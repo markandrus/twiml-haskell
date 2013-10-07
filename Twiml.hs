@@ -33,6 +33,12 @@ module Twiml
   , LangAlice(..)
   , say
   , say'
+  , sayMan
+  , sayMan'
+  , sayWoman
+  , sayWoman'
+  , sayAlice
+  , sayAlice'
   , voice
   , sayAttributes
   -- ** @\<Play\>@

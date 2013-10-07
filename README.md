@@ -5,7 +5,7 @@ This package provides a library for constructing
 [TwiML](www.twilio.com/docs/api/twiml). Install using
 
 ```
-cabal install twiml
+$ cabal install twiml
 ```
 
 Example
@@ -33,5 +33,5 @@ is transformed into
 TODO
 ----
 
-Update the `Show` instance for `Response` to actually print the attributes of
-each TwiML verb.
+* Update the `Show` instance for `Response` to actually print the attributes of
+  each TwiML verb.

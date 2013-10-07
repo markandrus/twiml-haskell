@@ -82,7 +82,7 @@ module Twiml
   , hangupOnStar
   , timeLimit
   , callerId
-  , recordA
+  , recordDial
   , dialAttributes
   -- * Secondary Verbs
   -- ** @\<Enqueue\>@
@@ -103,7 +103,7 @@ module Twiml
   -- ** @\<Reject\>@
   , Reject
   , RejectAttributes(..)
-  , Reason
+  , Reason(..)
   , reject
   , reject'
   , reason
@@ -627,8 +627,8 @@ callerId = lens (^. dialAttributes . L.to dialCallerId)
 setDialRecord :: DialAttributes -> Bool -> DialAttributes
 setDialRecord attrs record = attrs { dialRecord = Just record }
 
-recordA :: Lens (Dial p) (Dial p) (Maybe Bool) Bool
-recordA = lens (^. dialAttributes . L.to dialRecord)
+recordDial :: Lens (Dial p) (Dial p) (Maybe Bool) Bool
+recordDial = lens (^. dialAttributes . L.to dialRecord)
   (\t v -> over dialAttributes (flip setDialRecord v) t)
 
 dialAttributes :: Lens' (Dial p) DialAttributes

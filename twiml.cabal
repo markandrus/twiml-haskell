@@ -5,7 +5,7 @@ name:                twiml
 version:             0.1.0.0
 synopsis:            TwiML library for Haskell
 -- description:         
-homepage:            https://github.com/markandrus/twilio-haskell
+homepage:            https://github.com/markandrus/twiml-haskell
 license:             BSD3
 license-file:        LICENSE
 author:              Mark Andrus Roberts

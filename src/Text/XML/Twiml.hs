@@ -1,3 +1,4 @@
+{-#LANGUAGE EmptyDataDecls #-}
 {-#LANGUAGE FlexibleContexts #-}
 {-#LANGUAGE FlexibleInstances #-}
 {-#LANGUAGE FunctionalDependencies #-}
@@ -8,7 +9,7 @@
 {-#LANGUAGE TypeFamilies #-}
 {-#LANGUAGE UndecidableInstances #-}
 
-module Twiml
+module Text.XML.Twiml
   ( Twiml
   -- * Types
   -- ** @\<Response\>@
@@ -69,8 +70,8 @@ module Twiml
   , SmsAttributes(..)
   , sms
   , sms'
-  , Twiml.to
-  , Twiml.from
+  , Text.XML.Twiml.to
+  , Text.XML.Twiml.from
   , statusCallback
   , smsAttributes
   -- ** @\<Dial\>@
@@ -113,7 +114,7 @@ module Twiml
   , PauseAttributes(..)
   , pause
   , pause'
-  , Twiml.length
+  , Text.XML.Twiml.length
   , pauseAttributes
   -- * Lenses
   , HasLoop

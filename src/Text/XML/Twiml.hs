@@ -20,8 +20,9 @@ module Text.XML.Twiml
   , URL
   -- ** Method
   , Method(..)
-  -- ** Key
+  -- ** Keys and Digits
   , Key(..)
+  , PlayDigit(..)
   -- ** End
   , End
   , end
@@ -85,6 +86,18 @@ module Text.XML.Twiml
   , callerId
   , recordDial
   , dialAttributes
+  -- *** @\<Number\>@
+  , NumberAttributes(..)
+  -- *** @\<Sip\>@
+  , SipAttributes(..)
+  , Transport(..)
+  -- *** @\<Client\>@
+  , ClientAttributes(..)
+  -- *** @\<Conference\>@
+  , ConferenceAttributes(..)
+  , ConferenceBeep(..)
+  -- *** @\<Queue\>@
+  , QueueAttributes(..)
   -- * Secondary Verbs
   -- ** @\<Enqueue\>@
   , Enqueue
@@ -282,8 +295,172 @@ instance Show LangAlice where
   show ZhHK = "zh-HK"
   show ZhTW = "zh-TW"
 
--- FIXME: ...
-data DialNoun = DialNoun
+-- FIXME: Rename `PlayKey`.
+
+-- | See <https://www.twilio.com/docs/api/twiml/number#attributes>.
+data NumberAttributes = NumberAttributes
+  { numberSendDigits :: Maybe [PlayDigit]
+  , numberURL        :: Maybe URL
+  , numberMethod     :: Maybe Method
+  }
+
+defaultNumberAttributes :: NumberAttributes
+defaultNumberAttributes = NumberAttributes
+  { numberSendDigits = Nothing
+  , numberURL        = Nothing
+  , numberMethod     = Nothing
+  }
+
+-- | See <https://www.twilio.com/docs/api/twiml/sip#transport>.
+data Transport = TCP | UDP
+  deriving Show
+
+-- | See <https://www.twilio.com/docs/api/twiml/sip#attributes>.
+data SipAttributes = SipAttributes
+  { sipUsername  :: Maybe String
+  , sipPassword  :: Maybe String
+  , sipTransport :: Maybe Transport
+  , sipHeaders   :: Maybe String    -- NOTE: Under 1024 characters.
+  , sipURL       :: Maybe URL
+  , sipMethod    :: Maybe Method
+  }
+
+defaultSipAttributes :: SipAttributes
+defaultSipAttributes = SipAttributes
+  { sipUsername  = Nothing
+  , sipPassword  = Nothing
+  , sipTransport = Nothing
+  , sipHeaders   = Nothing
+  , sipURL       = Nothing
+  , sipMethod    = Nothing
+  }
+
+-- | See <https://www.twilio.com/docs/api/twiml/client#attributes>.
+data ClientAttributes = ClientAttributes
+  { clientURL    :: Maybe URL
+  , clientMethod :: Maybe Method
+  }
+
+defaultClientAttributes :: ClientAttributes
+defaultClientAttributes = ClientAttributes
+  { clientURL    = Nothing
+  , clientMethod = Nothing
+  }
+
+-- | See <https://www.twilio.com/docs/api/twiml/conference#attributes-beep>.
+data ConferenceBeep
+  = Yes
+  | No
+  | OnExit
+  | OnEnter
+
+instance Show ConferenceBeep where
+  show Yes     = "yes"
+  show No      = "no"
+  show OnExit  = "onExit"
+  show OnEnter = "onEnter"
+
+-- | See <https://www.twilio.com/docs/api/twiml/conference#attributes>.
+data ConferenceAttributes = ConferenceAttributes
+  { conferenceMuted           :: Maybe Bool
+  , conferenceBeep            :: Maybe Bool
+  , conferenceStartOnEnter    :: Maybe Bool
+  , conferenceEndOnExit       :: Maybe Bool
+  , conferenceWaitURL         :: Maybe URL
+  , conferenceWaitMethod      :: Maybe Method
+  , conferenceMaxParticipants :: Maybe Natural -- FIXME: Non-zero, less than 40.
+  }
+
+defaultConferenceAttributes :: ConferenceAttributes
+defaultConferenceAttributes = ConferenceAttributes
+  { conferenceMuted           = Nothing
+  , conferenceBeep            = Nothing
+  , conferenceStartOnEnter    = Nothing
+  , conferenceEndOnExit       = Nothing
+  , conferenceWaitURL         = Nothing
+  , conferenceWaitMethod      = Nothing
+  , conferenceMaxParticipants = Nothing
+  }
+
+-- | See <https://www.twilio.com/docs/api/twiml/queue#attributes>.
+data QueueAttributes = QueueAttributes
+  { queueURL    :: Maybe URL
+  , queueMethod :: Maybe Method
+  }
+
+defaultQueueAttributes :: QueueAttributes
+defaultQueueAttributes = QueueAttributes
+  { queueURL    = Nothing
+  , queueMethod = Nothing
+  }
+
+-- | See <https://www.twilio.com/docs/api/twiml/dial#nouns>.
+data DialNoun
+  = Number     NumberAttributes     String
+  | Sip        SipAttributes        URL    -- NOTE: URL must be under 255 characters.
+  | Client     ClientAttributes     String
+  | Conference ConferenceAttributes String
+  | Queue      QueueAttributes      String
+
+toArrowXml' :: ArrowXml a => DialNoun -> a n XmlTree
+toArrowXml' (Number attrs n)
+  = mkelem "Number"
+      (catMaybes
+        [ fmap (sattr "sendDigits" . concatMap show) $ numberSendDigits attrs
+        , fmap (sattr "url"        .         getURL) $ numberURL        attrs
+        , fmap (sattr "method"     .           show) $ numberMethod     attrs
+        ]
+      )
+      [txt n]
+toArrowXml' (Sip attrs url)
+  = mkelem "Sip"
+      (catMaybes
+        [ fmap (sattr "username" . show)   $ sipUsername attrs
+        , fmap (sattr "password" . show)   $ sipPassword attrs
+        , fmap (sattr "url"      . getURL) $ sipURL      attrs
+        , fmap (sattr "method"   . show)   $ sipMethod   attrs
+        ]
+      )
+    [txt . concat $ catMaybes
+      (
+        [ Just $ getURL url
+        , fmap ((:)  '?'           . show) $ sipHeaders   attrs
+        , fmap ((++) ";transport=" . show) $ sipTransport attrs
+        ]
+      )
+    ]
+toArrowXml' (Client attrs name)
+  = mkelem "Client"
+      (catMaybes
+        [ fmap (sattr "url"    . getURL) $ clientURL attrs
+        , fmap (sattr "method" . show)   $ clientMethod attrs
+        ]
+      )
+    [txt name]
+toArrowXml' (Conference attrs name)
+  = mkelem "Conference"
+      (catMaybes
+        [ fmap (sattr "muted" . show) $ conferenceMuted attrs
+        , fmap (sattr "beep"  . show) $ conferenceBeep  attrs
+        , fmap (sattr "startConferenceOnEnter" . show)
+            $ conferenceStartOnEnter attrs
+        , fmap (sattr "endConferenceOnExit" . show)
+            $ conferenceEndOnExit attrs
+        , fmap (sattr "waitURL"    . getURL) $ conferenceWaitURL attrs
+        , fmap (sattr "waitMethod" . show)   $ conferenceWaitMethod attrs
+        , fmap (sattr "maxParticipatns" . show)
+            $ conferenceMaxParticipants attrs
+        ]
+      )
+    [txt name]
+toArrowXml' (Queue attrs name)
+  = mkelem "Queue"
+      (catMaybes
+        [ fmap (sattr "url"    . getURL) $ queueURL    attrs
+        , fmap (sattr "method" . show)   $ queueMethod attrs
+        ]
+      )
+    [txt name]
 
 -- | The reason attribute takes the values \"rejected\" and \"busy.\" This tells
 -- Twilio what message to play when rejecting a call. Selecting \"busy\" will

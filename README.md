@@ -35,6 +35,4 @@ is transformed into
 TODO
 ----
 
-* Update the `Show` instance for `Response` to actually print the attributes of
-  each TwiML verb.
 * Define `DialNoun`.

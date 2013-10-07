@@ -134,6 +134,7 @@ import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens as L
 import Data.Functor.Foldable (Base, Fix(..), Foldable(..))
 import Data.Functor.Identity (Identity(..))
+import Data.Maybe (catMaybes)
 import Data.Natural (Natural)
 import Text.XML.HXT.Core hiding (loop)
 
@@ -199,6 +200,11 @@ data Voice
   = Man   (Maybe Lang)
   | Woman (Maybe Lang)
   | Alice (Maybe LangAlice)
+
+toTuple :: Voice -> (String, Maybe String)
+toTuple (Man   lang) = (show "man",   fmap show lang)
+toTuple (Woman lang) = (show "woman", fmap show lang)
+toTuple (Alice lang) = (show "alice", fmap show lang)
 
 -- | Languages spoken by voices 'Man' and 'Woman'. See
 -- <https://www.twilio.com/docs/api/twiml/say#attributes-manwoman>.
@@ -276,6 +282,7 @@ instance Show LangAlice where
   show ZhHK = "zh-HK"
   show ZhTW = "zh-TW"
 
+-- FIXME: ...
 data DialNoun = DialNoun
 
 -- | The reason attribute takes the values \"rejected\" and \"busy.\" This tells
@@ -329,14 +336,44 @@ instance HasLoop (Say p) where
   getLoop = (^. sayAttributes . L.to sayLoop)
   setLoop t v = over sayAttributes (flip setSayLoop v) t
 
+-- | The ‘digits’ attribute lets you play DTMF tones during a call. See
+-- <https://www.twilio.com/docs/api/twiml/play#attributes-digits>.
+data PlayDigit
+  = D0 -- ^ 0
+  | D1 -- ^ 1
+  | D2 -- ^ 2
+  | D3 -- ^ 3
+  | D4 -- ^ 4
+  | D5 -- ^ 5
+  | D6 -- ^ 6
+  | D7 -- ^ 7
+  | D8 -- ^ 8
+  | D9 -- ^ 9
+  | W  -- ^ w
+
+instance Show PlayDigit where
+  show D0 = "0"
+  show D1 = "1"
+  show D2 = "2"
+  show D3 = "3"
+  show D4 = "4"
+  show D5 = "5"
+  show D6 = "6"
+  show D7 = "7"
+  show D8 = "8"
+  show D9 = "9"
+  show W  = "w"
+
 -- | See <https://www.twilio.com/docs/api/twiml/play#attributes>.
 data PlayAttributes = PlayAttributes
   { playLoop :: Maybe Natural
+  , playDigits' :: Maybe [PlayDigit]
   }
 
 defaultPlayAttributes :: PlayAttributes
 defaultPlayAttributes = PlayAttributes
-  { playLoop = Nothing
+  { playLoop    = Nothing
+  , playDigits' = Nothing
   }
 
 playAttributes :: Lens' (Play p) PlayAttributes
@@ -351,6 +388,13 @@ setPlayLoop attrs loop = attrs { playLoop = Just loop }
 instance HasLoop (Play p) where
   getLoop = (^. playAttributes . L.to playLoop)
   setLoop t v = over playAttributes (flip setPlayLoop v) t
+
+setPlayDigits :: PlayAttributes -> [PlayDigit] -> PlayAttributes
+setPlayDigits attrs digits = attrs { playDigits' = Just digits }
+
+playDigits :: Lens (Play p) (Play p) (Maybe [PlayDigit]) [PlayDigit]
+playDigits = lens (^. playAttributes . L.to playDigits')
+  (\t v -> over playAttributes (flip setPlayDigits v) t)
 
 -- | See <https://www.twilio.com/docs/api/twiml/gather#attributes>.
 data GatherAttributes = GatherAttributes
@@ -1020,32 +1064,76 @@ toArrowXmls EndF
   = []
 toArrowXmls (SayF attrs n a)
   = mkelem "Say"
-      []
+      (catMaybes
+        [ fmap (sattr "voice" . fst . toTuple) $ sayVoice attrs
+        , fmap (snd . toTuple) (sayVoice attrs) >>= fmap (sattr "language")
+        , fmap (sattr "loop" . show) $ sayLoop attrs
+        ]
+      )
       [txt n]
   : a
 toArrowXmls (PlayF attrs url a)
   = mkelem "Play"
-      []
+      (catMaybes
+        [ fmap (sattr "loop" . show) $ playLoop attrs
+        , fmap (sattr "digits" . concatMap show) $ playDigits' attrs
+        ]
+      )
       [txt $ getURL url]
   : a
 toArrowXmls (GatherF attrs n a)
   = mkelem "Gather"
-      []
+      (catMaybes
+        [ fmap (sattr "action"      . show) $ gatherAction      attrs
+        , fmap (sattr "method"      . show) $ gatherMethod      attrs
+        , fmap (sattr "timeout"     . show) $ gatherTimeout     attrs
+        , fmap (sattr "finishOnKey" . show) $ gatherFinishOnKey attrs
+        , fmap (sattr "numDigits"   . show) $ gatherNumDigits   attrs
+        ]
+      )
       (cata toArrowXmls $ toTwiml' n)
   : a
 toArrowXmls (RecordF attrs url a)
   = mkelem "Record"
-      []
+      (catMaybes
+        [ fmap (sattr "action"      . show) $ recordAction      attrs
+        , fmap (sattr "method"      . show) $ recordMethod      attrs
+        , fmap (sattr "timeout"     . show) $ recordTimeout     attrs
+        , fmap (sattr "finishOnKey" . show) $ recordFinishOnKey attrs
+        , fmap (sattr "maxLength"   . show) $ recordMaxLength   attrs
+        , fmap (sattr "transcribe"  . show) $ recordTranscribe  attrs
+        , fmap (sattr "transcribeCallback" . getURL)
+            $ recordTranscribeCallback attrs
+        , fmap (sattr "playBeep"    . show) $ recordPlayBeep    attrs
+        ]
+      )
       [txt $ getURL url]
   : a
 toArrowXmls (SmsF attrs n a)
   = mkelem "Sms"
-      []
+      (catMaybes
+        [ fmap (sattr "to"     . show) $ smsTo     attrs
+        , fmap (sattr "from"   . show) $ smsFrom   attrs
+        , fmap (sattr "action" . show) $ smsAction attrs
+        , fmap (sattr "method" . show) $ smsMethod attrs
+        , fmap (sattr "statusCallback" . getURL) $ smsStatusCallback attrs
+        ]
+      )
       [txt n]
   : a
 toArrowXmls (DialF attrs n a)
   = mkelem "Dial"
-      []
+      (catMaybes
+        [ fmap (sattr "action"       . show) $ dialAction       attrs
+        , fmap (sattr "method"       . show) $ dialMethod       attrs
+        , fmap (sattr "timeout"      . show) $ dialTimeout      attrs
+        , fmap (sattr "hangupOnStar" . show) $ dialHangupOnStar attrs
+        , fmap (sattr "timeLimit"    . show) $ dialTimeLimit    attrs
+        , fmap (sattr "callerId"     . show) $ dialCallerId     attrs
+        , fmap (sattr "record"       . show) $ dialRecord       attrs
+        ]
+      )
+      -- FIXME: ...
       []
   : a
 toArrowXmls (EnqueueF n a)
@@ -1060,16 +1148,25 @@ toArrowXmls HangupF
   : []
 toArrowXmls (RedirectF attrs url)
   = mkelem "Redirect"
-      []
+      (catMaybes
+        [ fmap (sattr "method" . show) $ redirectMethod attrs
+        ]
+      )
       [txt $ getURL url]
   : []
 toArrowXmls (RejectF attrs)
   = aelem "Reject"
-      []
+      (catMaybes
+        [ fmap (sattr "reason" . show) $ rejectReason attrs
+        ]
+      )
   : []
 toArrowXmls (PauseF attrs a)
   = aelem "Pause"
-      []
+      (catMaybes
+        [ fmap (sattr "length" . show) $ pauseLength attrs
+        ]
+      )
   : a
 
 {- Lenses -}

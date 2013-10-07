@@ -10,12 +10,18 @@
 
 module Twiml
   ( Twiml
-  , URL
-  , Method
-  , Key
+  -- * Types
   -- ** @\<Response\>@
   , Response
   , respond
+  , toArrowXml
+  -- ** URL
+  , URL
+  -- ** Method
+  , Method(..)
+  -- ** Key
+  , Key(..)
+  -- ** End
   , End
   , end
   -- * Primary Verbs
@@ -25,58 +31,53 @@ module Twiml
   , Voice(..)
   , Lang(..)
   , LangAlice(..)
-  , sayAttributes
   , say
   , say'
-  -- *** Lenses
   , voice
+  , sayAttributes
   -- ** @\<Play\>@
   , Play
   , PlayAttributes(..)
-  , playAttributes
   , play
   , play'
+  , playAttributes
   -- ** @\<Gather\>@
   , Gather
   , GatherAttributes(..)
-  , gatherAttributes
   , gather
   , gather'
-  -- *** Lenses
   , numDigits
+  , gatherAttributes
   -- ** @\<Record\>@
   , Record
   , RecordAttributes(..)
-  , recordAttributes
   , record
   , record'
-  -- *** Lenses
   , maxLength
   , transcribe
   , transcribeCallback
   , playBeep
+  , recordAttributes
   -- ** @\<Sms\>@
   , Sms
   , SmsAttributes(..)
-  , smsAttributes
   , sms
   , sms'
-  -- *** Lenses
   , Twiml.to
   , Twiml.from
   , statusCallback
+  , smsAttributes
   -- ** @\<Dial\>@
   , Dial
   , DialAttributes(..)
   , DialNoun
-  , dialAttributes
   , dial
   , dial'
-  -- *** Lenses
   , hangupOnStar
   , timeLimit
   , callerId
   , recordA
+  , dialAttributes
   -- * Secondary Verbs
   -- ** @\<Enqueue\>@
   , Enqueue
@@ -90,26 +91,24 @@ module Twiml
   -- ** @\<Redirect\>@
   , Redirect
   , RedirectAttributes(..)
-  , redirectAttributes
   , redirect
   , redirect'
+  , redirectAttributes
   -- ** @\<Reject\>@
   , Reject
   , RejectAttributes(..)
   , Reason
-  , rejectAttributes
   , reject
   , reject'
-  -- *** Lenses
   , reason
+  , rejectAttributes
   -- ** @\<Pause\>@
   , Pause
   , PauseAttributes(..)
-  , pauseAttributes
   , pause
   , pause'
-  -- *** Lenses
   , Twiml.length
+  , pauseAttributes
   -- * Lenses
   , HasLoop
   , loop
@@ -129,6 +128,11 @@ import Control.Lens as L
 import Data.Functor.Foldable (Base, Fix(..), Foldable(..))
 import Data.Functor.Identity (Identity(..))
 import Data.Natural (Natural)
+import Text.XML.HXT.Core hiding (loop)
+
+-- | The following allows us to place the constraint @(f a :/~ GatherNoun a)@ on
+-- TwiML verbs that cannot be embedded in @\<Gather\>@. See
+-- <http://stackoverflow.com/a/17794490>.
 
 data Yes
 
@@ -155,18 +159,18 @@ data Method = GET | POST
   deriving Show
 
 data Key
-  = K0      -- ^ @0@
-  | K1      -- ^ @1@
-  | K2      -- ^ @2@
-  | K3      -- ^ @3@
-  | K4      -- ^ @4@
-  | K5      -- ^ @5@
-  | K6      -- ^ @6@
-  | K7      -- ^ @7@
-  | K8      -- ^ @8@
-  | K9      -- ^ @9@
-  | KStar   -- ^ @*@
-  | KPound  -- ^ @#@
+  = K0      -- ^ 0
+  | K1      -- ^ 1
+  | K2      -- ^ 2
+  | K3      -- ^ 3
+  | K4      -- ^ 4
+  | K5      -- ^ 5
+  | K6      -- ^ 6
+  | K7      -- ^ 7
+  | K8      -- ^ 8
+  | K9      -- ^ 9
+  | KStar   -- ^ \*
+  | KPound  -- ^ #
 
 instance Show Key where
   show K0     = "0"
@@ -267,10 +271,10 @@ instance Show LangAlice where
 
 data DialNoun = DialNoun
 
--- | The reason attribute takes the values "rejected" and "busy." This tells
--- Twilio what message to play when rejecting a call. Selecting "busy" will play
--- a busy signal to the caller, while selecting "rejected" will play a standard
--- not-in-service response.
+-- | The reason attribute takes the values \"rejected\" and \"busy.\" This tells
+-- Twilio what message to play when rejecting a call. Selecting \"busy\" will
+-- play a busy signal to the caller, while selecting \"rejected\" will play a
+-- standard not-in-service response.
 -- See <https://www.twilio.com/docs/api/twiml/reject#attributes-reason>
 data Reason = Rejected | Busy
 
@@ -748,33 +752,61 @@ data TwimlF p a where
             -> TwimlF p a
 
 instance Functor (TwimlF p) where
-  fmap = undefined
-{-
-  fmap _  EndF         = EndF
-  fmap f (SayF      a) = SayF      $ f a
-  fmap f (PlayF     a) = PlayF     $ f a
-  fmap f (GatherF n a) = GatherF n $ f a
--}
+  fmap _  EndF                   = EndF
+  fmap f (SayF      attrs n   a) = SayF      attrs n   $ f a
+  fmap f (PlayF     attrs url a) = PlayF     attrs url $ f a
+  fmap f (GatherF   attrs n   a) = GatherF   attrs n   $ f a
+  fmap f (RecordF   attrs url a) = RecordF   attrs url $ f a
+  fmap f (SmsF      attrs n   a) = SmsF      attrs n   $ f a
+  fmap f (DialF     attrs n   a) = DialF     attrs n   $ f a
+  fmap f (EnqueueF        n   a) = EnqueueF        n   $ f a
+  fmap _  LeaveF                 = LeaveF
+  fmap _  HangupF                = HangupF
+  fmap _ (RedirectF attrs url  ) = RedirectF attrs url
+  fmap _ (RejectF   attrs      ) = RejectF   attrs
+  fmap f (PauseF    attrs     a) = PauseF    attrs     $ f a
 
 newtype Twiml' p = Twiml' { fromTwiml' :: Fix (TwimlF p) }
 
+{- | TwiML is a set of instructions you can use to tell Twilio what to do
+   when you receive an incoming call or SMS. See
+   <https://www.twilio.com/docs/api/twiml>.
+
+   This library provides a number of smart constructors for creating 'Twiml', as
+   well as conversion functions for interop with other Haskell XML libraries,
+   including HXT.
+
+   As an example, the following Haskell code,
+
+@
+example
+  = respond
+  . sayMan \"Hello, world\"
+  $ hangup
+@
+
+   Is transformed into,
+
+@
+\<?xml version=\"1.0\" encoding=\"UTF-8\"?\>
+\<Response\>
+  \<Say voice=\"man\">Hello, world\</Say\>
+  \<Hangup/\>
+\</Response\>
+@
+
+-}
 class Twiml p t | t -> p where
   toTwiml' :: t -> Twiml' p
 
 type instance Base (Twiml' p) = TwimlF p
 
 instance forall p. Foldable (Twiml' p) where
-  project (Twiml' (Fix t)) = go t
+  project = fmap Twiml' . unFix . fromTwiml'
     where
-      go = undefined
-{-
-      go  EndF         = EndF
-      go (SayF      a) = SayF      $ Twiml' a
-      go (PlayF     a) = PlayF     $ Twiml' a
-      go (GatherF n a) = GatherF n $ Twiml' a
--}
+      unFix (Fix f) = f
 
--- | Useful for terminating 'Twiml'.
+-- | 'End' is not a TwiML verb, but it is useful for terminating 'Twiml'.
 newtype End p = End { fromEnd :: Twiml' p }
 
 instance Twiml p (End p) where toTwiml' = fromEnd
@@ -793,6 +825,27 @@ say = say' defaultSayAttributes
 
 say' :: Twiml p t => SayAttributes -> String -> t -> Say p
 say' attrs n = Say . Twiml' . Fix . SayF attrs n . fromTwiml' . toTwiml'
+
+sayMan :: Twiml p t => String -> t -> Say p
+sayMan = say' (defaultSayAttributes { sayVoice = Just $ Man Nothing })
+
+sayMan' :: Twiml p t => Lang -> String -> t -> Say p
+sayMan' lang
+  = say' (defaultSayAttributes { sayVoice = Just . Man $ Just lang })
+
+sayWoman :: Twiml p t => String -> t -> Say p
+sayWoman = say' (defaultSayAttributes { sayVoice = Just $ Woman Nothing })
+
+sayWoman' :: Twiml p t => Lang -> String -> t -> Say p
+sayWoman' lang
+  = say' (defaultSayAttributes { sayVoice = Just . Woman $ Just lang })
+
+sayAlice :: Twiml p t => String -> t -> Say p
+sayAlice = say' (defaultSayAttributes { sayVoice = Just $ Alice Nothing })
+
+sayAlice' :: Twiml p t => LangAlice -> String -> t -> Say p
+sayAlice' lang
+  = say' (defaultSayAttributes { sayVoice = Just . Alice $ Just lang })
 
 -- | The @\<Play\>@ verb plays an audio file back to the caller. Twilio
 -- retrieves the file from a URL that you provide. See
@@ -883,7 +936,7 @@ newtype Leave p = Leave { fromLeave :: Twiml' p }
 
 instance Twiml p (Leave p) where toTwiml' = fromLeave
 
-leave :: (Twiml p t, NotGatherNoun p) => Leave p
+leave :: NotGatherNoun p => Leave p
 leave = Leave . Twiml' $ Fix LeaveF
 
 -- | The @\<Hangup\>@ verb ends a call. See
@@ -892,7 +945,7 @@ newtype Hangup p = Hangup { fromHangup :: Twiml' p }
 
 instance Twiml p (Hangup p) where toTwiml' = fromHangup
 
-hangup :: (Twiml p t, NotGatherNoun p) => Hangup p
+hangup :: NotGatherNoun p => Hangup p
 hangup = Hangup . Twiml' $ Fix HangupF
 
 -- | The @\<Redirect\>@ verb transfers control of a call to the TwiML at a
@@ -934,26 +987,84 @@ pause' attrs = Pause . Twiml' . Fix . PauseF attrs . fromTwiml' . toTwiml'
 
 {- Response -}
 
--- | The root element of Twilio's XML Markup is the @\<Response\>@ element. In
--- any TwiML response to a Twilio request, all verb elements must be nested
--- within this element. Any other structure is considered invalid. See
+-- | The root element of Twilio's XML Markup is the @\<Response\>@ element. See
 -- <https://www.twilio.com/docs/api/twiml/your_response#response-element>.
 newtype Response = Response { fromResponse :: Twiml' Response }
+
+instance Show Response where
+  show t
+    = unlines
+    . flip runLA ()
+    $ toArrowXml t >>> writeDocumentToString
+      [ withXmlPi True
+      , withOutputEncoding utf8
+      , withIndent True
+      ]
 
 respond :: Twiml Response t => t -> Response
 respond = Response . toTwiml'
 
-instance Show Response where
-  show = unlines . cata f . fromResponse
-    where
-      f :: TwimlF p [String] -> [String]
-      f = undefined
-{-
-      f  EndF         = ["End"]
-      f (SayF a)      =  "Say"    : a
-      f (PlayF a)     =  "Play"   : a
-      f (GatherF n a) =  "Gather" : map ((:) '\t') (cata f $ toTwiml' n) ++ a
--}
+toArrowXml :: ArrowXml a => Response -> a n XmlTree
+toArrowXml
+  = root [] . return . selem "Response" . cata toArrowXmls . fromResponse
+
+toArrowXmls :: ArrowXml a => TwimlF p [a n XmlTree] -> [a n XmlTree]
+toArrowXmls EndF
+  = []
+toArrowXmls (SayF attrs n a)
+  = mkelem "Say"
+      []
+      [txt n]
+  : a
+toArrowXmls (PlayF attrs url a)
+  = mkelem "Play"
+      []
+      [txt $ getURL url]
+  : a
+toArrowXmls (GatherF attrs n a)
+  = mkelem "Gather"
+      []
+      (cata toArrowXmls $ toTwiml' n)
+  : a
+toArrowXmls (RecordF attrs url a)
+  = mkelem "Record"
+      []
+      [txt $ getURL url]
+  : a
+toArrowXmls (SmsF attrs n a)
+  = mkelem "Sms"
+      []
+      [txt n]
+  : a
+toArrowXmls (DialF attrs n a)
+  = mkelem "Dial"
+      []
+      []
+  : a
+toArrowXmls (EnqueueF n a)
+  = selem "Enqueue"
+      [txt n]
+  : a
+toArrowXmls LeaveF
+  = eelem "Leave"
+  : []
+toArrowXmls HangupF
+  = eelem "Hangup"
+  : []
+toArrowXmls (RedirectF attrs url)
+  = mkelem "Redirect"
+      []
+      [txt $ getURL url]
+  : []
+toArrowXmls (RejectF attrs)
+  = aelem "Reject"
+      []
+  : []
+toArrowXmls (PauseF attrs a)
+  = aelem "Pause"
+      []
+  : a
+
 {- Lenses -}
 
 class HasLoop t where
@@ -992,6 +1103,11 @@ finishOnKey :: HasFinishOnKey t => Lens t t (Maybe Key) Key
 finishOnKey = lens getFinishOnKey setFinishOnKey
 
 {- Examples -}
+
+example
+  = respond
+  . sayMan "Hello, world!"
+  $ hangup
 
 {-
 example

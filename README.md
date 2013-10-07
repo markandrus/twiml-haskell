@@ -8,12 +8,12 @@ This package provides a library for constructing
 $ cabal install twiml
 ```
 
-Documentation soon to be available on Hackage. For now, see [http://markandrus.github.io/twiml-haskell/](http://markandrus.github.io/twiml-haskell/).
+Documentation soon to be available on Hackage. For now, see [markandrus.github.io/twiml-haskell](http://markandrus.github.io/twiml-haskell).
 
 Example
 -------
 
-The follow Haskell code
+The following Haskell code
 
 ```hs
 example

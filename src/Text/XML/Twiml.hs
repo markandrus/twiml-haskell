@@ -49,6 +49,7 @@ module Text.XML.Twiml
   , play
   , play'
   , playAttributes
+  , digits
   -- ** @\<Gather\>@
   , Gather
   , GatherAttributes(..)
@@ -215,9 +216,9 @@ data Voice
   | Alice (Maybe LangAlice)
 
 toTuple :: Voice -> (String, Maybe String)
-toTuple (Man   lang) = (show "man",   fmap show lang)
-toTuple (Woman lang) = (show "woman", fmap show lang)
-toTuple (Alice lang) = (show "alice", fmap show lang)
+toTuple (Man   lang) = ("man",   fmap show lang)
+toTuple (Woman lang) = ("woman", fmap show lang)
+toTuple (Alice lang) = ("alice", fmap show lang)
 
 -- | Languages spoken by voices 'Man' and 'Woman'. See
 -- <https://www.twilio.com/docs/api/twiml/say#attributes-manwoman>.
@@ -569,8 +570,8 @@ instance HasLoop (Play p) where
 setPlayDigits :: PlayAttributes -> [PlayDigit] -> PlayAttributes
 setPlayDigits attrs digits = attrs { playDigits' = Just digits }
 
-playDigits :: Lens (Play p) (Play p) (Maybe [PlayDigit]) [PlayDigit]
-playDigits = lens (^. playAttributes . L.to playDigits')
+digits :: Lens (Play p) (Play p) (Maybe [PlayDigit]) [PlayDigit]
+digits = lens (^. playAttributes . L.to playDigits')
   (\t v -> over playAttributes (flip setPlayDigits v) t)
 
 -- | See <https://www.twilio.com/docs/api/twiml/gather#attributes>.
@@ -960,8 +961,10 @@ data TwimlF p a where
             -> Either DialNoun String
             -> a
             -> TwimlF p a
+  -- FIXME: Overlooked EnqueueAttributes
   EnqueueF  :: NotGatherNoun p
-            => String
+            => EnqueueAttributes
+            -> String
             -> a
             -> TwimlF p a
   LeaveF    :: NotGatherNoun p
@@ -979,6 +982,22 @@ data TwimlF p a where
             -> a
             -> TwimlF p a
 
+-- | See <https://www.twilio.com/docs/api/twiml/enqueue#attributes>.
+data EnqueueAttributes = EnqueueAttributes
+  { enqueueAction        :: Maybe URL
+  , enqueueMethod        :: Maybe Method
+  , enqueueWaitURL       :: Maybe URL
+  , enqueueWaitURLMethod :: Maybe Method
+  }
+
+defaultEnqueueAttributes :: EnqueueAttributes
+defaultEnqueueAttributes = EnqueueAttributes
+  { enqueueAction        = Nothing
+  , enqueueMethod        = Nothing
+  , enqueueWaitURL       = Nothing
+  , enqueueWaitURLMethod = Nothing
+  }
+
 instance Functor (TwimlF p) where
   fmap _  EndF                   = EndF
   fmap f (SayF      attrs n   a) = SayF      attrs n   $ f a
@@ -987,7 +1006,7 @@ instance Functor (TwimlF p) where
   fmap f (RecordF   attrs url a) = RecordF   attrs url $ f a
   fmap f (SmsF      attrs n   a) = SmsF      attrs n   $ f a
   fmap f (DialF     attrs n   a) = DialF     attrs n   $ f a
-  fmap f (EnqueueF        n   a) = EnqueueF        n   $ f a
+  fmap f (EnqueueF  attrs n   a) = EnqueueF  attrs n   $ f a
   fmap _  LeaveF                 = LeaveF
   fmap _  HangupF                = HangupF
   fmap _ (RedirectF attrs url  ) = RedirectF attrs url
@@ -1075,6 +1094,30 @@ sayAlice' :: Twiml p t => LangAlice -> String -> t -> Say p
 sayAlice' lang
   = say' (defaultSayAttributes { sayVoice = Just . Alice $ Just lang })
 
+sayExample1
+  = respond
+  . sayWoman' French "Chapeau!"
+  $ end
+
+{-
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="woman" language="fr">Chapeau!</Say>
+</Response>
+-}
+
+sayExample2
+  = respond
+  . sayAlice' FrFR "Chapeau!"
+  $ end
+
+{-
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="alice" language="fr-FR">Chapeau!</Say>
+</Response>
+-}
+
 -- | The @\<Play\>@ verb plays an audio file back to the caller. Twilio
 -- retrieves the file from a URL that you provide. See
 -- <https://www.twilio.com/docs/api/twiml/play>.
@@ -1154,7 +1197,7 @@ newtype Enqueue p = Enqueue { fromEnqueue :: Twiml' p }
 instance Twiml p (Enqueue p) where toTwiml' = fromEnqueue
 
 enqueue :: (Twiml p t, NotGatherNoun p) => String -> t -> Enqueue p
-enqueue name = Enqueue . Twiml' . Fix . EnqueueF name . fromTwiml' . toTwiml'
+enqueue name = Enqueue . Twiml' . Fix . EnqueueF defaultEnqueueAttributes name . fromTwiml' . toTwiml'
 
 -- | The @\<Leave\>@ verb transfers control of a call that is in a queue so that
 -- the caller exits the queue and execution continues with the next verb after
@@ -1306,15 +1349,18 @@ toArrowXmls (DialF attrs n a)
         , fmap (sattr "timeout"      . show) $ dialTimeout      attrs
         , fmap (sattr "hangupOnStar" . show) $ dialHangupOnStar attrs
         , fmap (sattr "timeLimit"    . show) $ dialTimeLimit    attrs
-        , fmap (sattr "callerId"     . show) $ dialCallerId     attrs
+        , fmap (sattr "callerId"           ) $ dialCallerId     attrs
         , fmap (sattr "record"       . show) $ dialRecord       attrs
         ]
       )
-      -- FIXME: ...
-      []
+      [either toArrowXml' txt $ n]
   : a
-toArrowXmls (EnqueueF n a)
-  = selem "Enqueue"
+toArrowXmls (EnqueueF attrs n a)
+  = mkelem "Enqueue"
+      (catMaybes
+        [
+        ]
+      )
       [txt n]
   : a
 toArrowXmls LeaveF

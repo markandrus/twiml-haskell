@@ -16,7 +16,7 @@ build-type:          Simple
 cabal-version:       >=1.8
 
 library
-  exposed-modules:     Text.XML.Twiml
+  exposed-modules:     Text.XML.Twiml, Text.XML.Twiml.Internal
   hs-source-dirs:      src
   -- other-modules:       
-  build-depends:       base ==4.6.*, lens ==3.9.*, recursion-schemes ==3.0.*, transformers ==0.3.*, natural-numbers ==0.1.*, hxt ==9.3.*
+  build-depends:       base ==4.6.*

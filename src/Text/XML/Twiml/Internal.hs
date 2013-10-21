@@ -8,11 +8,115 @@
 {-#LANGUAGE TypeFamilies #-}
 {-#LANGUAGE UndecidableInstances #-}
 
-module Text.XML.Twiml.Internal where
+module Text.XML.Twiml.Internal
+  ( Twiml(..)
+  , Twiml'
+  , Fix(..)
+  , TwimlF(..)
+    -- * Types
+  , URL
+  , Method
+  , Key
+  , PlayDigit
+  , Reason
+  , Voice(..)
+  , Lang(..)
+  , LangAlice(..)
+  , Natural
+  , DialNoun(..)
+  , ConferenceBeep(..)
+  , Transport(..)
+  , GatherNoun
+  , NotGatherNoun
+  , Base
+  , Foldable
+    -- * Primary Verbs
+    -- ** @\<Say\>@
+  , SayAttributes(..)
+  , defaultSayAttributes
+  , setSayVoice
+  , setSayLoop
+    -- ** @\<Play\>@
+  , PlayAttributes(..)
+  , defaultPlayAttributes
+  , setPlayLoop
+  , setPlayDigits
+    -- ** @\<Gather\>@
+  , GatherAttributes(..)
+  , defaultGatherAttributes
+  , setGatherAction
+  , setGatherMethod
+  , setGatherTimeout
+  , setGatherFinishOnKey
+  , setGatherNumDigits
+    -- ** @\<Record\>@
+  , RecordAttributes(..)
+  , defaultRecordAttributes
+  , setRecordAction
+  , setRecordMethod
+  , setRecordTimeout
+  , setRecordFinishOnKey
+  , setRecordMaxLength
+  , setRecordTranscribe
+  , setRecordTranscribeCallback
+  , setRecordPlayBeep
+    -- ** @\<Sms\>@
+  , SmsAttributes(..)
+  , defaultSmsAttributes
+  , setSmsTo
+  , setSmsFrom
+  , setSmsAction
+  , setSmsMethod
+  , setSmsStatusCallback
+    -- ** @\<Dial\>@
+  , DialAttributes(..)
+  , defaultDialAttributes
+  , setDialAction
+  , setDialMethod
+  , setDialTimeout
+  , setDialHangupOnStar
+  , setDialTimeLimit
+  , setDialCallerId
+  , setDialRecord
+    -- *** @\<Number\>@
+  , NumberAttributes(..)
+  , defaultNumberAttributes
+    -- *** @\<Sip\>@
+  , SipAttributes(..)
+  , defaultSipAttributes
+    -- *** @\<Client\>@
+  , ClientAttributes(..)
+  , defaultClientAttributes
+    -- *** @\<Conference\>@
+  , ConferenceAttributes(..)
+  , defaultConferenceAttributes
+    -- *** @\<Queue\>@
+  , QueueAttributes(..)
+  , defaultQueueAttributes
+    -- * Secondary Verbs
+    -- ** @\<Enqueue\>@
+  , EnqueueAttributes(..)
+  , defaultEnqueueAttributes
+    -- ** @\<Redirect\>@
+  , RedirectAttributes(..)
+  , defaultRedirectAttributes
+  , setRedirectMethod
+    -- ** @\<Reject\>@
+  , RejectAttributes(..)
+  , defaultRejectAttributes
+  , setRejectReason
+    -- ** @\<Pause\>@
+  , PauseAttributes(..)
+  , defaultPauseAttributes
+  , setPauseLength
+    -- * Lenses
+  , Lens
+  , lens
+  ) where
 
 type Natural = Int
 
-{- Lens -}
+{- Basic Lens Functionality -}
 
 type Lens s t a b = forall f. Functor f => (a -> f b) -> s -> f t
 
@@ -22,7 +126,7 @@ lens sa sbt afb s = fmap (sbt s) $ afb (sa s)
 
 {- Fix and Foldable -}
 
--- The following definitions were extracted from the recursion-schemes package.
+-- $fixAndFoldable The following definitions were extracted from the recursion-schemes package.
 
 newtype Fix f = Fix { unFix :: f (Fix f) }
 
@@ -53,7 +157,7 @@ instance TypeCast No b => TypeEq x y b
 
 {- TwimlF -}
 
--- | This is the @Functor@ we use when folding 'Twiml'.
+-- | This is the 'Functor' we use when folding 'Twiml'.
 data TwimlF p a where
   EndF      :: TwimlF p a
   SayF      :: SayAttributes

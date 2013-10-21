@@ -5,27 +5,26 @@
 
 module Text.XML.Twiml
   ( Twiml
-  -- * Types
-  -- ** @\<Response\>@
+  -- * @\<Response\>@
   , Response
   , respond
-  -- ** URL
-  , URL
-  -- ** Method
-  , Method(..)
-  -- ** Keys and Digits
-  , Key(..)
-  , PlayDigit(..)
-  -- ** End
+  -- * End
   , End
   , end
+  -- * Types
+  , URL
+  , Method(..)
+  , Key(..)
+  , PlayDigit(..)
   -- * Primary Verbs
   -- ** @\<Say\>@
   , Say
   , SayAttributes(..)
+  , sayAttributes
   , Voice(..)
   , Lang(..)
   , LangAlice(..)
+  , voice
   , say
   , say'
   , sayMan
@@ -34,52 +33,50 @@ module Text.XML.Twiml
   , sayWoman'
   , sayAlice
   , sayAlice'
-  , voice
-  , sayAttributes
   -- ** @\<Play\>@
   , Play
   , PlayAttributes(..)
-  , play
-  , play'
   , playAttributes
   , digits
+  , play
+  , play'
   -- ** @\<Gather\>@
   , Gather
   , GatherAttributes(..)
+  , gatherAttributes
+  , numDigits
   , gather
   , gather'
-  , numDigits
-  , gatherAttributes
   -- ** @\<Record\>@
   , Record
   , RecordAttributes(..)
-  , record
-  , record'
+  , recordAttributes
   , maxLength
   , transcribe
   , transcribeCallback
   , playBeep
-  , recordAttributes
+  , record
+  , record'
   -- ** @\<Sms\>@
   , Sms
   , SmsAttributes(..)
+  , smsAttributes
+  , statusCallback
+  , to
+  , from
   , sms
   , sms'
-  , Text.XML.Twiml.to
-  , Text.XML.Twiml.from
-  , statusCallback
-  , smsAttributes
   -- ** @\<Dial\>@
   , Dial
   , DialAttributes(..)
+  , dialAttributes
   , DialNoun(..)
-  , dial
-  , dial'
   , hangupOnStar
   , timeLimit
   , callerId
   , recordDial
-  , dialAttributes
+  , dial
+  , dial'
   -- *** @\<Number\>@
   , NumberAttributes(..)
   -- *** @\<Sip\>@
@@ -105,25 +102,26 @@ module Text.XML.Twiml
   -- ** @\<Redirect\>@
   , Redirect
   , RedirectAttributes(..)
+  , redirectAttributes
   , redirect
   , redirect'
-  , redirectAttributes
   -- ** @\<Reject\>@
   , Reject
   , RejectAttributes(..)
+  , rejectAttributes
   , Reason(..)
+  , reason
   , reject
   , reject'
-  , reason
-  , rejectAttributes
   -- ** @\<Pause\>@
   , Pause
   , PauseAttributes(..)
+  , pauseAttributes
+  , Text.XML.Twiml.length
   , pause
   , pause'
-  , Text.XML.Twiml.length
-  , pauseAttributes
   -- * Lenses
+  , Lens
   , HasLoop
   , loop
   , HasAction

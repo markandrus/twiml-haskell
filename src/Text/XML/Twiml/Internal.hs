@@ -15,10 +15,10 @@ module Text.XML.Twiml.Internal
   , TwimlF(..)
     -- * Types
   , URL
-  , Method
-  , Key
-  , PlayDigit
-  , Reason
+  , Method(..)
+  , Key(..)
+  , PlayDigit(..)
+  , Reason(..)
   , Voice(..)
   , Lang(..)
   , LangAlice(..)
@@ -113,6 +113,9 @@ module Text.XML.Twiml.Internal
   , Lens
   , lens
   ) where
+
+import Data.Maybe (catMaybes)
+import Text.XML.Light
 
 type Natural = Int
 
@@ -237,6 +240,52 @@ class Twiml p t | t -> p where
 
 instance Twiml p (Twiml' p) where
   toTwiml' = id
+
+instance Show (Twiml' p) where
+  show twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" ++ (ppElement $ toXML twiml) ++ "\n"
+
+(&) :: a -> (a -> b) -> b
+a & f = f a
+{-# INLINE (&) #-}
+
+string :: String -> Content
+string str = Text $ CData CDataText str Nothing
+
+toXML :: Twiml' p -> Element
+toXML = unode "Response" . cata go where
+  go EndF = []
+  go (SayF a b c) = unode "Say" (string b) & add_attrs (catMaybes
+    [ Nothing -- Just $ Attr (unqual "") ""
+    ]) : c
+  go (PlayF a b c) = unode "Play" (string $ getURL b) & add_attrs (catMaybes
+    [ Nothing
+    ]) : c
+  go (GatherF a b c) = unode "Gather" (toXML b) & add_attrs (catMaybes
+    [ Nothing
+    ]) : c
+  go (RecordF a b c) = unode "Record" (string $ getURL b) & add_attrs (catMaybes
+    [ Nothing
+    ]) : c
+  go (SmsF a b c) = unode "Sms" (string b) & add_attrs (catMaybes
+    [ Nothing
+    ]) : c
+  go (DialF a b c) = unode "Dial" () & add_attrs (catMaybes
+    [ Nothing
+    ]) : c
+  go (EnqueueF a b c) = unode "Enqueue" (string b) & add_attrs (catMaybes
+    [ Nothing
+    ]) : c
+  go LeaveF = [unode "Leave" ()]
+  go HangupF = [unode "Hangup" ()]
+  go (RedirectF a b) = [unode "Redirect" (string $ getURL b) & add_attrs (catMaybes
+    [ Nothing
+    ])]
+  go (RejectF a) = [unode "Reject" () & add_attrs (catMaybes
+    [ Nothing
+    ])]
+  go (PauseF a b) = unode "Pause" () & add_attrs (catMaybes
+    [ Nothing
+    ]) : b
 
 {- Twiml Attributes -}
 

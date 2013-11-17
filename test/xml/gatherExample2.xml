@@ -3,5 +3,5 @@
   <Gather action="/process_gather.php" method="GET">
     <Say>Please enter your account number, followed by the pound sign</Say>
   </Gather>
-  <Say>We didn't receive any input. Goodbye!</Say>
+  <Say>We didn&#39;t receive any input. Goodbye!</Say>
 </Response>

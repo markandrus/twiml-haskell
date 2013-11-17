@@ -13,6 +13,7 @@ module Text.XML.Twiml
   , end
   -- * Types
   , URL
+  , parseURL
   , Method(..)
   , Key(..)
   , PlayDigit(..)
@@ -296,10 +297,10 @@ sayAlice' :: Twiml p t => LangAlice -> String -> t -> Say p
 sayAlice' lang
   = say' (defaultSayAttributes { sayVoice = Just . Alice $ Just lang })
 
-play :: Twiml p t => URL -> t -> Play p
+play :: Twiml p t => Maybe URL -> t -> Play p
 play = play' defaultPlayAttributes
 
-play' :: Twiml p t => PlayAttributes -> URL -> t -> Play p
+play' :: Twiml p t => PlayAttributes -> Maybe URL -> t -> Play p
 play' attrs n = Play . Fix . PlayF attrs n . toTwiml'
 
 gather :: (Twiml GatherNoun n, Twiml p t, NotGatherNoun p) => n -> t -> Gather p
@@ -310,13 +311,13 @@ gather' :: (Twiml GatherNoun n, Twiml p t, NotGatherNoun p)
 gather' attrs n
   = Gather . Fix . GatherF attrs (toTwiml' n) . toTwiml'
 
-record :: (Twiml p t, NotGatherNoun p) => URL -> t -> Record p
+record :: (Twiml p t, NotGatherNoun p) => t -> Record p
 record = record' defaultRecordAttributes
 
 record' :: (Twiml p t, NotGatherNoun p)
-        => RecordAttributes -> URL -> t -> Record p
-record' attrs url
-  = Record . Fix . RecordF attrs url . toTwiml'
+        => RecordAttributes -> t -> Record p
+record' attrs
+  = Record . Fix . RecordF attrs . toTwiml'
 
 sms :: (Twiml p t, NotGatherNoun p) => String -> t -> Sms p
 sms = sms' defaultSmsAttributes
@@ -392,9 +393,9 @@ numDigits = lens (^. gatherAttributes . to' gatherNumDigits)
 
 recordAttributes :: Lens' (Record p) RecordAttributes
 recordAttributes = lens
-  (\(Record (Fix (RecordF attributes _ _))) -> attributes)
-  (\(Record (Fix (RecordF _          n a)))    attributes ->
-     Record (Fix (RecordF attributes n a)))
+  (\(Record (Fix (RecordF attributes _))) -> attributes)
+  (\(Record (Fix (RecordF _          a)))    attributes ->
+     Record (Fix (RecordF attributes a)))
 
 maxLength :: Lens (Record p) (Record p) (Maybe Natural) Natural
 maxLength = lens (^. recordAttributes . to' recordMaxLength)

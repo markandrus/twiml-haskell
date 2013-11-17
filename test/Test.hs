@@ -2,6 +2,7 @@ module Main where
 
 import Control.Lens
 import Control.Monad (when)
+import Data.Maybe (fromJust)
 import System.IO
 import Text.XML.Twiml
 
@@ -9,7 +10,7 @@ import Text.XML.Twiml
 
 sayExample1 =
   ( respond
-  . sayWoman "Hello World"
+  . say "Hello World"
   $ end
   , "test/xml/sayExample1.xml" )
 
@@ -26,13 +27,13 @@ sayExamples = [ sayExample1, sayExample2 ]
 -- FIXME: ...
 playExample1 =
   ( respond
-  . play undefined -- "https://api.twilio.com/cowbell.mp3"
+  . play (parseURL "https://api.twilio.com/cowbell.mp3")
   $ end
   , "test/xml/playExample1.xml" )
 
 playExample2 =
   ( respond
-  . (play (undefined) <&> digits .~ [W, W, W, W, D3])
+  . (play Nothing <&> digits .~ [W, W, W, W, D3])
   $ end
   , "test/xml/playExample2.xml" )
 
@@ -50,7 +51,7 @@ gatherExample2 =
   ( respond
   . (gather
       (say "Please enter your account number, followed by the pound sign" $ end)
-        <&> action .~ undefined
+        <&> action .~ (fromJust $ parseURL "/process_gather.php")
         <&> method .~ GET)
   . say "We didn't receive any input. Goodbye!"
   $ end
@@ -62,25 +63,25 @@ gatherExamples = [ gatherExample1, gatherExample2 ]
 
 recordExample1 =
   ( respond
-  . record undefined
+  . record
   $ end
   , "test/xml/recordExample1.xml" )
 
 recordExample2 =
   ( respond
   . say "Please leave a message at the beep. Press the star key when finished."
-  . (record undefined <&> action      .~ undefined
-                      <&> method      .~ GET
-                      <&> maxLength   .~ 20
-                      <&> finishOnKey .~ KStar)
+  . (record <&> action      .~ (fromJust $ parseURL "http://foo.edu/handleRecording.php")
+            <&> method      .~ GET
+            <&> maxLength   .~ 20
+            <&> finishOnKey .~ KStar)
   . say "I did not receive a recording"
   $ end
   , "test/xml/recordExample2.xml" )
 
 recordExample3 =
   ( respond
-  . (record undefined <&> transcribe         .~ True
-                      <&> transcribeCallback .~ undefined)
+  . (record <&> transcribe         .~ True
+            <&> transcribeCallback .~ (fromJust $ parseURL "/handle_transcribe.php"))
   $ end
   , "test/xml/recordExample3.xml" )
 
@@ -98,7 +99,7 @@ smsExample1 =
 smsExample2 =
   ( respond
   . say "Our store is located at 123 Easy St."
-  . (sms "Store Location: 123 Easy St." <&> action .~ undefined
+  . (sms "Store Location: 123 Easy St." <&> action .~ (fromJust $ parseURL "/smsHandler.php")
                                         <&> method .~ POST)
   $ end
   , "test/xml/smsExample2.xml" )
@@ -106,7 +107,7 @@ smsExample2 =
 smsExample3 =
   ( respond
   . say "Our store is located at 123 Easy St."
-  . (sms "Store Location: 123 Easy St." <&> statusCallback .~ undefined)
+  . (sms "Store Location: 123 Easy St." <&> statusCallback .~ (fromJust $ parseURL "/smsHandler.php"))
   $ end
   , "test/xml/smsExample3.xml" )
 
@@ -123,7 +124,7 @@ dialExample1 =
 
 dialExample2 =
   ( respond
-  . (dial (Right "415-123-4567") <&> action .~ undefined
+  . (dial (Right "415-123-4567") <&> action .~ (fromJust $ parseURL "/handleDialCallStatus.php")
                                  <&> method .~ GET)
   . say "I am unreachable"
   $ end
@@ -178,13 +179,13 @@ hangupExamples = [ hangupExample1 ]
 redirectExample1 =
   ( respond
   . dial (Right "415-123-4567")
-  . redirect undefined
+  . redirect (fromJust $ parseURL "http://www.foo.com/nextInstructions")
   $ end
   , "test/xml/redirectExample1.xml" )
 
 redirectExample2 =
   ( respond
-  . redirect undefined
+  . redirect (fromJust $ parseURL "../nextInstructions")
   $ end
   , "test/xml/redirectExample2.xml" )
 

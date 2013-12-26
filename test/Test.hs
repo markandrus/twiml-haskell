@@ -1,10 +1,12 @@
 module Main where
 
+import Data.Functor ((<$>))
 import Control.Lens
 import Control.Monad (when)
 import Data.Maybe (fromJust)
 import System.IO
 import Text.XML.Twiml
+import Text.XML.Twiml.Internal (GatherNoun)
 
 {- Say -}
 
@@ -24,7 +26,6 @@ sayExamples = [ sayExample1, sayExample2 ]
 
 {- Play -}
 
--- FIXME: ...
 playExample1 =
   ( respond
   . play (parseURL "https://api.twilio.com/cowbell.mp3")
@@ -47,12 +48,13 @@ gatherExample1 =
   $ end
   , "test/xml/gatherExample1.xml" )
 
+-- FIXME: Ugly.
 gatherExample2 =
   ( respond
-  . (gather
-      (say "Please enter your account number, followed by the pound sign" $ end)
-        <&> action .~ (fromJust $ parseURL "/process_gather.php")
-        <&> method .~ GET)
+  . (gather <&> action .~ (fromJust $ parseURL "/process_gather.php")
+            <&> method .~ GET
+      $ say "Please enter your account number, followed by the pound sign"
+      $ end)
   . say "We didn't receive any input. Goodbye!"
   $ end
   , "test/xml/gatherExample2.xml" )
@@ -115,6 +117,7 @@ smsExamples = [ smsExample1, smsExample2, smsExample3 ]
 
 {- Dial -}
 
+-- FIXME: Ugly.
 dialExample1 =
   ( respond
   . dial (Right "415-123-4567")
@@ -122,6 +125,7 @@ dialExample1 =
   $ end
   , "test/xml/dialExample1.xml" )
 
+-- FIXME: Ugly.
 dialExample2 =
   ( respond
   . (dial (Right "415-123-4567") <&> action .~ (fromJust $ parseURL "/handleDialCallStatus.php")
@@ -130,6 +134,7 @@ dialExample2 =
   $ end
   , "test/xml/dialExample2.xml" )
 
+-- FIXME: Ugly.
 dialExample3 =
   ( respond
   . (dial
@@ -176,6 +181,7 @@ hangupExamples = [ hangupExample1 ]
 
 {- Redirect -}
 
+-- FIXME: Ugly.
 redirectExample1 =
   ( respond
   . dial (Right "415-123-4567")

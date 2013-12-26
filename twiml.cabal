@@ -16,7 +16,7 @@ build-type:          Simple
 cabal-version:       >=1.8
 
 library
-  exposed-modules:     Text.XML.Twiml, Text.XML.Twiml.Internal
+  exposed-modules:     Text.XML.Twiml, Text.XML.Twiml.Verbs, Text.XML.Twiml.Verbs.End, Text.XML.Twiml.Verbs.Say, Text.XML.Twiml.Verbs.Play, Text.XML.Twiml.Verbs.Gather, Text.XML.Twiml.Verbs.Record, Text.XML.Twiml.Verbs.Sms, Text.XML.Twiml.Verbs.Dial, Text.XML.Twiml.Verbs.Enqueue, Text.XML.Twiml.Verbs.Leave, Text.XML.Twiml.Verbs.Hangup, Text.XML.Twiml.Verbs.Redirect, Text.XML.Twiml.Verbs.Reject, Text.XML.Twiml.Verbs.Pause, Text.XML.Twiml.Internal, Text.XML.Twiml.Internal.Foldable, Text.XML.Twiml.Internal.Lens
   hs-source-dirs:      src
   -- other-modules:       
   build-depends:       base ==4.6.*, xml >=1.3, network >=2.4

@@ -1,11 +1,18 @@
 {-#LANGUAGE FlexibleInstances #-}
 {-#LANGUAGE MultiParamTypeClasses #-}
 
-module Text.XML.Twiml.Verbs.Pause where
+module Text.XML.Twiml.Verbs.Pause
+  ( -- * @\<Pause\>@
+    Pause
+  , pause
+  , pause'
+    -- * Attribute Lenses
+  , length'
+  ) where
 
+import Text.XML.Twiml.Types
 import Text.XML.Twiml.Verbs.End (End)
-import Text.XML.Twiml.Internal (Fix(..), Lang(..), LangAlice(..), Twiml(..), Twiml', TwimlF(..), URL(..), NotGatherNoun, Natural, PauseAttributes(..), defaultPauseAttributes, setPauseLength)
-import Text.XML.Twiml.Internal.Lens ((^.), Lens, Lens', lens, over, to')
+import Text.XML.Twiml.Internal (Twiml(..), Twiml', TwimlF(..))
 
 newtype Pause    p = Pause    { fromPause    :: Twiml' p }
 instance                    Twiml p (Pause    p) where toTwiml' = fromPause
@@ -22,6 +29,9 @@ pauseAttributes = lens
   (\(Pause (Fix (PauseF _          a)))    attributes ->
      Pause (Fix (PauseF attributes a)))
 
-length :: Lens (Pause p) (Pause p) (Maybe Natural) Natural
-length = lens (^. pauseAttributes . to' pauseLength)
+setPauseLength :: PauseAttributes -> Natural -> PauseAttributes
+setPauseLength attrs length = attrs { pauseLength = Just length }
+
+length' :: Lens (Pause p) (Pause p) (Maybe Natural) Natural
+length' = lens (^. pauseAttributes . to' pauseLength)
   (\t v -> over pauseAttributes (flip setPauseLength v) t)

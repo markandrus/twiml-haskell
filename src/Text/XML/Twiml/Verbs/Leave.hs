@@ -1,11 +1,15 @@
 {-#LANGUAGE FlexibleInstances #-}
 {-#LANGUAGE MultiParamTypeClasses #-}
 
-module Text.XML.Twiml.Verbs.Leave where
+module Text.XML.Twiml.Verbs.Leave
+  ( -- * @\<Leave\>@
+    Leave
+  , leave
+  ) where
 
+import Text.XML.Twiml.Types
 import Text.XML.Twiml.Verbs.End (End)
-import Text.XML.Twiml.Internal (Fix(..), Lang(..), LangAlice(..), Twiml(..), Twiml', TwimlF(..), URL(..), NotGatherNoun, Natural)
-import Text.XML.Twiml.Internal.Lens ((^.), Lens, Lens', lens, over, to')
+import Text.XML.Twiml.Internal (Twiml(..), Twiml', TwimlF(..))
 
 newtype Leave p = Leave { fromLeave :: Twiml' p }
 instance NotGatherNoun p => Twiml p (Leave p) where toTwiml' = fromLeave

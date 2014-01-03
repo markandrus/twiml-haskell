@@ -1,10 +1,14 @@
 {-#LANGUAGE FlexibleInstances #-}
 {-#LANGUAGE MultiParamTypeClasses #-}
 
-module Text.XML.Twiml.Verbs.Enqueue where
+module Text.XML.Twiml.Verbs.Enqueue
+  ( -- * @\<Enqueue\>@
+    Enqueue
+  , enqueue
+  ) where
 
-import Text.XML.Twiml.Internal (Fix(..), Lang(..), LangAlice(..), EnqueueAttributes(..), defaultEnqueueAttributes, Twiml(..), Twiml', TwimlF(..), URL(..), NotGatherNoun, Natural)
-import Text.XML.Twiml.Internal.Lens ((^.), Lens, Lens', lens, over, to')
+import Text.XML.Twiml.Types
+import Text.XML.Twiml.Internal (Twiml(..), Twiml', TwimlF(..))
 
 newtype Enqueue p = Enqueue { fromEnqueue :: Twiml' p }
 instance NotGatherNoun p => Twiml p (Enqueue  p) where toTwiml' = fromEnqueue

@@ -4,37 +4,16 @@
 {-#LANGUAGE FunctionalDependencies #-}
 {-#LANGUAGE GADTs #-}
 {-#LANGUAGE MultiParamTypeClasses #-}
-{-#LANGUAGE Rank2Types #-}
+{-#LANGUAGE RankNTypes #-}
 {-#LANGUAGE TypeFamilies #-}
 {-#LANGUAGE UndecidableInstances #-}
 
 module Text.XML.Twiml.Internal where
 
 import Text.XML.Twiml.Types
-import Text.XML.Twiml.Internal.Lens
-import Text.XML.Twiml.Internal.Foldable
 
 import Data.Maybe (catMaybes, fromMaybe)
 import Text.XML.Light
-
-
-{- Type Inequality -}
-
--- See <http://stackoverflow.com/a/17794490>.
-
-data Yes
-
-data No
-
-class TypeCast a b | a -> b
-
-instance TypeCast a a
-
-class TypeEq a b c | a b -> c
-
-instance TypeEq x x Yes
-
-instance TypeCast No b => TypeEq x y b
 
 {- TwimlF -}
 
@@ -186,7 +165,7 @@ toXML = cata go where
     ]) : c
   go LeaveF = [unode "Leave" ()]
   go HangupF = [unode "Hangup" ()]
-  go (RedirectF a b) = [unode "Redirect" (string $ getURL b) & add_attrs (catMaybes
+  go (RedirectF a b) = [unode "Redirect" (string $ show b) & add_attrs (catMaybes
     [ fmap ((Attr $ unqual "method") . show) $ redirectMethod a
     ])]
   go (RejectF a) = [unode "Reject" () & add_attrs (catMaybes
@@ -197,259 +176,6 @@ toXML = cata go where
     ]) : b
 
 {- Twiml Attributes -}
-
--- | See <https://www.twilio.com/docs/api/twiml/say#attributes>.
-data SayAttributes = SayAttributes
-  { sayVoice :: Maybe Voice
-  , sayLoop  :: Maybe Natural
-  }
-
-defaultSayAttributes :: SayAttributes
-defaultSayAttributes = SayAttributes
-  { sayVoice = Nothing
-  , sayLoop  = Nothing
-  }
-
-setSayVoice :: SayAttributes -> Voice -> SayAttributes
-setSayVoice attrs voice = attrs { sayVoice = Just voice }
-
-setSayLoop :: SayAttributes -> Natural -> SayAttributes
-setSayLoop attrs loop = attrs { sayLoop = Just loop }
-
--- | See <https://www.twilio.com/docs/api/twiml/play#attributes>.
-data PlayAttributes = PlayAttributes
-  { playLoop :: Maybe Natural
-  , playDigits' :: Maybe [PlayDigit]
-  }
-
-defaultPlayAttributes :: PlayAttributes
-defaultPlayAttributes = PlayAttributes
-  { playLoop    = Nothing
-  , playDigits' = Nothing
-  }
-
-setPlayLoop :: PlayAttributes -> Natural -> PlayAttributes
-setPlayLoop attrs loop = attrs { playLoop = Just loop }
-
-setPlayDigits :: PlayAttributes -> [PlayDigit] -> PlayAttributes
-setPlayDigits attrs digits = attrs { playDigits' = Just digits }
-
--- | See <https://www.twilio.com/docs/api/twiml/gather#attributes>.
-data GatherAttributes = GatherAttributes
-  { gatherAction      :: Maybe URL
-  , gatherMethod      :: Maybe Method
-  , gatherTimeout     :: Maybe Natural
-  , gatherFinishOnKey :: Maybe Key
-  , gatherNumDigits   :: Maybe Natural
-  }
-
-defaultGatherAttributes :: GatherAttributes
-defaultGatherAttributes = GatherAttributes
-  { gatherAction      = Nothing
-  , gatherMethod      = Nothing
-  , gatherTimeout     = Nothing
-  , gatherFinishOnKey = Nothing
-  , gatherNumDigits   = Nothing
-  }
-
-setGatherAction :: GatherAttributes -> URL -> GatherAttributes
-setGatherAction attrs action = attrs { gatherAction = Just action }
-
-setGatherMethod :: GatherAttributes -> Method -> GatherAttributes
-setGatherMethod attrs method = attrs { gatherMethod = Just method }
-
-setGatherTimeout :: GatherAttributes -> Natural -> GatherAttributes
-setGatherTimeout attrs timeout = attrs { gatherTimeout = Just timeout }
-
-setGatherFinishOnKey :: GatherAttributes -> Key -> GatherAttributes
-setGatherFinishOnKey attrs finishOnKey
-  = attrs { gatherFinishOnKey = Just finishOnKey }
-
-setGatherNumDigits :: GatherAttributes -> Natural -> GatherAttributes
-setGatherNumDigits attrs numDigits = attrs { gatherNumDigits = Just numDigits }
-
--- | See <https://www.twilio.com/docs/api/twiml/record#attributes>.
-data RecordAttributes = RecordAttributes
-  { recordAction             :: Maybe URL
-  , recordMethod             :: Maybe Method
-  , recordTimeout            :: Maybe Natural
-  , recordFinishOnKey        :: Maybe Key
-  , recordMaxLength          :: Maybe Natural
-  , recordTranscribe         :: Maybe Bool
-  , recordTranscribeCallback :: Maybe URL
-  , recordPlayBeep           :: Maybe Bool
-  }
-
-defaultRecordAttributes :: RecordAttributes
-defaultRecordAttributes = RecordAttributes
-  { recordAction             = Nothing
-  , recordMethod             = Nothing
-  , recordTimeout            = Nothing
-  , recordFinishOnKey        = Nothing
-  , recordMaxLength          = Nothing
-  , recordTranscribe         = Nothing
-  , recordTranscribeCallback = Nothing
-  , recordPlayBeep           = Nothing
-  }
-
-setRecordAction :: RecordAttributes -> URL -> RecordAttributes
-setRecordAction attrs action = attrs { recordAction = Just action }
-
-setRecordMethod :: RecordAttributes -> Method -> RecordAttributes
-setRecordMethod attrs method = attrs { recordMethod = Just method }
-
-setRecordTimeout :: RecordAttributes -> Natural -> RecordAttributes
-setRecordTimeout attrs timeout = attrs { recordTimeout = Just timeout }
-
-setRecordFinishOnKey :: RecordAttributes -> Key -> RecordAttributes
-setRecordFinishOnKey attrs key = attrs { recordFinishOnKey = Just key }
-
-setRecordMaxLength :: RecordAttributes -> Natural -> RecordAttributes
-setRecordMaxLength attrs length = attrs { recordMaxLength = Just length }
-
-setRecordTranscribe :: RecordAttributes -> Bool -> RecordAttributes
-setRecordTranscribe attrs transcribe
-  = attrs { recordTranscribe = Just transcribe }
-
-setRecordTranscribeCallback :: RecordAttributes -> URL -> RecordAttributes
-setRecordTranscribeCallback attrs transcribeCallback
-  = attrs { recordTranscribeCallback = Just transcribeCallback }
-
-setRecordPlayBeep :: RecordAttributes -> Bool -> RecordAttributes
-setRecordPlayBeep attrs playBeep = attrs { recordPlayBeep = Just playBeep }
-
--- | See <https://www.twilio.com/docs/api/twiml/sms#attributes>.
-data SmsAttributes = SmsAttributes
-  { smsTo             :: Maybe String
-  , smsFrom           :: Maybe String
-  , smsAction         :: Maybe URL
-  , smsMethod         :: Maybe Method
-  , smsStatusCallback :: Maybe URL
-  }
-
-defaultSmsAttributes :: SmsAttributes
-defaultSmsAttributes = SmsAttributes
-  { smsTo             = Nothing
-  , smsFrom           = Nothing
-  , smsAction         = Nothing
-  , smsMethod         = Nothing
-  , smsStatusCallback = Nothing
-  }
-
-setSmsTo :: SmsAttributes -> String -> SmsAttributes
-setSmsTo attrs to = attrs { smsTo = Just to }
-
-setSmsFrom :: SmsAttributes -> String -> SmsAttributes
-setSmsFrom attrs from = attrs { smsFrom = Just from }
-
-setSmsAction :: SmsAttributes -> URL -> SmsAttributes
-setSmsAction attrs action = attrs { smsAction = Just action }
-
-setSmsMethod :: SmsAttributes -> Method -> SmsAttributes
-setSmsMethod attrs method = attrs { smsMethod = Just method }
-
-setSmsStatusCallback :: SmsAttributes -> URL -> SmsAttributes
-setSmsStatusCallback attrs statusCallback
-  = attrs { smsStatusCallback = Just statusCallback }
-
--- | See <https://www.twilio.com/docs/api/twiml/dial#attributes>.
-data DialAttributes = DialAttributes
-  { dialAction       :: Maybe URL
-  , dialMethod       :: Maybe Method
-  , dialTimeout      :: Maybe Natural
-  , dialHangupOnStar :: Maybe Bool
-  , dialTimeLimit    :: Maybe Natural
-  , dialCallerId     :: Maybe String
-  , dialRecord       :: Maybe Bool
-  }
-
-defaultDialAttributes :: DialAttributes
-defaultDialAttributes = DialAttributes
-  { dialAction       = Nothing
-  , dialMethod       = Nothing
-  , dialTimeout      = Nothing
-  , dialHangupOnStar = Nothing
-  , dialTimeLimit    = Nothing
-  , dialCallerId     = Nothing
-  , dialRecord       = Nothing
-  }
-
-setDialAction :: DialAttributes -> URL -> DialAttributes
-setDialAction attrs action = attrs { dialAction = Just action }
-
-setDialMethod :: DialAttributes -> Method -> DialAttributes
-setDialMethod attrs method = attrs { dialMethod = Just method }
-
-setDialTimeout :: DialAttributes -> Natural -> DialAttributes
-setDialTimeout attrs timeout = attrs { dialTimeout = Just timeout }
-
-setDialHangupOnStar :: DialAttributes -> Bool -> DialAttributes
-setDialHangupOnStar attrs hangupOnStar
-  = attrs { dialHangupOnStar = Just hangupOnStar }
-
-setDialTimeLimit :: DialAttributes -> Natural -> DialAttributes
-setDialTimeLimit attrs timeLimit = attrs { dialTimeLimit = Just timeLimit }
-
-setDialCallerId :: DialAttributes -> String -> DialAttributes
-setDialCallerId attrs callerId = attrs { dialCallerId = Just callerId }
-
-setDialRecord :: DialAttributes -> Bool -> DialAttributes
-setDialRecord attrs record = attrs { dialRecord = Just record }
-
--- | See <https://www.twilio.com/docs/api/twiml/redirect#attributes>.
-data RedirectAttributes = RedirectAttributes
-  { redirectMethod :: Maybe Method
-  }
-
-defaultRedirectAttributes :: RedirectAttributes
-defaultRedirectAttributes = RedirectAttributes
-  { redirectMethod = Nothing
-  }
-
-setRedirectMethod :: RedirectAttributes -> Method -> RedirectAttributes
-setRedirectMethod attrs method = attrs { redirectMethod = Just method }
-
--- | See <https://www.twilio.com/docs/api/twiml/reject#attributes>.
-data RejectAttributes = RejectAttributes
-  { rejectReason :: Maybe Reason
-  }
-
-defaultRejectAttributes :: RejectAttributes
-defaultRejectAttributes = RejectAttributes
-  { rejectReason = Nothing
-  }
-
-setRejectReason :: RejectAttributes -> Reason -> RejectAttributes
-setRejectReason attrs reason = attrs { rejectReason = Just reason }
-
--- | See <https://www.twilio.com/docs/api/twiml/pause#attributes>.
-data PauseAttributes = PauseAttributes
-  { pauseLength :: Maybe Natural
-  }
-
-defaultPauseAttributes :: PauseAttributes
-defaultPauseAttributes = PauseAttributes
-  { pauseLength = Nothing
-  }
-
-setPauseLength :: PauseAttributes -> Natural -> PauseAttributes
-setPauseLength attrs length = attrs { pauseLength = Just length }
-
--- | See <https://www.twilio.com/docs/api/twiml/enqueue#attributes>.
-data EnqueueAttributes = EnqueueAttributes
-  { enqueueAction        :: Maybe URL
-  , enqueueMethod        :: Maybe Method
-  , enqueueWaitURL       :: Maybe URL
-  , enqueueWaitURLMethod :: Maybe Method
-  }
-
-defaultEnqueueAttributes :: EnqueueAttributes
-defaultEnqueueAttributes = EnqueueAttributes
-  { enqueueAction        = Nothing
-  , enqueueMethod        = Nothing
-  , enqueueWaitURL       = Nothing
-  , enqueueWaitURLMethod = Nothing
-  }
 
 -- FIXME: Rename `PlayKey`.
 
@@ -544,8 +270,3 @@ data DialNoun
 number :: String -> Maybe DialNoun
 number = Just . Number defaultNumberAttributes
 
--- This constraint lets us enforce TwiML nesting rules.
-
-class TypeEq x GatherNoun No => NotGatherNoun x
-
-instance TypeEq x GatherNoun No => NotGatherNoun x

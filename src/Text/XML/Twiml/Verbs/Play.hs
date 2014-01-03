@@ -1,10 +1,18 @@
 {-#LANGUAGE FlexibleInstances #-}
 {-#LANGUAGE MultiParamTypeClasses #-}
 
-module Text.XML.Twiml.Verbs.Play where
+module Text.XML.Twiml.Verbs.Play
+  ( -- * @\<Play\>@
+    Play
+  , play
+  , play'
+    -- * Attribute Lenses
+  , digits
+  , loop
+  ) where
 
-import Text.XML.Twiml.Internal (Fix(..), Lang(..), LangAlice(..), PlayAttributes(..), setPlayDigits, defaultPlayAttributes, Twiml(..), Twiml', TwimlF(..), URL(..), PlayDigit(..))
-import Text.XML.Twiml.Internal.Lens ((^.), Lens, Lens', lens, over, to')
+import Text.XML.Twiml.Types
+import Text.XML.Twiml.Internal (Twiml(..), Twiml', TwimlF(..))
 
 newtype Play p = Play { fromPlay :: Twiml' p }
 instance Twiml p (Play p) where toTwiml' = fromPlay
@@ -21,6 +29,17 @@ playAttributes = lens
   (\(Play (Fix (PlayF _          n a)))    attributes ->
      Play (Fix (PlayF attributes n a)))
 
+setPlayLoop :: PlayAttributes -> Natural -> PlayAttributes
+setPlayLoop attrs loop = attrs { playLoop = Just loop }
+
+setPlayDigits :: PlayAttributes -> [PlayDigit] -> PlayAttributes
+setPlayDigits attrs digits = attrs { playDigits' = Just digits }
+
 digits :: Lens (Play p) (Play p) (Maybe [PlayDigit]) [PlayDigit]
 digits = lens (^. playAttributes . to' playDigits')
   (\t v -> over playAttributes (flip setPlayDigits v) t)
+
+instance HasLoop (Play p) where
+  loop = lens getLoop setLoop where
+    getLoop = (^. playAttributes . to' playLoop)
+    setLoop t v = over playAttributes (flip setPlayLoop v) t

@@ -6,14 +6,26 @@
 module Text.XML.Twiml
   ( Response
   , respond
-  , Text.XML.Twiml.Verbs
+  , module Text.XML.Twiml.Verbs
+  , module Text.XML.Twiml.Types
+  , module Text.XML.Twiml.Internal
   ) where
 
+import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Verbs
-import Text.XML.Twiml.Internal hiding (Lens, lens)
-import Text.XML.Twiml.Internal.Lens
-
-import Unsafe.Coerce (unsafeCoerce)
+import Text.XML.Twiml.Types hiding
+  ( Lens
+  , Lens'
+  , lens
+  , (^.)
+  , over
+  , to'
+  , Fix
+  , Foldable
+  , Base
+  , Yes
+  , No
+  )
 
 {- Twiml Response -}
 

@@ -1,10 +1,24 @@
 {-#LANGUAGE FlexibleInstances #-}
 {-#LANGUAGE MultiParamTypeClasses #-}
 
-module Text.XML.Twiml.Verbs.Say where
+module Text.XML.Twiml.Verbs.Say
+  ( -- * @\<Say\>@
+    Say
+  , say
+  , say'
+  , sayMan
+  , sayMan'
+  , sayWoman
+  , sayWoman'
+  , sayAlice
+  , sayAlice'
+    -- * Attribute Lenses
+  , voice
+  , loop
+  ) where
 
-import Text.XML.Twiml.Internal (Fix(..), Lang(..), LangAlice(..), SayAttributes(..), setSayVoice, defaultSayAttributes, Twiml(..), Twiml', TwimlF(..), Voice(..))
-import Text.XML.Twiml.Internal.Lens ((^.), Lens, Lens', lens, over, to')
+import Text.XML.Twiml.Types
+import Text.XML.Twiml.Internal (Twiml(..), Twiml', TwimlF(..))
 
 newtype Say p = Say { fromSay :: Twiml' p }
 instance Twiml p (Say p) where toTwiml' = fromSay
@@ -42,6 +56,43 @@ sayAttributes = lens
   (\(Say (Fix (SayF _          n a)))    attributes ->
      Say (Fix (SayF attributes n a)))
 
+{-
+
+setDialAction :: DialAttributes -> URL -> DialAttributes
+setDialAction attrs action = attrs { dialAction = Just action }
+
+setDialMethod :: DialAttributes -> Method -> DialAttributes
+setDialMethod attrs method = attrs { dialMethod = Just method }
+
+setDialTimeout :: DialAttributes -> Natural -> DialAttributes
+setDialTimeout attrs timeout = attrs { dialTimeout = Just timeout }
+
+setDialHangupOnStar :: DialAttributes -> Bool -> DialAttributes
+setDialHangupOnStar attrs hangupOnStar
+  = attrs { dialHangupOnStar = Just hangupOnStar }
+
+setDialTimeLimit :: DialAttributes -> Natural -> DialAttributes
+setDialTimeLimit attrs timeLimit = attrs { dialTimeLimit = Just timeLimit }
+
+setDialCallerId :: DialAttributes -> String -> DialAttributes
+setDialCallerId attrs callerId = attrs { dialCallerId = Just callerId }
+
+setDialRecord :: DialAttributes -> Bool -> DialAttributes
+setDialRecord attrs record = attrs { dialRecord = Just record }
+
+-}
+
+setSayVoice :: SayAttributes -> Voice -> SayAttributes
+setSayVoice attrs voice = attrs { sayVoice = Just voice }
+
+setSayLoop :: SayAttributes -> Natural -> SayAttributes
+setSayLoop attrs loop = attrs { sayLoop = Just loop }
+
 voice :: Lens (Say p) (Say p) (Maybe Voice) Voice
 voice = lens (^. sayAttributes . to' sayVoice)
   (\t v -> over sayAttributes (flip setSayVoice v) t)
+
+instance HasLoop (Say p) where
+  loop = lens getLoop setLoop where
+    getLoop = (^. sayAttributes . to' sayLoop)
+    setLoop t v = over sayAttributes (flip setSayLoop v) t

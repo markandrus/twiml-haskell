@@ -1,10 +1,23 @@
 {-#LANGUAGE FlexibleInstances #-}
 {-#LANGUAGE MultiParamTypeClasses #-}
 
-module Text.XML.Twiml.Verbs.Dial where
+module Text.XML.Twiml.Verbs.Dial
+  ( -- * @\<Dial\>@
+    Dial
+  , dial
+  , dial'
+    -- * Attribute Lenses
+  , hangupOnStar
+  , timeLimit
+  , callerId
+  , recordDial
+  , action
+  , method
+  , timeout
+  ) where
 
-import Text.XML.Twiml.Internal (Fix(..), Lang(..), LangAlice(..), DialAttributes(..), setDialHangupOnStar, setDialTimeLimit, setDialCallerId, setDialRecord, defaultDialAttributes, Twiml(..), Twiml', TwimlF(..), URL(..), NotGatherNoun, DialNoun(..), Natural)
-import Text.XML.Twiml.Internal.Lens ((^.), Lens, Lens', lens, over, to')
+import Text.XML.Twiml.Types
+import Text.XML.Twiml.Internal (DialNoun(..), Twiml(..), Twiml', TwimlF(..))
 
 newtype Dial p = Dial { fromDial :: Twiml' p }
 instance NotGatherNoun p => Twiml p (Dial p) where toTwiml' = fromDial
@@ -22,6 +35,28 @@ dialAttributes = lens
   (\(Dial (Fix (DialF _          n a)))    attributes ->
      Dial (Fix (DialF attributes n a)))
 
+setDialAction :: DialAttributes -> URL -> DialAttributes
+setDialAction attrs action = attrs { dialAction = Just action }
+
+setDialMethod :: DialAttributes -> Method -> DialAttributes
+setDialMethod attrs method = attrs { dialMethod = Just method }
+
+setDialTimeout :: DialAttributes -> Natural -> DialAttributes
+setDialTimeout attrs timeout = attrs { dialTimeout = Just timeout }
+
+setDialHangupOnStar :: DialAttributes -> Bool -> DialAttributes
+setDialHangupOnStar attrs hangupOnStar
+  = attrs { dialHangupOnStar = Just hangupOnStar }
+
+setDialTimeLimit :: DialAttributes -> Natural -> DialAttributes
+setDialTimeLimit attrs timeLimit = attrs { dialTimeLimit = Just timeLimit }
+
+setDialCallerId :: DialAttributes -> String -> DialAttributes
+setDialCallerId attrs callerId = attrs { dialCallerId = Just callerId }
+
+setDialRecord :: DialAttributes -> Bool -> DialAttributes
+setDialRecord attrs record = attrs { dialRecord = Just record }
+
 hangupOnStar :: Lens (Dial p) (Dial p) (Maybe Bool) Bool
 hangupOnStar = lens (^. dialAttributes . to' dialHangupOnStar)
   (\t v -> over dialAttributes (flip setDialHangupOnStar v) t)
@@ -37,3 +72,20 @@ callerId = lens (^. dialAttributes . to' dialCallerId)
 recordDial :: Lens (Dial p) (Dial p) (Maybe Bool) Bool
 recordDial = lens (^. dialAttributes . to' dialRecord)
   (\t v -> over dialAttributes (flip setDialRecord v) t)
+
+instance HasAction (Dial p) where
+  action = lens getAction setAction where
+    getAction = (^. dialAttributes . to' dialAction)
+    setAction t v = over dialAttributes (flip setDialAction v) t
+
+instance HasMethod (Dial p) where
+  method = lens getMethod setMethod where
+    getMethod = (^. dialAttributes . to' dialMethod)
+    setMethod t v = over dialAttributes (flip setDialMethod v) t
+
+instance HasTimeout (Dial p) where
+  timeout = lens getTimeout setTimeout where
+    getTimeout = (^. dialAttributes . to' dialTimeout)
+    setTimeout t v = over dialAttributes (flip setDialTimeout v) t
+
+

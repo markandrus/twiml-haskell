@@ -1,12 +1,12 @@
 module Main where
 
+import Text.XML.Twiml
+
 import Data.Functor ((<$>))
 import Control.Lens
 import Control.Monad (when)
 import Data.Maybe (fromJust)
 import System.IO
-import Text.XML.Twiml
-import Text.XML.Twiml.Internal (GatherNoun)
 
 {- Say -}
 
@@ -218,14 +218,14 @@ rejectExamples = [ rejectExample1, rejectExample2 ]
 pauseExample1 =
   ( respond
   . say "I will pause 10 seconds starting now!"
-  . (pause <&> Text.XML.Twiml.length .~ 10)
+  . (pause <&> length' .~ 10)
   . say "I just paused 10 seconds"
   $ end
   , "test/xml/pauseExample1.xml" )
 
 pauseExample2 =
   ( respond
-  . (pause <&> Text.XML.Twiml.length .~ 5)
+  . (pause <&> length' .~ 5)
   . say "Hi there."
   $ end
   , "test/xml/pauseExample2.xml" )

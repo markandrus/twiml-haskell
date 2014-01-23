@@ -228,7 +228,8 @@ defaultGatherAttributes = GatherAttributes
   , gatherNumDigits   = Nothing
   }
 
--- | This constraint lets us enforce TwiML nesting rules.
+-- | For some @Twiml p t@, the constraint @(p ':/~' 'Gather'')@ lets us enforce
+-- TwiML nesting rules.
 data Gather'
 
 -- | See <https://www.twilio.com/docs/api/twiml/record#attributes>.

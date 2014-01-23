@@ -4,6 +4,7 @@
 module Text.XML.Twiml.Verbs.Leave
   ( -- * @\<Leave\>@
     Leave
+    -- ** Constructor
   , leave
   ) where
 

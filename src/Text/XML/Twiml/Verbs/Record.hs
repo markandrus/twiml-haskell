@@ -4,9 +4,14 @@
 module Text.XML.Twiml.Verbs.Record
   ( -- * @\<Record\>@
     Record
+    -- ** Constructors
   , record
   , record'
-    -- * Attribute Lenses
+    -- ** Attributes
+  , RecordAttributes(..)
+  , defaultRecordAttributes
+    -- *** Lenses
+  , recordAttributes
   , maxLength
   , transcribe
   , transcribeCallback

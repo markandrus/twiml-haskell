@@ -8,77 +8,93 @@
 {-#LANGUAGE MultiParamTypeClasses #-}
 {-#LANGUAGE RankNTypes #-}
 {-#LANGUAGE TypeFamilies #-}
+{-#LANGUAGE TypeOperators #-}
 {-#LANGUAGE UndecidableInstances #-}
 
 module Text.XML.Twiml.Types
-  ( -- * Attributes
-    -- ** @\<Say\>@
-    SayAttributes(..)
+  ( Natural
+  , URL
+  , parseURL
+  , Method(..)
+  , Key(..)
+  , Digit(..)
+    -- * @\<Say\>@
+  , SayAttributes(..)
   , defaultSayAttributes
-    -- ** @\<Play\>@
+  , Voice(..)
+  , Lang(..)
+  , LangAlice(..)
+    -- * @\<Play\>@
   , PlayAttributes(..)
   , defaultPlayAttributes
-    -- ** @\<Gather\>@
+    -- * @\<Gather\>@
   , GatherAttributes(..)
   , defaultGatherAttributes
-    -- ** @\<Record\>@
+    -- * @\<Record\>@
   , RecordAttributes(..)
   , defaultRecordAttributes
-    -- ** @\<Sms\>@
+    -- * @\<Sms\>@
   , SmsAttributes(..)
   , defaultSmsAttributes
-    -- ** @\<Dial\>@
+    -- * @\<Dial\>@
   , DialAttributes(..)
   , defaultDialAttributes
-    -- ** @\<Enqueue\>@
+  , DialNoun(..)
+    -- ** @\<Number\>@
+  , NumberAttributes(..)
+  , defaultNumberAttributes
+    -- ** @\<Sip\>@
+  , SipAttributes(..)
+  , defaultSipAttributes
+  , Transport(..)
+    -- ** @\<Client\>@
+  , ClientAttributes(..)
+  , defaultClientAttributes
+    -- ** @\<Conference\>@
+  , ConferenceAttributes
+  , defaultConferenceAttributes
+  , ConferenceBeep(..)
+    -- ** @\<Queue\>@
+  , QueueAttributes(..)
+  , defaultQueueAttributes
+    -- * @\<Enqueue\>@
   , EnqueueAttributes(..)
   , defaultEnqueueAttributes
-    -- ** @\<Redirect\>@
+    -- * @\<Redirect\>@
   , RedirectAttributes(..)
   , defaultRedirectAttributes
-    -- ** @\<Reject\>@
+    -- * @\<Reject\>@
   , RejectAttributes(..)
   , defaultRejectAttributes
-    -- ** @\<Pause\>@
+  , Reason(..)
+    -- * @\<Pause\>@
   , PauseAttributes(..)
   , defaultPauseAttributes
-    -- ** Lens Classes
+    -- * Lens Classes
   , HasLoop(..)
   , HasAction(..)
   , HasMethod(..)
   , HasTimeout(..)
   , HasFinishOnKey(..)
-    -- * URL, Method & Transport
-  , URL
-  , parseURL
-  , Method(..)
-  , Transport(..)
-    -- * Voices and Languages
-  , Voice(..)
-  , showVoice
-  , showLang
-  , Lang(..)
-  , LangAlice(..)
-    -- * Miscellaneous
-  , Natural
-  , Key(..)
-  , PlayDigit(..)
-  , ConferenceBeep(..)
-  , Reason(..)
+  -- * Internal
   , GatherNoun
   , NotGatherNoun
-    -- * Basic Lens Functionality
+    -- ** Lens
+    -- $lens
   , Lens
   , Lens'
   , lens
   , (^.)
   , over
   , to'
-    -- * Fix and Foldable
+    -- ** Fix & Foldable
+    -- $fix
   , Fix(..)
   , Foldable(..)
   , Base(..)
-    -- * Type Inequality
+    -- ** Type Inequality
+    -- $type
+  , (:/~)
   , Yes
   , No
   ) where
@@ -100,16 +116,99 @@ defaultSayAttributes = SayAttributes
   , sayLoop  = Nothing
   }
 
+-- | Voices supported by @\<Say\>@. See
+-- <https://www.twilio.com/docs/api/twiml/say#attributes-voice>.
+data Voice
+  = Man   (Maybe Lang)
+  | Woman (Maybe Lang)
+  | Alice (Maybe LangAlice)
+
+-- | Languages spoken by voices 'Man' and 'Woman'. See
+-- <https://www.twilio.com/docs/api/twiml/say#attributes-manwoman>.
+data Lang
+  = English
+  | EnglishUK
+  | Spanish
+  | French
+  | German
+  | Italian
+
+instance Show Lang where
+  show English   = "en"
+  show EnglishUK = "en-gb"
+  show Spanish   = "es"
+  show French    = "fr"
+  show German    = "de"
+  show Italian   = "it"
+
+-- | Languages spoken by 'Alice'. See
+-- <https://www.twilio.com/docs/api/twiml/say#attributes-alice>.
+data LangAlice
+  = DaDK -- ^ Danish, Denmark
+  | DeDE -- ^ German, Germany
+  | EnAU -- ^ English, Australia
+  | EnCA -- ^ English, Canada
+  | EnGB -- ^ English, UK
+  | EnIN -- ^ English, India
+  | EnUS -- ^ English, United States
+  | CaES -- ^ Catalan, Spain
+  | EsES -- ^ Spanish, Spain
+  | EsMX -- ^ Spanish, Mexico
+  | FiFI -- ^ Finnish, Finland
+  | FrCA -- ^ French, Canada
+  | FrFR -- ^ French, France
+  | ItIT -- ^ Italian, Italy
+  | JaJP -- ^ Japanese, Japan
+  | KoKR -- ^ Korean, Korea
+  | NbNO -- ^ Norwegian, Norway
+  | NlNL -- ^ Dutch, Netherlands
+  | PlPL -- ^ Polish-Poland
+  | PtBR -- ^ Portuguese, Brazil
+  | PtPT -- ^ Portuguese, Portugal
+  | RuRU -- ^ Russian, Russia
+  | SvSE -- ^ Swedish, Sweden
+  | ZhCN -- ^ Chinese (Mandarin)
+  | ZhHK -- ^ Chinese (Cantonese)
+  | ZhTW -- ^ Chinese (Taiwanese Mandarin)
+
+instance Show LangAlice where
+  show DaDK = "da-DK"
+  show DeDE = "de-DE"
+  show EnAU = "en-AU"
+  show EnCA = "en-CA"
+  show EnGB = "en-GB"
+  show EnIN = "en-IN"
+  show EnUS = "en-US"
+  show CaES = "ca-ES"
+  show EsES = "es-ES"
+  show EsMX = "es-MX"
+  show FiFI = "fi-FI"
+  show FrCA = "fr-CA"
+  show FrFR = "fr-FR"
+  show ItIT = "it-IT"
+  show JaJP = "ja-JP"
+  show KoKR = "ko-KR"
+  show NbNO = "nb-NO"
+  show NlNL = "nl-NL"
+  show PlPL = "pl-PL"
+  show PtBR = "pt-BR"
+  show PtPT = "pt-PT"
+  show RuRU = "ru-RU"
+  show SvSE = "sv-SE"
+  show ZhCN = "zh-CN"
+  show ZhHK = "zh-HK"
+  show ZhTW = "zh-TW"
+
 -- | See <https://www.twilio.com/docs/api/twiml/play#attributes>.
 data PlayAttributes = PlayAttributes
-  { playLoop :: Maybe Natural
-  , playDigits' :: Maybe [PlayDigit]
+  { playLoop   :: Maybe Natural
+  , playDigits :: Maybe [Digit]
   }
 
 defaultPlayAttributes :: PlayAttributes
 defaultPlayAttributes = PlayAttributes
-  { playLoop    = Nothing
-  , playDigits' = Nothing
+  { playLoop   = Nothing
+  , playDigits = Nothing
   }
 
 -- | See <https://www.twilio.com/docs/api/twiml/gather#attributes>.
@@ -194,6 +293,111 @@ defaultDialAttributes = DialAttributes
   , dialRecord       = Nothing
   }
 
+-- | See <https://www.twilio.com/docs/api/twiml/number#attributes>.
+data NumberAttributes = NumberAttributes
+  { numberSendDigits :: Maybe [Digit]
+  , numberURL        :: Maybe URL
+  , numberMethod     :: Maybe Method
+  }
+
+defaultNumberAttributes :: NumberAttributes
+defaultNumberAttributes = NumberAttributes
+  { numberSendDigits = Nothing
+  , numberURL        = Nothing
+  , numberMethod     = Nothing
+  }
+
+-- | See <https://www.twilio.com/docs/api/twiml/sip#attributes>.
+data SipAttributes = SipAttributes
+  { sipUsername  :: Maybe String
+  , sipPassword  :: Maybe String
+  , sipTransport :: Maybe Transport
+  , sipHeaders   :: Maybe String    -- NOTE: Under 1024 characters.
+  , sipURL       :: Maybe URL
+  , sipMethod    :: Maybe Method
+  }
+
+defaultSipAttributes :: SipAttributes
+defaultSipAttributes = SipAttributes
+  { sipUsername  = Nothing
+  , sipPassword  = Nothing
+  , sipTransport = Nothing
+  , sipHeaders   = Nothing
+  , sipURL       = Nothing
+  , sipMethod    = Nothing
+  }
+
+-- | See <https://www.twilio.com/docs/api/twiml/sip#transport>.
+data Transport = TCP | UDP
+  deriving Show
+
+-- | See <https://www.twilio.com/docs/api/twiml/client#attributes>.
+data ClientAttributes = ClientAttributes
+  { clientURL    :: Maybe URL
+  , clientMethod :: Maybe Method
+  }
+
+defaultClientAttributes :: ClientAttributes
+defaultClientAttributes = ClientAttributes
+  { clientURL    = Nothing
+  , clientMethod = Nothing
+  }
+
+-- | See <https://www.twilio.com/docs/api/twiml/conference#attributes>.
+data ConferenceAttributes = ConferenceAttributes
+  { conferenceMuted           :: Maybe Bool
+  , conferenceBeep            :: Maybe Bool
+  , conferenceStartOnEnter    :: Maybe Bool
+  , conferenceEndOnExit       :: Maybe Bool
+  , conferenceWaitURL         :: Maybe URL
+  , conferenceWaitMethod      :: Maybe Method
+  , conferenceMaxParticipants :: Maybe Natural -- FIXME: Non-zero, less than 40.
+  }
+
+defaultConferenceAttributes :: ConferenceAttributes
+defaultConferenceAttributes = ConferenceAttributes
+  { conferenceMuted           = Nothing
+  , conferenceBeep            = Nothing
+  , conferenceStartOnEnter    = Nothing
+  , conferenceEndOnExit       = Nothing
+  , conferenceWaitURL         = Nothing
+  , conferenceWaitMethod      = Nothing
+  , conferenceMaxParticipants = Nothing
+  }
+
+-- | See <https://www.twilio.com/docs/api/twiml/conference#attributes-beep>.
+data ConferenceBeep
+  = Yes
+  | No
+  | OnExit
+  | OnEnter
+
+instance Show ConferenceBeep where
+  show Yes     = "yes"
+  show No      = "no"
+  show OnExit  = "onExit"
+  show OnEnter = "onEnter"
+
+-- | See <https://www.twilio.com/docs/api/twiml/queue#attributes>.
+data QueueAttributes = QueueAttributes
+  { queueURL    :: Maybe URL
+  , queueMethod :: Maybe Method
+  }
+
+defaultQueueAttributes :: QueueAttributes
+defaultQueueAttributes = QueueAttributes
+  { queueURL    = Nothing
+  , queueMethod = Nothing
+  }
+
+-- | See <https://www.twilio.com/docs/api/twiml/dial#nouns>.
+data DialNoun
+  = Number     NumberAttributes     String
+  | Sip        SipAttributes        URL    -- NOTE: URL must be under 255 characters.
+  | Client     ClientAttributes     String
+  | Conference ConferenceAttributes String
+  | Queue      QueueAttributes      String
+
 -- | See <https://www.twilio.com/docs/api/twiml/enqueue#attributes>.
 data EnqueueAttributes = EnqueueAttributes
   { enqueueAction        :: Maybe URL
@@ -229,6 +433,17 @@ defaultRejectAttributes :: RejectAttributes
 defaultRejectAttributes = RejectAttributes
   { rejectReason = Nothing
   }
+
+-- | The reason attribute takes the values \"rejected\" and \"busy.\" This tells
+-- Twilio what message to play when rejecting a call. Selecting \"busy\" will
+-- play a busy signal to the caller, while selecting \"rejected\" will play a
+-- standard not-in-service response.
+-- See <https://www.twilio.com/docs/api/twiml/reject#attributes-reason>
+data Reason = Rejected | Busy
+
+instance Show Reason where
+  show Rejected = "rejected"
+  show Busy     = "busy"
 
 -- | See <https://www.twilio.com/docs/api/twiml/pause#attributes>.
 data PauseAttributes = PauseAttributes
@@ -279,10 +494,6 @@ parseURL url = parseURIReference url
 data Method = GET | POST
   deriving Show
 
--- | See <https://www.twilio.com/docs/api/twiml/sip#transport>.
-data Transport = TCP | UDP
-  deriving Show
-
 type Natural = Int
 
 {- Twiml Datatypes -}
@@ -315,130 +526,13 @@ instance Show Key where
   show KStar  = "*"
   show KPound = "#"
 
-{- Voices and Languages -}
-
--- | Voices supported by @\<Say\>@. See
--- <https://www.twilio.com/docs/api/twiml/say#attributes-voice>.
-data Voice
-  = Man   (Maybe Lang)
-  | Woman (Maybe Lang)
-  | Alice (Maybe LangAlice)
-
-showVoice :: Voice -> String
-showVoice (Man _) = "man"
-showVoice (Woman _) = "woman"
-showVoice (Alice _) = "alice"
-
-showLang :: Voice -> Maybe String
-showLang (Man lang) = fmap show lang 
-showLang (Woman lang) = fmap show lang 
-showLang (Alice lang) = fmap show lang 
-
--- | Languages spoken by voices 'Man' and 'Woman'. See
--- <https://www.twilio.com/docs/api/twiml/say#attributes-manwoman>.
-data Lang
-  = English
-  | EnglishUK
-  | Spanish
-  | French
-  | German
-  | Italian
-
-instance Show Lang where
-  show English   = "en"
-  show EnglishUK = "en-gb"
-  show Spanish   = "es"
-  show French    = "fr"
-  show German    = "de"
-  show Italian   = "it"
-
--- | Languages spoken by 'Alice'. See
--- <https://www.twilio.com/docs/api/twiml/say#attributes-alice>.
-data LangAlice
-  = DaDK -- ^ Danish, Denmark
-  | DeDE -- ^ German, Germany
-  | EnAU -- ^ English, Australia
-  | EnCA -- ^ English, Canada
-  | EnGB -- ^ English, UK
-  | EnIN -- ^ English, India
-  | EnUS -- ^ English, United States
-  | CaES -- ^ Catalan, Spain
-  | EsES -- ^ Spanish, Spain
-  | EsMX -- ^ Spanish, Mexico
-  | FiFI -- ^ Finnish, Finland
-  | FrCA -- ^ French, Canada
-  | FrFR -- ^ French, France
-  | ItIT -- ^ Italian, Italy
-  | JaJP -- ^ Japanese, Japan
-  | KoKR -- ^ Korean, Korea
-  | NbNO -- ^ Norwegian, Norway
-  | NlNL -- ^ Dutch, Netherlands
-  | PlPL -- ^ Polish-Poland
-  | PtBR -- ^ Portuguese, Brazil
-  | PtPT -- ^ Portuguese, Portugal
-  | RuRU -- ^ Russian, Russia
-  | SvSE -- ^ Swedish, Sweden
-  | ZhCN -- ^ Chinese (Mandarin)
-  | ZhHK -- ^ Chinese (Cantonese)
-  | ZhTW -- ^ Chinese (Taiwanese Mandarin)
-
-instance Show LangAlice where
-  show DaDK = "da-DK"
-  show DeDE = "de-DE"
-  show EnAU = "en-AU"
-  show EnCA = "en-CA"
-  show EnGB = "en-GB"
-  show EnIN = "en-IN"
-  show EnUS = "en-US"
-  show CaES = "ca-ES"
-  show EsES = "es-ES"
-  show EsMX = "es-MX"
-  show FiFI = "fi-FI"
-  show FrCA = "fr-CA"
-  show FrFR = "fr-FR"
-  show ItIT = "it-IT"
-  show JaJP = "ja-JP"
-  show KoKR = "ko-KR"
-  show NbNO = "nb-NO"
-  show NlNL = "nl-NL"
-  show PlPL = "pl-PL"
-  show PtBR = "pt-BR"
-  show PtPT = "pt-PT"
-  show RuRU = "ru-RU"
-  show SvSE = "sv-SE"
-  show ZhCN = "zh-CN"
-  show ZhHK = "zh-HK"
-  show ZhTW = "zh-TW"
-
--- | See <https://www.twilio.com/docs/api/twiml/conference#attributes-beep>.
-data ConferenceBeep
-  = Yes
-  | No
-  | OnExit
-  | OnEnter
-
-instance Show ConferenceBeep where
-  show Yes     = "yes"
-  show No      = "no"
-  show OnExit  = "onExit"
-  show OnEnter = "onEnter"
-
--- | The reason attribute takes the values \"rejected\" and \"busy.\" This tells
--- Twilio what message to play when rejecting a call. Selecting \"busy\" will
--- play a busy signal to the caller, while selecting \"rejected\" will play a
--- standard not-in-service response.
--- See <https://www.twilio.com/docs/api/twiml/reject#attributes-reason>
-data Reason = Rejected | Busy
-
-instance Show Reason where
-  show Rejected = "rejected"
-  show Busy     = "busy"
+{- Voices & Languages -}
 
 data GatherNoun
 
 -- | The ‘digits’ attribute lets you play DTMF tones during a call. See
 -- <https://www.twilio.com/docs/api/twiml/play#attributes-digits>.
-data PlayDigit
+data Digit
   = D0 -- ^ 0
   | D1 -- ^ 1
   | D2 -- ^ 2
@@ -451,7 +545,7 @@ data PlayDigit
   | D9 -- ^ 9
   | W  -- ^ w
 
-instance Show PlayDigit where
+instance Show Digit where
   show D0 = "0"
   show D1 = "1"
   show D2 = "2"
@@ -464,17 +558,12 @@ instance Show PlayDigit where
   show D9 = "9"
   show W  = "w"
 
--- This constraint lets us enforce TwiML nesting rules.
-
-class TypeEq x GatherNoun No => NotGatherNoun x
-
-instance TypeEq x GatherNoun No => NotGatherNoun x
-
 {- Basic Lens Functionality -}
 
--- The following section extracts a number of definitions required to get
+-- $lens The following section extracts a number of definitions required to get
 -- lenses, as defined in the lens package, working, without relying on the lens
--- package itself. If this turns out to be a bad idea, please email me.
+-- package itself. Rather than use the following functions, consider installing
+-- lens. See <https://hackage.haskell.org/package/lens>.
 
 -- The following definitions were extracted from the lens package.
 
@@ -557,9 +646,11 @@ instance Profunctor (->) where
   (#.) _ = unsafeCoerce
   {-# INLINE (#.) #-}
 
-{- Fix and Foldable -}
+{- Fix & Foldable -}
 
--- $fixAndFoldable The following definitions were extracted from the recursion-schemes package.
+-- $fix The following definitions were extracted from the recursion-schemes
+-- package. See <https://hackage.haskell.org/package/recursion-schemes>.
+
 newtype Fix f = Fix { unFix :: f (Fix f) }
 
 type family Base t :: * -> *
@@ -571,7 +662,7 @@ class Functor (Base t) => Foldable t where
 
 {- Type Inequality -}
 
--- See <http://stackoverflow.com/a/17794490>.
+-- See <https://stackoverflow.com/a/17794490>.
 
 data Yes
 
@@ -586,3 +677,13 @@ class TypeEq a b c | a b -> c
 instance TypeEq x x Yes
 
 instance TypeCast No b => TypeEq x y b
+
+-- This constraint lets us enforce TwiML nesting rules.
+
+class TypeEq x GatherNoun No => NotGatherNoun x
+
+instance TypeEq x GatherNoun No => NotGatherNoun x
+
+class TypeEq x y No => (:/~) x y
+
+instance TypeEq x y No => (:/~) x y

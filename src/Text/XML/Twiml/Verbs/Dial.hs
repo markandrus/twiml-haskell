@@ -4,9 +4,14 @@
 module Text.XML.Twiml.Verbs.Dial
   ( -- * @\<Dial\>@
     Dial
+    -- ** Constructors
   , dial
   , dial'
-    -- * Attribute Lenses
+    -- ** Attributes
+  , DialAttributes(..)
+  , defaultDialAttributes
+    -- *** Lenses
+  , dialAttributes
   , hangupOnStar
   , timeLimit
   , callerId
@@ -17,7 +22,7 @@ module Text.XML.Twiml.Verbs.Dial
   ) where
 
 import Text.XML.Twiml.Types
-import Text.XML.Twiml.Internal (DialNoun(..), Twiml(..), Twiml', TwimlF(..))
+import Text.XML.Twiml.Internal (Twiml(..), Twiml', TwimlF(..))
 
 newtype Dial p = Dial { fromDial :: Twiml' p }
 instance NotGatherNoun p => Twiml p (Dial p) where toTwiml' = fromDial

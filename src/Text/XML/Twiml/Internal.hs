@@ -8,7 +8,11 @@
 {-#LANGUAGE TypeFamilies #-}
 {-#LANGUAGE UndecidableInstances #-}
 
-module Text.XML.Twiml.Internal where
+module Text.XML.Twiml.Internal
+  ( TwimlF(..)
+  , Twiml(..)
+  , Twiml'
+  ) where
 
 import Text.XML.Twiml.Types
 
@@ -111,6 +115,16 @@ showBool :: Bool -> String
 showBool True = "true"
 showBool False = "false"
 
+showVoice :: Voice -> String
+showVoice (Man _) = "man"
+showVoice (Woman _) = "woman"
+showVoice (Alice _) = "alice"
+
+showLang :: Voice -> Maybe String
+showLang (Man lang) = fmap show lang 
+showLang (Woman lang) = fmap show lang 
+showLang (Alice lang) = fmap show lang 
+
 toXML :: Twiml' p -> [Element]
 toXML = cata go where
   go EndF = []
@@ -122,7 +136,7 @@ toXML = cata go where
   go (PlayF a b c) = (fromMaybe (unode "Play" ()) (fmap (unode "Play" . string . show) b))
       & add_attrs (catMaybes
     [ fmap ((Attr $ unqual "loop") . show) $ playLoop a
-    , fmap ((Attr $ unqual "digits") . concatMap show) $ playDigits' a
+    , fmap ((Attr $ unqual "digits") . concatMap show) $ playDigits a
     ]) : c
   go (GatherF a b c) = unode "Gather" (toXML b) & add_attrs (catMaybes
     [ fmap ((Attr $ unqual "action") . show) $ gatherAction a
@@ -178,94 +192,6 @@ toXML = cata go where
 {- Twiml Attributes -}
 
 -- FIXME: Rename `PlayKey`.
-
--- | See <https://www.twilio.com/docs/api/twiml/number#attributes>.
-data NumberAttributes = NumberAttributes
-  { numberSendDigits :: Maybe [PlayDigit]
-  , numberURL        :: Maybe URL
-  , numberMethod     :: Maybe Method
-  }
-
-defaultNumberAttributes :: NumberAttributes
-defaultNumberAttributes = NumberAttributes
-  { numberSendDigits = Nothing
-  , numberURL        = Nothing
-  , numberMethod     = Nothing
-  }
-
--- | See <https://www.twilio.com/docs/api/twiml/sip#attributes>.
-data SipAttributes = SipAttributes
-  { sipUsername  :: Maybe String
-  , sipPassword  :: Maybe String
-  , sipTransport :: Maybe Transport
-  , sipHeaders   :: Maybe String    -- NOTE: Under 1024 characters.
-  , sipURL       :: Maybe URL
-  , sipMethod    :: Maybe Method
-  }
-
-defaultSipAttributes :: SipAttributes
-defaultSipAttributes = SipAttributes
-  { sipUsername  = Nothing
-  , sipPassword  = Nothing
-  , sipTransport = Nothing
-  , sipHeaders   = Nothing
-  , sipURL       = Nothing
-  , sipMethod    = Nothing
-  }
-
--- | See <https://www.twilio.com/docs/api/twiml/client#attributes>.
-data ClientAttributes = ClientAttributes
-  { clientURL    :: Maybe URL
-  , clientMethod :: Maybe Method
-  }
-
-defaultClientAttributes :: ClientAttributes
-defaultClientAttributes = ClientAttributes
-  { clientURL    = Nothing
-  , clientMethod = Nothing
-  }
-
--- | See <https://www.twilio.com/docs/api/twiml/conference#attributes>.
-data ConferenceAttributes = ConferenceAttributes
-  { conferenceMuted           :: Maybe Bool
-  , conferenceBeep            :: Maybe Bool
-  , conferenceStartOnEnter    :: Maybe Bool
-  , conferenceEndOnExit       :: Maybe Bool
-  , conferenceWaitURL         :: Maybe URL
-  , conferenceWaitMethod      :: Maybe Method
-  , conferenceMaxParticipants :: Maybe Natural -- FIXME: Non-zero, less than 40.
-  }
-
-defaultConferenceAttributes :: ConferenceAttributes
-defaultConferenceAttributes = ConferenceAttributes
-  { conferenceMuted           = Nothing
-  , conferenceBeep            = Nothing
-  , conferenceStartOnEnter    = Nothing
-  , conferenceEndOnExit       = Nothing
-  , conferenceWaitURL         = Nothing
-  , conferenceWaitMethod      = Nothing
-  , conferenceMaxParticipants = Nothing
-  }
-
--- | See <https://www.twilio.com/docs/api/twiml/queue#attributes>.
-data QueueAttributes = QueueAttributes
-  { queueURL    :: Maybe URL
-  , queueMethod :: Maybe Method
-  }
-
-defaultQueueAttributes :: QueueAttributes
-defaultQueueAttributes = QueueAttributes
-  { queueURL    = Nothing
-  , queueMethod = Nothing
-  }
-
--- | See <https://www.twilio.com/docs/api/twiml/dial#nouns>.
-data DialNoun
-  = Number     NumberAttributes     String
-  | Sip        SipAttributes        URL    -- NOTE: URL must be under 255 characters.
-  | Client     ClientAttributes     String
-  | Conference ConferenceAttributes String
-  | Queue      QueueAttributes      String
 
 number :: String -> Maybe DialNoun
 number = Just . Number defaultNumberAttributes

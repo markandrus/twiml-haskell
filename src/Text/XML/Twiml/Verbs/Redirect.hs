@@ -4,9 +4,14 @@
 module Text.XML.Twiml.Verbs.Redirect
   ( -- * @\<Redirect\>@
     Redirect
+    -- ** Constructors
   , redirect
   , redirect'
-    -- * Attribute Lenses
+    -- ** Attributes
+  , RedirectAttributes(..)
+  , defaultRedirectAttributes
+    -- *** Lenses
+  , redirectAttributes
   , method
   ) where
 

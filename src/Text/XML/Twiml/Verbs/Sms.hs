@@ -4,9 +4,14 @@
 module Text.XML.Twiml.Verbs.Sms
   ( -- * @\<Sms\>@
     Sms
+    -- ** Constructors
   , sms
   , sms'
-    -- * Attribute Lenses
+    -- ** Attributes
+  , SmsAttributes(..)
+  , defaultSmsAttributes
+    -- *** Lenses
+  , smsAttributes
   , to
   , from
   , statusCallback

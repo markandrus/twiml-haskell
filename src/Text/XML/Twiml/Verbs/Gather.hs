@@ -6,9 +6,14 @@
 module Text.XML.Twiml.Verbs.Gather
   ( -- * @\<Gather\>@
     Gather
+    -- ** Constructors
   , gather
   , gather'
-    -- * Attribute Lenses
+    -- ** Attributes
+  , GatherAttributes(..)
+  , defaultGatherAttributes
+    -- *** Lenses
+  , gatherAttributes
   , numDigits
   , action
   , method

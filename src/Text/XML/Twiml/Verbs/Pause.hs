@@ -4,9 +4,14 @@
 module Text.XML.Twiml.Verbs.Pause
   ( -- * @\<Pause\>@
     Pause
+    -- ** Constructors
   , pause
   , pause'
-    -- * Attribute Lenses
+    -- ** Attributes
+  , PauseAttributes(..)
+  , defaultPauseAttributes
+    -- *** Lenses
+  , pauseAttributes
   , length'
   ) where
 

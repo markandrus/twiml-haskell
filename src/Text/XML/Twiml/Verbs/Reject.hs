@@ -4,9 +4,14 @@
 module Text.XML.Twiml.Verbs.Reject
   ( -- * @\<Reject\>@
     Reject
+    -- ** Constructors
   , reject
   , reject'
-    -- * Attribute Lenses
+    -- ** Attributes
+  , RejectAttributes(..)
+  , defaultRejectAttributes
+    -- *** Lenses
+  , rejectAttributes
   , reason
   ) where
 

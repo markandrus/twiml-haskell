@@ -4,6 +4,7 @@
 module Text.XML.Twiml.Verbs.Say
   ( -- * @\<Say\>@
     Say
+    -- ** Constructors
   , say
   , say'
   , sayMan
@@ -12,7 +13,11 @@ module Text.XML.Twiml.Verbs.Say
   , sayWoman'
   , sayAlice
   , sayAlice'
-    -- * Attribute Lenses
+    -- ** Attributes
+  , SayAttributes(..)
+  , defaultSayAttributes
+    -- *** Lenses
+  , sayAttributes
   , voice
   , loop
   ) where

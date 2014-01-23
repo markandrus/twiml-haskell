@@ -4,6 +4,7 @@
 module Text.XML.Twiml.Verbs.Enqueue
   ( -- * @\<Enqueue\>@
     Enqueue
+    -- ** Constructor
   , enqueue
   ) where
 

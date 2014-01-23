@@ -5,6 +5,7 @@ module Text.XML.Twiml.Verbs.End
   ( -- * End
     -- $end
     End
+    -- ** Constructor
   , end
   ) where
 

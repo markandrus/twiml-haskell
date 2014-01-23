@@ -4,6 +4,7 @@
 module Text.XML.Twiml.Verbs.Hangup
   ( -- * @\<Hangup\>@
     Hangup
+    -- ** Constructor
   , hangup
   ) where
 

@@ -4,9 +4,14 @@
 module Text.XML.Twiml.Verbs.Play
   ( -- * @\<Play\>@
     Play
+    -- ** Constructors
   , play
   , play'
-    -- * Attribute Lenses
+    -- ** Attributes
+  , PlayAttributes(..)
+  , defaultPlayAttributes
+    -- *** Lenses
+  , playAttributes
   , digits
   , loop
   ) where
@@ -32,11 +37,11 @@ playAttributes = lens
 setPlayLoop :: PlayAttributes -> Natural -> PlayAttributes
 setPlayLoop attrs loop = attrs { playLoop = Just loop }
 
-setPlayDigits :: PlayAttributes -> [PlayDigit] -> PlayAttributes
-setPlayDigits attrs digits = attrs { playDigits' = Just digits }
+setPlayDigits :: PlayAttributes -> [Digit] -> PlayAttributes
+setPlayDigits attrs digits = attrs { playDigits = Just digits }
 
-digits :: Lens (Play p) (Play p) (Maybe [PlayDigit]) [PlayDigit]
-digits = lens (^. playAttributes . to' playDigits')
+digits :: Lens (Play p) (Play p) (Maybe [Digit]) [Digit]
+digits = lens (^. playAttributes . to' playDigits)
   (\t v -> over playAttributes (flip setPlayDigits v) t)
 
 instance HasLoop (Play p) where

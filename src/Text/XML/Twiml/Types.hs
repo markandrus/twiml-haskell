@@ -30,6 +30,7 @@ module Text.XML.Twiml.Types
     -- * @\<Gather\>@
   , GatherAttributes(..)
   , defaultGatherAttributes
+  , Gather'
     -- * @\<Record\>@
   , RecordAttributes(..)
   , defaultRecordAttributes
@@ -77,8 +78,6 @@ module Text.XML.Twiml.Types
   , HasTimeout(..)
   , HasFinishOnKey(..)
   -- * Internal
-  , GatherNoun
-  , NotGatherNoun
     -- ** Lens
     -- $lens
   , Lens
@@ -228,6 +227,9 @@ defaultGatherAttributes = GatherAttributes
   , gatherFinishOnKey = Nothing
   , gatherNumDigits   = Nothing
   }
+
+-- | This constraint lets us enforce TwiML nesting rules.
+data Gather'
 
 -- | See <https://www.twilio.com/docs/api/twiml/record#attributes>.
 data RecordAttributes = RecordAttributes
@@ -438,7 +440,7 @@ defaultRejectAttributes = RejectAttributes
 -- Twilio what message to play when rejecting a call. Selecting \"busy\" will
 -- play a busy signal to the caller, while selecting \"rejected\" will play a
 -- standard not-in-service response.
--- See <https://www.twilio.com/docs/api/twiml/reject#attributes-reason>
+-- See <https://www.twilio.com/docs/api/twiml/reject#attributes-reason>.
 data Reason = Rejected | Busy
 
 instance Show Reason where
@@ -662,7 +664,8 @@ class Functor (Base t) => Foldable t where
 
 {- Type Inequality -}
 
--- See <https://stackoverflow.com/a/17794490>.
+-- $type The following defines ':/~' to mean inequality at the type level.
+-- Borrowed from HList. See <http://okmij.org/ftp/Haskell/typeEQ.html>.
 
 data Yes
 
@@ -677,12 +680,6 @@ class TypeEq a b c | a b -> c
 instance TypeEq x x Yes
 
 instance TypeCast No b => TypeEq x y b
-
--- This constraint lets us enforce TwiML nesting rules.
-
-class TypeEq x GatherNoun No => NotGatherNoun x
-
-instance TypeEq x GatherNoun No => NotGatherNoun x
 
 class TypeEq x y No => (:/~) x y
 

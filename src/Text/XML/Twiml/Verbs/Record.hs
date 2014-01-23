@@ -1,8 +1,11 @@
+{-#LANGUAGE FlexibleContexts #-}
 {-#LANGUAGE FlexibleInstances #-}
 {-#LANGUAGE MultiParamTypeClasses #-}
+{-#LANGUAGE TypeOperators #-}
 
 module Text.XML.Twiml.Verbs.Record
   ( -- * @\<Record\>@
+    -- $record
     Record
     -- ** Constructors
   , record
@@ -25,13 +28,38 @@ module Text.XML.Twiml.Verbs.Record
 import Text.XML.Twiml.Types
 import Text.XML.Twiml.Internal (Twiml(..), Twiml', TwimlF(..))
 
-newtype Record p = Record { fromRecord :: Twiml' p }
-instance NotGatherNoun p => Twiml p (Record p) where toTwiml' = fromRecord
+{- $record This example
 
-record :: (Twiml p t, NotGatherNoun p) => t -> Record p
+@
+module Example where
+
+import Control.Lens
+import Text.XML.Twiml
+
+example
+  = respond
+  . (record \<&\> timeout    .~ 10
+            \<&\> transcribe .~ True)
+  $ end
+@
+
+produces the following TwiML response:
+
+@
+\<?xml version=\"1.0\" encoding=\"UTF-8\"?\>
+\<Response\>
+  \<Record timeout=\"10\" transcribe=\"true\" \/\>
+\<\/Response\>
+@
+-}
+
+newtype Record p = Record { fromRecord :: Twiml' p }
+instance (p :/~ Gather') => Twiml p (Record p) where toTwiml' = fromRecord
+
+record :: (Twiml p t, p :/~ Gather') => t -> Record p
 record = record' defaultRecordAttributes
 
-record' :: (Twiml p t, NotGatherNoun p)
+record' :: (Twiml p t, p :/~ Gather')
         => RecordAttributes -> t -> Record p
 record' attrs
   = Record . Fix . RecordF attrs . toTwiml'

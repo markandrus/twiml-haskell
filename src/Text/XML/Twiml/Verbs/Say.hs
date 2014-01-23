@@ -3,6 +3,7 @@
 
 module Text.XML.Twiml.Verbs.Say
   ( -- * @\<Say\>@
+    -- $say
     Say
     -- ** Constructors
   , say
@@ -24,6 +25,29 @@ module Text.XML.Twiml.Verbs.Say
 
 import Text.XML.Twiml.Types
 import Text.XML.Twiml.Internal (Twiml(..), Twiml', TwimlF(..))
+
+{- $say This example
+
+@
+module Example where
+
+import Text.XML.Twiml
+
+example
+  = respond
+  . sayWoman' French \"Chapeau\"
+  $ end
+@
+
+produces the following TwiML response:
+
+@
+\<?xml version=\"1.0\" encoding=\"UTF-8\"?\>
+\<Response\>
+  \<Say voice=\"woman\" language=\"fr\"\>Chapeau\<\/Say\>
+\<\/Response\>
+@
+-}
 
 newtype Say p = Say { fromSay :: Twiml' p }
 instance Twiml p (Say p) where toTwiml' = fromSay

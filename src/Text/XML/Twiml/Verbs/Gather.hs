@@ -2,9 +2,11 @@
 {-#LANGUAGE FlexibleInstances #-}
 {-#LANGUAGE MultiParamTypeClasses #-}
 {-#LANGUAGE RankNTypes #-}
+{-#LANGUAGE TypeOperators #-}
 
 module Text.XML.Twiml.Verbs.Gather
   ( -- * @\<Gather\>@
+    -- $gather
     Gather
     -- ** Constructors
   , gather
@@ -27,13 +29,42 @@ import Text.XML.Twiml.Verbs.End
 
 import Unsafe.Coerce (unsafeCoerce)
 
-newtype Gather p = Gather { fromGather :: Twiml' p }
-instance NotGatherNoun p => Twiml p (Gather   p) where toTwiml' = fromGather
+{- $gather This example
 
-gather :: (Twiml GatherNoun n, Twiml p t, NotGatherNoun p) => n -> t -> Gather p
+@
+module Example where
+
+import Control.Lens
+import Text.XML.Twiml
+
+example
+  = respond
+  . (gather \<&\> timeout     .~ 10
+            \<&\> finishOnKey .~ KStar
+      $ say \"Please enter your pin number and then press star.\"
+      $ end)
+  $ end
+@
+
+produces the following TwiML response:
+
+@
+\<?xml version=\"1.0\" encoding=\"UTF-8\"?\>
+\<Response\>
+  \<Gather timeout=\"10\" finishOnKey=\"*\"\>
+    \<Say\>Please enter your pin number and then press star.\<\/Say\>
+  \<\/Gather\>
+\<\/Response\>
+@
+-}
+
+newtype Gather p = Gather { fromGather :: Twiml' p }
+instance (p :/~ Gather') => Twiml p (Gather p) where toTwiml' = fromGather
+
+gather :: (Twiml Gather' n, Twiml p t, p :/~ Gather') => n -> t -> Gather p
 gather = gather' defaultGatherAttributes
 
-gather' :: (Twiml GatherNoun n, Twiml p t, NotGatherNoun p)
+gather' :: (Twiml Gather' n, Twiml p t, p :/~ Gather')
         => GatherAttributes -> n -> t -> Gather p
 gather' attrs n
   = Gather . Fix . GatherF attrs (toTwiml' n) . toTwiml'
@@ -74,12 +105,12 @@ instance forall p t. Twiml p t => HasMethod (t -> Gather p) where
     getMethod f = (^. gatherAttributes . to' gatherMethod) (f $ unsafeCoerce end)
     setMethod f v = fmap (over gatherAttributes (flip setGatherMethod v)) f
 
-instance HasTimeout (Gather p) where
+instance forall p t. Twiml p t => HasTimeout (t -> Gather p) where
   timeout = lens getTimeout setTimeout where
-    getTimeout = (^. gatherAttributes . to' gatherTimeout)
-    setTimeout t v = over gatherAttributes (flip setGatherTimeout v) t
+    getTimeout f = (^. gatherAttributes . to' gatherTimeout) (f $ unsafeCoerce end)
+    setTimeout f v = fmap (over gatherAttributes (flip setGatherTimeout v)) f
 
-instance HasFinishOnKey (Gather p) where
+instance forall p t. Twiml p t => HasFinishOnKey (t -> Gather p) where
   finishOnKey = lens getFinishOnKey setFinishOnKey where
-    getFinishOnKey = (^. gatherAttributes . to' gatherFinishOnKey)
-    setFinishOnKey t v = over gatherAttributes (flip setGatherFinishOnKey v) t
+    getFinishOnKey f = (^. gatherAttributes . to' gatherFinishOnKey) (f $ unsafeCoerce end)
+    setFinishOnKey f v = fmap (over gatherAttributes (flip setGatherFinishOnKey v)) f

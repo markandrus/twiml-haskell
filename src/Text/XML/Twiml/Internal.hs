@@ -7,6 +7,7 @@
 {-#LANGUAGE RankNTypes #-}
 {-#LANGUAGE TypeFamilies #-}
 {-#LANGUAGE UndecidableInstances #-}
+{-#LANGUAGE TypeOperators #-}
 
 module Text.XML.Twiml.Internal
   ( TwimlF(..)
@@ -32,39 +33,39 @@ data TwimlF p a where
             -> Maybe URL
             -> a
             -> TwimlF p a
-  GatherF   :: NotGatherNoun p
+  GatherF   :: ((p :/~ Gather'))
             => GatherAttributes
-            -> Twiml' GatherNoun
+            -> Twiml' Gather'
             -> a
             -> TwimlF p a
-  RecordF   :: NotGatherNoun p
+  RecordF   :: (p :/~ Gather')
             => RecordAttributes
             -> a
             -> TwimlF p a
-  SmsF      :: NotGatherNoun p
+  SmsF      :: (p :/~ Gather')
             => SmsAttributes
             -> String
             -> a
             -> TwimlF p a
-  DialF     :: NotGatherNoun p
+  DialF     :: (p :/~ Gather')
             => DialAttributes
             -> Either DialNoun String
             -> a
             -> TwimlF p a
-  EnqueueF  :: NotGatherNoun p
+  EnqueueF  :: (p :/~ Gather')
             => EnqueueAttributes
             -> String
             -> a
             -> TwimlF p a
-  LeaveF    :: NotGatherNoun p
+  LeaveF    :: (p :/~ Gather')
             => TwimlF p a
-  HangupF   :: NotGatherNoun p
+  HangupF   :: (p :/~ Gather')
             => TwimlF p a
-  RedirectF :: NotGatherNoun p
+  RedirectF :: (p :/~ Gather')
             => RedirectAttributes
             -> URL
             -> TwimlF p a
-  RejectF   :: NotGatherNoun p
+  RejectF   :: (p :/~ Gather')
             => RejectAttributes
             -> TwimlF p a
   PauseF    :: PauseAttributes

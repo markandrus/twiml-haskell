@@ -3,6 +3,7 @@
 
 module Text.XML.Twiml.Verbs.Play
   ( -- * @\<Play\>@
+    -- $play
     Play
     -- ** Constructors
   , play
@@ -18,6 +19,30 @@ module Text.XML.Twiml.Verbs.Play
 
 import Text.XML.Twiml.Types
 import Text.XML.Twiml.Internal (Twiml(..), Twiml', TwimlF(..))
+
+{- $play This example
+
+@
+module Example where
+
+import Control.Lens
+import Text.XML.Twiml
+
+example
+  = respond
+  . (play (parseURL \"https:\/\/api.twilio.com\/cowbell.mp3\") \<&\> loop .~ 10)
+  $ end
+@
+
+produces the following TwiML response:
+
+@
+\<?xml version=\"1.0\" encoding=\"UTF-8\"?\>
+\<Response\>
+  \<Play loop=\"10\"\>https:\/\/api.twilio.com\/cowbell.mp3\<\/Play\>
+\<\/Response\>
+@
+-}
 
 newtype Play p = Play { fromPlay :: Twiml' p }
 instance Twiml p (Play p) where toTwiml' = fromPlay

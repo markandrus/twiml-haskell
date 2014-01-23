@@ -1,8 +1,11 @@
+{-#LANGUAGE FlexibleContexts #-}
 {-#LANGUAGE FlexibleInstances #-}
 {-#LANGUAGE MultiParamTypeClasses #-}
+{-#LANGUAGE TypeOperators #-}
 
 module Text.XML.Twiml.Verbs.Dial
   ( -- * @\<Dial\>@
+    -- $dial
     Dial
     -- ** Constructors
   , dial
@@ -24,13 +27,38 @@ module Text.XML.Twiml.Verbs.Dial
 import Text.XML.Twiml.Types
 import Text.XML.Twiml.Internal (Twiml(..), Twiml', TwimlF(..))
 
-newtype Dial p = Dial { fromDial :: Twiml' p }
-instance NotGatherNoun p => Twiml p (Dial p) where toTwiml' = fromDial
+{- $dial This example
 
-dial :: (Twiml p t, NotGatherNoun p) => Either DialNoun String -> t -> Dial p
+@
+module Example where
+
+import Control.Lens
+import Text.XML.Twiml
+
+example
+  = respond
+  . (dial (Right \"415-123-4567\") \<&\> timeout .~ 10
+                                     record  .~ True)
+  $ end
+@
+
+produces the following TwiML response:
+
+@
+\<?xml version=\"1.0\" encoding=\"UTF-8\"?\>
+\<Response\>
+  \<Dial timeout=\"10\" record=\"true\"\>415-123-4567\<\/Dial\>
+\<\/Response\>
+@
+-}
+
+newtype Dial p = Dial { fromDial :: Twiml' p }
+instance (p :/~ Gather') => Twiml p (Dial p) where toTwiml' = fromDial
+
+dial :: (Twiml p t, p :/~ Gather') => Either DialNoun String -> t -> Dial p
 dial = dial' defaultDialAttributes
 
-dial' :: (Twiml p t, NotGatherNoun p)
+dial' :: (Twiml p t, p :/~ Gather')
       => DialAttributes -> Either DialNoun String -> t -> Dial p
 dial' attrs n = Dial . Fix . DialF attrs n . toTwiml'
 

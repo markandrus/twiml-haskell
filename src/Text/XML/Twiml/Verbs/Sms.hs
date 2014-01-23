@@ -1,8 +1,11 @@
+{-#LANGUAGE FlexibleContexts #-}
 {-#LANGUAGE FlexibleInstances #-}
 {-#LANGUAGE MultiParamTypeClasses #-}
+{-#LANGUAGE TypeOperators #-}
 
 module Text.XML.Twiml.Verbs.Sms
   ( -- * @\<Sms\>@
+    -- $sms
     Sms
     -- ** Constructors
   , sms
@@ -22,13 +25,38 @@ module Text.XML.Twiml.Verbs.Sms
 import Text.XML.Twiml.Types
 import Text.XML.Twiml.Internal (Twiml(..), Twiml', TwimlF(..))
 
-newtype Sms p = Sms { fromSms :: Twiml' p }
-instance NotGatherNoun p => Twiml p (Sms p) where toTwiml' = fromSms
+{- $sms This example
 
-sms :: (Twiml p t, NotGatherNoun p) => String -> t -> Sms p
+@
+module Example where
+
+import Control.Lens
+import Text.XML.Twiml
+
+example
+  = respond
+  . (sms \"The king stay the king.\" \<&\> to   .~ \"+14105551234\"
+                                   \<&\> from .~ \"+14105556789\")
+  $ end
+@
+
+produces the following TwiML response:
+
+@
+\<?xml version=\"1.0\" encoding=\"UTF-8\"?\>
+\<Response\>
+  \<Sms from=\"+14105551234\" to=\"+14105556789\"\>The king stay the king.\<\/Sms\>
+\<\/Response\>
+@
+-}
+
+newtype Sms p = Sms { fromSms :: Twiml' p }
+instance (p :/~ Gather') => Twiml p (Sms p) where toTwiml' = fromSms
+
+sms :: (Twiml p t, p :/~ Gather') => String -> t -> Sms p
 sms = sms' defaultSmsAttributes
 
-sms' :: (Twiml p t, NotGatherNoun p) => SmsAttributes -> String -> t -> Sms p
+sms' :: (Twiml p t, p :/~ Gather') => SmsAttributes -> String -> t -> Sms p
 sms' attrs n = Sms . Fix . SmsF attrs n . toTwiml'
 
 smsAttributes :: Lens' (Sms p) SmsAttributes

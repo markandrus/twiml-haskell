@@ -33,7 +33,7 @@ data TwimlF p a where
             -> Maybe URL
             -> a
             -> TwimlF p a
-  GatherF   :: ((p :/~ Gather'))
+  GatherF   :: (p :/~ Gather')
             => GatherAttributes
             -> Twiml' Gather'
             -> a

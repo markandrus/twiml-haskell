@@ -35,4 +35,5 @@ is transformed into
 TODO
 ----
 
-* Define `DialNoun`.
+* Implement phone number parsing for `Dial`.
+* Implement `Enqueue` attributes.

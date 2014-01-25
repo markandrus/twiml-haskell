@@ -22,6 +22,23 @@ module Text.XML.Twiml.Verbs.Dial
   , action
   , method
   , timeout
+    -- ** Dial Nouns
+  , DialNoun(..)
+    -- *** @\<Number\>@
+  , NumberAttributes(..)
+  , defaultNumberAttributes
+    -- *** @\<Sip\>@
+  , SipAttributes(..)
+  , defaultSipAttributes
+    -- *** @\<Client\>@
+  , ClientAttributes(..)
+  , defaultClientAttributes
+    -- *** @\<Conference\>@
+  , ConferenceAttributes(..)
+  , defaultConferenceAttributes
+    -- *** @\<Queue\>@
+  , QueueAttributes(..)
+  , defaultQueueAttributes
   ) where
 
 import Text.XML.Twiml.Types
@@ -38,7 +55,7 @@ import Text.XML.Twiml
 example
   = respond
   . (dial (Right \"415-123-4567\") \<&\> timeout .~ 10
-                                     record  .~ True)
+                                 \<&\> record  .~ True)
   $ end
 @
 

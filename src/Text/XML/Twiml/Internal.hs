@@ -122,9 +122,43 @@ showVoice (Woman _) = "woman"
 showVoice (Alice _) = "alice"
 
 showLang :: Voice -> Maybe String
-showLang (Man lang) = fmap show lang 
-showLang (Woman lang) = fmap show lang 
-showLang (Alice lang) = fmap show lang 
+showLang (Man lang) = fmap show lang
+showLang (Woman lang) = fmap show lang
+showLang (Alice lang) = fmap show lang
+
+dialNoun :: Either DialNoun String -> Content
+dialNoun (Left (Number a b))
+  = Elem $ unode "Number" (string b) & add_attrs (catMaybes
+      [ fmap ((Attr $ unqual "sendDigits") . concatMap show) $ numberSendDigits a
+      , fmap ((Attr $ unqual "url") . show) $ numberURL a
+      , fmap ((Attr $ unqual "method") . show) $ numberMethod a
+      ])
+dialNoun (Left (Sip a b))
+  = Elem $ unode "Sip" (string $ show b) & add_attrs (catMaybes
+      [ fmap ((Attr $ unqual "url") . show) $ sipURL a
+      , fmap ((Attr $ unqual "method") . show) $ sipMethod a
+      ])
+dialNoun (Left (Client a b))
+  = Elem $ unode "Client" (string b) & add_attrs (catMaybes
+      [ fmap ((Attr $ unqual "url") . show) $ clientURL a
+      , fmap ((Attr $ unqual "method") . show) $ clientMethod a
+      ])
+dialNoun (Left (Conference a b))
+  = Elem $ unode "Conference" (string b) & add_attrs (catMaybes
+      [ fmap ((Attr $ unqual "muted") . showBool) $ conferenceMuted a
+      , fmap ((Attr $ unqual "beep") . show) $ conferenceBeep a
+      , fmap ((Attr $ unqual "startConferenceOnEnter") . showBool) $ conferenceStartOnEnter a
+      , fmap ((Attr $ unqual "endConferenceOnExit") . showBool) $ conferenceEndOnExit a
+      , fmap ((Attr $ unqual "waitUrl") . show) $ conferenceWaitURL a
+      , fmap ((Attr $ unqual "waitMethod") . show) $ conferenceWaitMethod a
+      , fmap ((Attr $ unqual "maxParticipants") . show) $ conferenceMaxParticipants a
+      ])
+dialNoun (Left (Queue a b))
+  = Elem $ unode "Queue" (string b) & add_attrs (catMaybes
+      [ fmap ((Attr $ unqual "url") . show) $ queueURL a
+      , fmap ((Attr $ unqual "method") . show) $ queueMethod a
+      ])
+dialNoun (Right str) = string str
 
 toXML :: Twiml' p -> [Element]
 toXML = cata go where
@@ -163,7 +197,7 @@ toXML = cata go where
     , fmap ((Attr $ unqual "method") . show) $ smsMethod a
     , fmap ((Attr $ unqual "statusCallback") . show) $ smsStatusCallback a
     ]) : c
-  go (DialF a b c) = unode "Dial" () & add_attrs (catMaybes
+  go (DialF a b c) = unode "Dial" (dialNoun b) & add_attrs (catMaybes
     [ fmap ((Attr $ unqual "action") . show) $ dialAction a
     , fmap ((Attr $ unqual "method") . show) $ dialMethod a
     , fmap ((Attr $ unqual "timeout") . show) $ dialTimeout a

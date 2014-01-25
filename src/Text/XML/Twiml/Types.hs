@@ -52,7 +52,7 @@ module Text.XML.Twiml.Types
   , ClientAttributes(..)
   , defaultClientAttributes
     -- ** @\<Conference\>@
-  , ConferenceAttributes
+  , ConferenceAttributes(..)
   , defaultConferenceAttributes
   , ConferenceBeep(..)
     -- ** @\<Queue\>@

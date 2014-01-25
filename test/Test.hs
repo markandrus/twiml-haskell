@@ -121,11 +121,10 @@ smsExamples = [ smsExample1, smsExample2, smsExample3 ]
 dialExample1 =
   ( respond
   . dial (Right "415-123-4567")
-  . say "Goodybye"
+  . say "Goodbye"
   $ end
   , "test/xml/dialExample1.xml" )
 
--- FIXME: Ugly.
 dialExample2 =
   ( respond
   . (dial (Right "415-123-4567") <&> action .~ (fromJust $ parseURL "/handleDialCallStatus.php")
@@ -134,11 +133,10 @@ dialExample2 =
   $ end
   , "test/xml/dialExample2.xml" )
 
--- FIXME: Ugly.
 dialExample3 =
   ( respond
   . (dial
-        (Left $ Number (NumberAttributes Nothing Nothing Nothing) "+1558675309")
+        (Left $ Number (NumberAttributes Nothing Nothing Nothing) "+15558675309")
       <&> callerId .~ "+15551112222")
   $ end
   , "test/xml/dialExample3.xml" )
@@ -149,15 +147,13 @@ dialExamples = [ dialExample1, dialExample2, dialExample3 ]
 
 {- Enqueue -}
 
-{-
 enqueueExample1 =
   ( respond
-  . (enqueue "support" <&> waitURL .~ undefined)
+  . (enqueue "support" <&> waitURL .~ (fromJust $ parseURL "wait-music.xml"))
   $ end
   , "test/xml/enqueueExample1.xml" )
--}
 
-enqueueExamples = []
+enqueueExamples = [ enqueueExample1 ]
 
 {- Leave -}
 
@@ -218,14 +214,14 @@ rejectExamples = [ rejectExample1, rejectExample2 ]
 pauseExample1 =
   ( respond
   . say "I will pause 10 seconds starting now!"
-  . (pause <&> length' .~ 10)
+  . (pause <&> duration .~ 10)
   . say "I just paused 10 seconds"
   $ end
   , "test/xml/pauseExample1.xml" )
 
 pauseExample2 =
   ( respond
-  . (pause <&> length' .~ 5)
+  . (pause <&> duration .~ 5)
   . say "Hi there."
   $ end
   , "test/xml/pauseExample2.xml" )

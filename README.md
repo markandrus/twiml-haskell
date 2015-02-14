@@ -1,7 +1,7 @@
 twiml
 =====
 
-![twiml-haskell on Travis CI](https://travis-ci.org/markandrus/twiml-haskell.svg)
+[![twiml-haskell on Travis CI](https://travis-ci.org/markandrus/twiml-haskell.svg)](https://travis-ci.org/markandrus/twiml-haskell)
 
 This package provides a library for constructing
 [TwiML](www.twilio.com/docs/api/twiml). Install using

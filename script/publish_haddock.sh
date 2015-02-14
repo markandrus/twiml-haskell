@@ -5,7 +5,7 @@ set -e
 
 user='markandrus'
 repo='twiml-haskell'
-root='src/Text/XML/Twiml.hs'
+package='twiml'
 
 if [[ "${TRAVIS_REPO_SLUG}"  == "${user}/${repo}" \
    && "${TRAVIS_PULL_REQUEST}" == 'false' \
@@ -13,8 +13,8 @@ if [[ "${TRAVIS_REPO_SLUG}"  == "${user}/${repo}" \
 then
 
   echo "Generating Haddock documentation..."
-  haddock -o doc --html ${root}
-  cp -R doc ${HOME}/doc
+  cabal haddock
+  cp -R dist/doc/html/${package} ${HOME}/doc
 
   echo "Cloning repo..."
   cd ${HOME}

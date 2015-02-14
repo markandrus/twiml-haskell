@@ -1,4 +1,3 @@
-{-#LANGUAGE EmptyDataDecls #-}
 {-#LANGUAGE FlexibleContexts #-}
 {-#LANGUAGE FlexibleInstances #-}
 {-#LANGUAGE FunctionalDependencies #-}
@@ -17,7 +16,7 @@ module Text.XML.Twiml.Internal
 
 import Text.XML.Twiml.Types
 
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (catMaybes)
 import Text.XML.Light
 
 {- TwimlF -}
@@ -73,7 +72,7 @@ data TwimlF p a where
             -> TwimlF p a
 
 instance Functor (TwimlF p) where
-  fmap f  EndF             = EndF
+  fmap _  EndF             = EndF
   fmap f (SayF      a b c) = SayF      a b $ f c
   fmap f (PlayF     a b c) = PlayF     a b $ f c
   fmap f (GatherF   a b c) = GatherF   a b $ f c
@@ -81,10 +80,10 @@ instance Functor (TwimlF p) where
   fmap f (SmsF      a b c) = SmsF      a b $ f c
   fmap f (DialF     a b c) = DialF     a b $ f c
   fmap f (EnqueueF  a b c) = EnqueueF  a b $ f c
-  fmap f  LeaveF           = LeaveF
-  fmap f  HangupF          = HangupF
-  fmap f (RedirectF a b)   = RedirectF a b
-  fmap f (RejectF   a)     = RejectF   a
+  fmap _  LeaveF           = LeaveF
+  fmap _  HangupF          = HangupF
+  fmap _ (RedirectF a b)   = RedirectF a b
+  fmap _ (RejectF   a)     = RejectF   a
   fmap f (PauseF    a b)   = PauseF    a   $ f b
 
 type instance Base (Fix (TwimlF p)) = TwimlF p
@@ -166,9 +165,9 @@ toXML = cata go where
   go (SayF a b c) = unode "Say" (string b) & add_attrs (catMaybes
     [ fmap ((Attr $ unqual "voice") . showVoice) $ sayVoice a
     , fmap ((Attr $ unqual "loop") . show) $ sayLoop a
-    , fmap (Attr $ unqual "language") $ (sayVoice a >>= showLang)
+    , fmap (Attr $ unqual "language") (sayVoice a >>= showLang)
     ]) : c
-  go (PlayF a b c) = (fromMaybe (unode "Play" ()) (fmap (unode "Play" . string . show) b))
+  go (PlayF a b c) = maybe (unode "Play" ()) (unode "Play" . string . show) b
       & add_attrs (catMaybes
     [ fmap ((Attr $ unqual "loop") . show) $ playLoop a
     , fmap ((Attr $ unqual "digits") . concatMap show) $ playDigits a
@@ -223,11 +222,3 @@ toXML = cata go where
   go (PauseF a b) = unode "Pause" () & add_attrs (catMaybes
     [ fmap ((Attr $ unqual "length") . show) $ pauseLength a
     ]) : b
-
-{- Twiml Attributes -}
-
--- FIXME: Rename `PlayKey`.
-
-number :: String -> Maybe DialNoun
-number = Just . Number defaultNumberAttributes
-

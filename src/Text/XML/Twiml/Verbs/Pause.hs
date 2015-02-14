@@ -68,4 +68,4 @@ setPauseLength attrs length = attrs { pauseLength = Just length }
 
 duration :: Lens (Pause p) (Pause p) (Maybe Natural) Natural
 duration = lens (^. pauseAttributes . to' pauseLength)
-  (\t v -> over pauseAttributes (flip setPauseLength v) t)
+  (\t v -> over pauseAttributes (`setPauseLength` v) t)

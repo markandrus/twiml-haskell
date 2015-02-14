@@ -109,33 +109,31 @@ setDialRecord attrs record = attrs { dialRecord = Just record }
 
 hangupOnStar :: Lens (Dial p) (Dial p) (Maybe Bool) Bool
 hangupOnStar = lens (^. dialAttributes . to' dialHangupOnStar)
-  (\t v -> over dialAttributes (flip setDialHangupOnStar v) t)
+  (\t v -> over dialAttributes (`setDialHangupOnStar` v) t)
 
 timeLimit :: Lens (Dial p) (Dial p) (Maybe Natural) Natural
 timeLimit = lens (^. dialAttributes . to' dialTimeLimit)
-  (\t v -> over dialAttributes (flip setDialTimeLimit v) t)
+  (\t v -> over dialAttributes (`setDialTimeLimit` v) t)
 
 callerId :: Lens (Dial p) (Dial p) (Maybe String) String
 callerId = lens (^. dialAttributes . to' dialCallerId)
-  (\t v -> over dialAttributes (flip setDialCallerId v) t)
+  (\t v -> over dialAttributes (`setDialCallerId` v) t)
 
 recordDial :: Lens (Dial p) (Dial p) (Maybe Bool) Bool
 recordDial = lens (^. dialAttributes . to' dialRecord)
-  (\t v -> over dialAttributes (flip setDialRecord v) t)
+  (\t v -> over dialAttributes (`setDialRecord` v) t)
 
 instance HasAction (Dial p) where
   action = lens getAction setAction where
     getAction = (^. dialAttributes . to' dialAction)
-    setAction t v = over dialAttributes (flip setDialAction v) t
+    setAction t v = over dialAttributes (`setDialAction` v) t
 
 instance HasMethod (Dial p) where
   method = lens getMethod setMethod where
     getMethod = (^. dialAttributes . to' dialMethod)
-    setMethod t v = over dialAttributes (flip setDialMethod v) t
+    setMethod t v = over dialAttributes (`setDialMethod` v) t
 
 instance HasTimeout (Dial p) where
   timeout = lens getTimeout setTimeout where
     getTimeout = (^. dialAttributes . to' dialTimeout)
-    setTimeout t v = over dialAttributes (flip setDialTimeout v) t
-
-
+    setTimeout t v = over dialAttributes (`setDialTimeout` v) t

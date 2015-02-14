@@ -83,22 +83,22 @@ setSmsStatusCallback attrs statusCallback
 
 to :: Lens (Sms p) (Sms p) (Maybe String) String
 to = lens (^. smsAttributes . to' smsTo)
-  (\t v -> over smsAttributes (flip setSmsTo v) t)
+  (\t v -> over smsAttributes (`setSmsTo` v) t)
 
 from :: Lens (Sms p) (Sms p) (Maybe String) String
 from = lens (^. smsAttributes . to' smsFrom)
-  (\t v -> over smsAttributes (flip setSmsFrom v) t)
+  (\t v -> over smsAttributes (`setSmsFrom` v) t)
 
 statusCallback :: Lens (Sms p) (Sms p) (Maybe URL) URL
 statusCallback = lens (^. smsAttributes . to' smsStatusCallback)
-  (\t v -> over smsAttributes (flip setSmsStatusCallback v) t)
+  (\t v -> over smsAttributes (`setSmsStatusCallback` v) t)
 
 instance HasAction (Sms p) where
   action = lens getAction setAction where
     getAction = (^. smsAttributes . to' smsAction)
-    setAction t v = over smsAttributes (flip setSmsAction v) t
+    setAction t v = over smsAttributes (`setSmsAction` v) t
 
 instance HasMethod (Sms p) where
   method = lens getMethod setMethod where
     getMethod = (^. smsAttributes . to' smsMethod)
-    setMethod t v = over smsAttributes (flip setSmsMethod v) t
+    setMethod t v = over smsAttributes (`setSmsMethod` v) t

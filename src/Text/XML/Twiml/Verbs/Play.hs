@@ -67,9 +67,9 @@ setPlayDigits attrs digits = attrs { playDigits = Just digits }
 
 digits :: Lens (Play p) (Play p) (Maybe [Digit]) [Digit]
 digits = lens (^. playAttributes . to' playDigits)
-  (\t v -> over playAttributes (flip setPlayDigits v) t)
+  (\t v -> over playAttributes (`setPlayDigits` v) t)
 
 instance HasLoop (Play p) where
   loop = lens getLoop setLoop where
     getLoop = (^. playAttributes . to' playLoop)
-    setLoop t v = over playAttributes (flip setPlayLoop v) t
+    setLoop t v = over playAttributes (`setPlayLoop` v) t

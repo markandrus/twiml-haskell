@@ -79,17 +79,17 @@ setEnqueueWaitURLMethod attrs meth = attrs { enqueueWaitURLMethod = Just meth }
 instance HasAction (Enqueue p) where
   action = lens getAction setAction where
     getAction = (^. enqueueAttributes . to' enqueueAction)
-    setAction t v = over enqueueAttributes (flip setEnqueueAction v) t
+    setAction t v = over enqueueAttributes (`setEnqueueAction` v) t
 
 instance HasMethod (Enqueue p) where
   method = lens getMethod setMethod where
     getMethod = (^. enqueueAttributes . to' enqueueMethod)
-    setMethod t v = over enqueueAttributes (flip setEnqueueMethod v) t
+    setMethod t v = over enqueueAttributes (`setEnqueueMethod` v) t
 
 waitURL :: Lens (Enqueue p) (Enqueue p) (Maybe URL) URL
 waitURL = lens (^. enqueueAttributes . to' enqueueWaitURL)
-  (\t v -> over enqueueAttributes (flip setEnqueueWaitURL v) t)
+  (\t v -> over enqueueAttributes (`setEnqueueWaitURL` v) t)
 
 waitURLMethod :: Lens (Enqueue p) (Enqueue p) (Maybe Method) Method
 waitURLMethod = lens (^. enqueueAttributes . to' enqueueWaitURLMethod)
-  (\t v -> over enqueueAttributes (flip setEnqueueWaitURLMethod v) t)
+  (\t v -> over enqueueAttributes (`setEnqueueWaitURLMethod` v) t)

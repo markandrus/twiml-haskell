@@ -35,13 +35,3 @@ import Text.XML.Twiml.Verbs.Hangup
 import Text.XML.Twiml.Verbs.Redirect
 import Text.XML.Twiml.Verbs.Reject
 import Text.XML.Twiml.Verbs.Pause
-
-import Text.XML.Twiml.Types (URL(..), Method(..), Key(..), Natural)
--- import Text.XML.Twiml.Internal (Twiml, setSayLoop, sayLoop, setPlayLoop, playLoop, gatherAction, setGatherAction, recordAction, setRecordAction, smsAction, setSmsAction, dialAction, setDialAction, gatherMethod, setGatherMethod, recordMethod, setRecordMethod, smsMethod, setSmsMethod, dialMethod, setDialMethod, redirectMethod, setRedirectMethod, gatherTimeout, setGatherTimeout, recordTimeout, setRecordTimeout, dialTimeout, setDialTimeout, gatherFinishOnKey, setGatherFinishOnKey, recordFinishOnKey, setRecordFinishOnKey)
-import Text.XML.Twiml.Internal
-
-{- Lenses -}
-
--- $lenses The following classes and lenses abstract over attributes shared by
--- two or more TwiML verbs.
---

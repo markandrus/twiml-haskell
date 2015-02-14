@@ -1,7 +1,5 @@
 {-#LANGUAGE EmptyDataDecls #-}
 {-#LANGUAGE FlexibleContexts #-}
-{-#LANGUAGE EmptyDataDecls #-}
-{-#LANGUAGE FlexibleContexts #-}
 {-#LANGUAGE FlexibleInstances #-}
 {-#LANGUAGE FunctionalDependencies #-}
 {-#LANGUAGE GADTs #-}
@@ -90,7 +88,7 @@ module Text.XML.Twiml.Types
     -- $fix
   , Fix(..)
   , Foldable(..)
-  , Base(..)
+  , Base
     -- ** Type Inequality
     -- $type
   , (:/~)
@@ -531,8 +529,6 @@ instance Show Key where
 
 {- Voices & Languages -}
 
-data GatherNoun
-
 -- | The ‘digits’ attribute lets you play DTMF tones during a call. See
 -- <https://www.twilio.com/docs/api/twiml/play#attributes-digits>.
 data Digit
@@ -637,7 +633,8 @@ class Profunctor h where
   dimap :: (a -> b) -> (c -> d) -> h b c -> h a d
   dimap f g = lmap f . rmap g
   (#.) :: (b -> c) -> h a b -> h a c
-  (#.) = \f -> \p -> p `seq` rmap f p
+  f #. p = p `seq` rmap f p
+
 
 instance Profunctor (->) where
   dimap ab cd bc = cd . bc . ab

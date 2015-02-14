@@ -119,9 +119,9 @@ setSayLoop attrs loop = attrs { sayLoop = Just loop }
 
 voice :: Lens (Say p) (Say p) (Maybe Voice) Voice
 voice = lens (^. sayAttributes . to' sayVoice)
-  (\t v -> over sayAttributes (flip setSayVoice v) t)
+  (\t v -> over sayAttributes (`setSayVoice` v) t)
 
 instance HasLoop (Say p) where
   loop = lens getLoop setLoop where
     getLoop = (^. sayAttributes . to' sayLoop)
-    setLoop t v = over sayAttributes (flip setSayLoop v) t
+    setLoop t v = over sayAttributes (`setSayLoop` v) t

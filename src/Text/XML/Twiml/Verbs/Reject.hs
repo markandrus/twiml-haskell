@@ -66,5 +66,5 @@ setRejectReason attrs reason = attrs { rejectReason = Just reason }
 
 reason :: Lens (Reject p) (Reject p) (Maybe Reason) Reason
 reason = lens (^. rejectAttributes . to' rejectReason)
-  (\t v -> over rejectAttributes (flip setRejectReason v) t)
+  (\t v -> over rejectAttributes (`setRejectReason` v) t)
 

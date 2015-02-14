@@ -98,36 +98,36 @@ setRecordPlayBeep attrs playBeep = attrs { recordPlayBeep = Just playBeep }
 
 maxLength :: Lens (Record p) (Record p) (Maybe Natural) Natural
 maxLength = lens (^. recordAttributes . to' recordMaxLength)
-  (\t v -> over recordAttributes (flip setRecordMaxLength v) t)
+  (\t v -> over recordAttributes (`setRecordMaxLength` v) t)
 
 transcribe :: Lens (Record p) (Record p) (Maybe Bool) Bool
 transcribe = lens (^. recordAttributes . to' recordTranscribe)
-  (\t v -> over recordAttributes (flip setRecordTranscribe v) t)
+  (\t v -> over recordAttributes (`setRecordTranscribe` v) t)
 
 transcribeCallback :: Lens (Record p) (Record p) (Maybe URL) URL
 transcribeCallback = lens (^. recordAttributes . to' recordTranscribeCallback)
-  (\t v -> over recordAttributes (flip setRecordTranscribeCallback v) t)
+  (\t v -> over recordAttributes (`setRecordTranscribeCallback` v) t)
 
 playBeep :: Lens (Record p) (Record p) (Maybe Bool) Bool
 playBeep = lens (^. recordAttributes . to' recordPlayBeep)
-  (\t v -> over recordAttributes (flip setRecordPlayBeep v) t)
+  (\t v -> over recordAttributes (`setRecordPlayBeep` v) t)
 
 instance HasAction (Record p) where
   action = lens getAction setAction where
     getAction = (^. recordAttributes . to' recordAction)
-    setAction t v = over recordAttributes (flip setRecordAction v) t
+    setAction t v = over recordAttributes (`setRecordAction` v) t
 
 instance HasMethod (Record p) where
   method = lens getMethod setMethod where
     getMethod = (^. recordAttributes . to' recordMethod)
-    setMethod t v = over recordAttributes (flip setRecordMethod v) t
+    setMethod t v = over recordAttributes (`setRecordMethod` v) t
 
 instance HasTimeout (Record p) where
   timeout = lens getTimeout setTimeout where
     getTimeout = (^. recordAttributes . to' recordTimeout)
-    setTimeout t v = over recordAttributes (flip setRecordTimeout v) t
+    setTimeout t v = over recordAttributes (`setRecordTimeout` v) t
 
 instance HasFinishOnKey (Record p) where
   finishOnKey = lens getFinishOnKey setFinishOnKey where
     getFinishOnKey = (^. recordAttributes . to' recordFinishOnKey)
-    setFinishOnKey t v = over recordAttributes (flip setRecordFinishOnKey v) t
+    setFinishOnKey t v = over recordAttributes (`setRecordFinishOnKey` v) t

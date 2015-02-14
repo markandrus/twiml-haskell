@@ -68,6 +68,6 @@ setRedirectMethod attrs method = attrs { redirectMethod = Just method }
 instance HasMethod (Redirect p) where
   method = lens getMethod setMethod where
     getMethod = (^. redirectAttributes . to' redirectMethod)
-    setMethod t v = over redirectAttributes (flip setRedirectMethod v) t
+    setMethod t v = over redirectAttributes (`setRedirectMethod` v) t
 
 

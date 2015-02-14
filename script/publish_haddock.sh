@@ -20,7 +20,8 @@ then
   cd ${HOME}
   git config --global user.email 'travis@travis-ci.org'
   git config --global user.name 'travis-ci'
-  git clone --quiet --branch=gh-pages ${repo} gh-pages >/dev/null
+  git clone --quiet --branch=gh-pages \
+    https://${HADDOCK_KEY}@github.com/${user}/${repo} gh-pages >/dev/null
   
   echo "Updating repo..."
   cd gh-pages

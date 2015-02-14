@@ -34,7 +34,11 @@ is transformed into
 </Response>
 ```
 
-TODO
-----
+Contributing
+------------
 
-* Implement phone number parsing for `Dial`.
+Feel free to contribute to any of the open [issues]
+(https://github.com/markandrus/twiml-haskell/issues), bugfixes, etc. When you
+think you're ready to merge, ensure the tests are passing and open a pull
+request. If you are adding new functionality, please include new tests as well.
+Finally, add yourself to the `AUTHORS` file.

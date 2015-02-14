@@ -13,7 +13,6 @@ if [[ "${TRAVIS_REPO_SLUG}"  == "${user}/${repo}" \
 then
 
   echo "Generating Haddock documentation..."
-  sudo cabal install haddock --global
   haddock -o doc --html ${root}
   cp -R doc ${HOME}/doc
 

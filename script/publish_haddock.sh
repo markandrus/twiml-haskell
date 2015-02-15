@@ -26,7 +26,7 @@ then
   echo "Updating repo..."
   cd gh-pages
   rm -rf *
-  mv ../doc/* gh-pages
+  mv ../doc/* .
   git add -f .
   git commit -m "Updating Haddock documentation (${TRAVIS_BUILD_NUMBER})"
   git push -fq origin gh-pages >/dev/null

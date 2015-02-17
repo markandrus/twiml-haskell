@@ -12,6 +12,8 @@ $ cabal install twiml
 
 Documentation soon to be available on Hackage. For now, see [markandrus.github.io/twiml-haskell](http://markandrus.github.io/twiml-haskell).
 
+For the Twilio REST API, see [twilio-haskell](http://markandrus.github.io/twilio-haskell).
+
 Example
 -------
 

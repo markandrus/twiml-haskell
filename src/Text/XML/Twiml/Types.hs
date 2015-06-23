@@ -1,14 +1,30 @@
+{-#LANGUAGE ConstraintKinds #-}
+{-#LANGUAGE DataKinds #-}
+{-#LANGUAGE DeriveDataTypeable #-}
+{-#LANGUAGE DeriveFunctor #-}
+{-#LANGUAGE DeriveGeneric #-}
 {-#LANGUAGE EmptyDataDecls #-}
 {-#LANGUAGE FlexibleContexts #-}
 {-#LANGUAGE FlexibleInstances #-}
 {-#LANGUAGE FunctionalDependencies #-}
 {-#LANGUAGE GADTs #-}
+{-#LANGUAGE KindSignatures #-}
+{-#LANGUAGE LambdaCase #-}
 {-#LANGUAGE MultiParamTypeClasses #-}
+{-#LANGUAGE NamedFieldPuns #-}
+{-#LANGUAGE OverloadedStrings #-}
+{-#LANGUAGE PolyKinds #-}
 {-#LANGUAGE RankNTypes #-}
+{-#LANGUAGE ScopedTypeVariables #-}
+{-#LANGUAGE StandaloneDeriving #-}
+{-#LANGUAGE TemplateHaskell #-}
 {-#LANGUAGE TypeFamilies #-}
 {-#LANGUAGE TypeOperators #-}
 {-#LANGUAGE UndecidableInstances #-}
 
+module Text.XML.Twiml.Types where
+
+{-
 module Text.XML.Twiml.Types
   ( Natural
   , URL
@@ -16,6 +32,19 @@ module Text.XML.Twiml.Types
   , Method(..)
   , Key(..)
   , Digit(..)
+    -- * Phantom Types
+  , Say'
+  , Play'
+  , Gather'
+  , Record'
+  , Sms'
+  , Dial'
+  , Enqueue'
+  , Leave'
+  , Hangup'
+  , Redirect'
+  , Reject'
+  , Pause'
     -- * @\<Say\>@
   , SayAttributes(..)
   , defaultSayAttributes
@@ -28,7 +57,6 @@ module Text.XML.Twiml.Types
     -- * @\<Gather\>@
   , GatherAttributes(..)
   , defaultGatherAttributes
-  , Gather'
     -- * @\<Record\>@
   , RecordAttributes(..)
   , defaultRecordAttributes
@@ -76,14 +104,6 @@ module Text.XML.Twiml.Types
   , HasTimeout(..)
   , HasFinishOnKey(..)
   -- * Internal
-    -- ** Lens
-    -- $lens
-  , Lens
-  , Lens'
-  , lens
-  , (^.)
-  , over
-  , to'
     -- ** Fix & Foldable
     -- $fix
   , Fix(..)
@@ -94,24 +114,85 @@ module Text.XML.Twiml.Types
   , (:/~)
   , Yes
   , No
+    -- * Promoted Lists
+    -- ** @(++)@
+    -- $promotedLists
+  , type (++)
+  , SList(..)
+  , WitnessList(..)
+  , associativity
+  , rightIdentity
+    -- ** @elem@
+    -- $elem
+  , Elem
+  , type (∉)
+    -- * Indexed
+    -- ** Functor
+    -- $indexedFunctor
+  , IxFunctor(..)
+    -- ** Applicative
+    -- $indexedApplicative
+  , IxApplicative(..)
+    -- ** Monad
+    -- $indexedMonad
+  , IxMonad(..)
+    -- ** Free
+  , IxFree(..)
+  , iliftF
+    -- ** Show
+  , IxShow(..)
   ) where
+-}
 
+import Control.Lens hiding (Identity, imap, to)
+import Control.Monad
+import Data.Data
+import Data.Default
+import Data.Maybe
+import Data.Text hiding (concatMap, map)
+import GHC.Generics (Generic)
 import Network.URI (URI(..), parseURIReference)
-import Unsafe.Coerce (unsafeCoerce)
+import Text.XML.Light
+
+class ToXML a where
+  toXML :: a -> [Element]
+
+class ToElement a where
+  toElement :: a -> Element
+
+class ToAttrs a where
+  toAttrs :: a -> [Attr]
+
+class ToAttrValue a where
+  toAttrValue :: a -> String
+
+instance ToAttrValue Bool where
+  toAttrValue True  = "true"
+  toAttrValue False = "false"
+
+instance ToAttrValue String where
+  toAttrValue = id
 
 {- Attributes -}
 
 -- | See <https://www.twilio.com/docs/api/twiml/say#attributes>.
 data SayAttributes = SayAttributes
-  { sayVoice :: Maybe Voice
-  , sayLoop  :: Maybe Natural
-  }
+  { _sayVoice :: Maybe Voice
+  , _sayLoop  :: Maybe Natural
+  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
-defaultSayAttributes :: SayAttributes
-defaultSayAttributes = SayAttributes
-  { sayVoice = Nothing
-  , sayLoop  = Nothing
-  }
+instance Default SayAttributes where
+  def = SayAttributes
+    { _sayVoice = def
+    , _sayLoop  = def
+    }
+
+instance ToAttrs SayAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr  "voice"      _sayVoice
+    , makeAttr  "loop"       _sayLoop
+    , makeAttr' "language"  (_sayVoice >=> lang) (either toAttrValue toAttrValue)
+    ]
 
 -- | Voices supported by @\<Say\>@. See
 -- <https://www.twilio.com/docs/api/twiml/say#attributes-voice>.
@@ -119,6 +200,17 @@ data Voice
   = Man   (Maybe Lang)
   | Woman (Maybe Lang)
   | Alice (Maybe LangAlice)
+  deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+
+instance ToAttrValue Voice where
+  toAttrValue (Man   _) = "man"
+  toAttrValue (Woman _) = "woman"
+  toAttrValue (Alice _) = "alice"
+
+lang :: Voice -> Maybe (Either Lang LangAlice)
+lang (Man   l) = Left  <$> l
+lang (Woman l) = Left  <$> l
+lang (Alice r) = Right <$> r
 
 -- | Languages spoken by voices 'Man' and 'Woman'. See
 -- <https://www.twilio.com/docs/api/twiml/say#attributes-manwoman>.
@@ -129,14 +221,15 @@ data Lang
   | French
   | German
   | Italian
+  deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
-instance Show Lang where
-  show English   = "en"
-  show EnglishUK = "en-gb"
-  show Spanish   = "es"
-  show French    = "fr"
-  show German    = "de"
-  show Italian   = "it"
+instance ToAttrValue Lang where
+  toAttrValue English   = "en"
+  toAttrValue EnglishUK = "en-gb"
+  toAttrValue Spanish   = "es"
+  toAttrValue French    = "fr"
+  toAttrValue German    = "de"
+  toAttrValue Italian   = "it"
 
 -- | Languages spoken by 'Alice'. See
 -- <https://www.twilio.com/docs/api/twiml/say#attributes-alice>.
@@ -167,204 +260,304 @@ data LangAlice
   | ZhCN -- ^ Chinese (Mandarin)
   | ZhHK -- ^ Chinese (Cantonese)
   | ZhTW -- ^ Chinese (Taiwanese Mandarin)
+  deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
-instance Show LangAlice where
-  show DaDK = "da-DK"
-  show DeDE = "de-DE"
-  show EnAU = "en-AU"
-  show EnCA = "en-CA"
-  show EnGB = "en-GB"
-  show EnIN = "en-IN"
-  show EnUS = "en-US"
-  show CaES = "ca-ES"
-  show EsES = "es-ES"
-  show EsMX = "es-MX"
-  show FiFI = "fi-FI"
-  show FrCA = "fr-CA"
-  show FrFR = "fr-FR"
-  show ItIT = "it-IT"
-  show JaJP = "ja-JP"
-  show KoKR = "ko-KR"
-  show NbNO = "nb-NO"
-  show NlNL = "nl-NL"
-  show PlPL = "pl-PL"
-  show PtBR = "pt-BR"
-  show PtPT = "pt-PT"
-  show RuRU = "ru-RU"
-  show SvSE = "sv-SE"
-  show ZhCN = "zh-CN"
-  show ZhHK = "zh-HK"
-  show ZhTW = "zh-TW"
+instance ToAttrValue LangAlice where
+  toAttrValue DaDK = "da-DK"
+  toAttrValue DeDE = "de-DE"
+  toAttrValue EnAU = "en-AU"
+  toAttrValue EnCA = "en-CA"
+  toAttrValue EnGB = "en-GB"
+  toAttrValue EnIN = "en-IN"
+  toAttrValue EnUS = "en-US"
+  toAttrValue CaES = "ca-ES"
+  toAttrValue EsES = "es-ES"
+  toAttrValue EsMX = "es-MX"
+  toAttrValue FiFI = "fi-FI"
+  toAttrValue FrCA = "fr-CA"
+  toAttrValue FrFR = "fr-FR"
+  toAttrValue ItIT = "it-IT"
+  toAttrValue JaJP = "ja-JP"
+  toAttrValue KoKR = "ko-KR"
+  toAttrValue NbNO = "nb-NO"
+  toAttrValue NlNL = "nl-NL"
+  toAttrValue PlPL = "pl-PL"
+  toAttrValue PtBR = "pt-BR"
+  toAttrValue PtPT = "pt-PT"
+  toAttrValue RuRU = "ru-RU"
+  toAttrValue SvSE = "sv-SE"
+  toAttrValue ZhCN = "zh-CN"
+  toAttrValue ZhHK = "zh-HK"
+  toAttrValue ZhTW = "zh-TW"
 
 -- | See <https://www.twilio.com/docs/api/twiml/play#attributes>.
 data PlayAttributes = PlayAttributes
-  { playLoop   :: Maybe Natural
-  , playDigits :: Maybe [Digit]
-  }
+  { _playLoop   :: Maybe Natural
+  , _playDigits :: Maybe [Digit]
+  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
-defaultPlayAttributes :: PlayAttributes
-defaultPlayAttributes = PlayAttributes
-  { playLoop   = Nothing
-  , playDigits = Nothing
-  }
+instance Default PlayAttributes where
+  def = PlayAttributes
+    { _playLoop   = def
+    , _playDigits = def
+    }
+
+instance ToAttrs PlayAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "loop"   _playLoop
+    , makeAttr "digits" _playDigits
+    ]
 
 -- | See <https://www.twilio.com/docs/api/twiml/gather#attributes>.
 data GatherAttributes = GatherAttributes
-  { gatherAction      :: Maybe URL
-  , gatherMethod      :: Maybe Method
-  , gatherTimeout     :: Maybe Natural
-  , gatherFinishOnKey :: Maybe Key
-  , gatherNumDigits   :: Maybe Natural
-  }
+  { _gatherAction      :: Maybe URL
+  , _gatherMethod      :: Maybe Method
+  , _gatherTimeout     :: Maybe Natural
+  , _gatherFinishOnKey :: Maybe Key
+  , _gatherNumDigits   :: Maybe Natural
+  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
-defaultGatherAttributes :: GatherAttributes
-defaultGatherAttributes = GatherAttributes
-  { gatherAction      = Nothing
-  , gatherMethod      = Nothing
-  , gatherTimeout     = Nothing
-  , gatherFinishOnKey = Nothing
-  , gatherNumDigits   = Nothing
-  }
+instance Default GatherAttributes where
+  def = GatherAttributes
+    { _gatherAction      = def
+    , _gatherMethod      = def
+    , _gatherTimeout     = def
+    , _gatherFinishOnKey = def
+    , _gatherNumDigits   = def
+    }
 
--- | For some @Twiml p t@, the constraint @(p ':/~' 'Gather'')@ lets us enforce
--- TwiML nesting rules.
-data Gather'
+instance With GatherAttributes where
+  with = def
+
+instance ToAttrs GatherAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "action"      _gatherAction
+    , makeAttr "method"      _gatherMethod
+    , makeAttr "timeout"     _gatherTimeout
+    , makeAttr "finishOnKey" _gatherFinishOnKey
+    , makeAttr "numDigits"   _gatherNumDigits
+    ]
 
 -- | See <https://www.twilio.com/docs/api/twiml/record#attributes>.
 data RecordAttributes = RecordAttributes
-  { recordAction             :: Maybe URL
-  , recordMethod             :: Maybe Method
-  , recordTimeout            :: Maybe Natural
-  , recordFinishOnKey        :: Maybe Key
-  , recordMaxLength          :: Maybe Natural
-  , recordTranscribe         :: Maybe Bool
-  , recordTranscribeCallback :: Maybe URL
-  , recordPlayBeep           :: Maybe Bool
-  }
+  { _recordAction             :: Maybe URL
+  , _recordMethod             :: Maybe Method
+  , _recordTimeout            :: Maybe Natural
+  , _recordFinishOnKey        :: Maybe Key
+  , _recordMaxLength          :: Maybe Natural
+  , _recordTranscribe         :: Maybe Bool
+  , _recordTranscribeCallback :: Maybe URL
+  , _recordPlayBeep           :: Maybe Bool
+  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
-defaultRecordAttributes :: RecordAttributes
-defaultRecordAttributes = RecordAttributes
-  { recordAction             = Nothing
-  , recordMethod             = Nothing
-  , recordTimeout            = Nothing
-  , recordFinishOnKey        = Nothing
-  , recordMaxLength          = Nothing
-  , recordTranscribe         = Nothing
-  , recordTranscribeCallback = Nothing
-  , recordPlayBeep           = Nothing
-  }
+instance Default RecordAttributes where
+  def = RecordAttributes
+    { _recordAction             = def
+    , _recordMethod             = def
+    , _recordTimeout            = def
+    , _recordFinishOnKey        = def
+    , _recordMaxLength          = def
+    , _recordTranscribe         = def
+    , _recordTranscribeCallback = def
+    , _recordPlayBeep           = def
+    }
+
+instance With RecordAttributes where
+  with = def
+
+instance ToAttrs RecordAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "action"             _recordAction
+    , makeAttr "method"             _recordMethod
+    , makeAttr "timeout"            _recordTimeout
+    , makeAttr "finishOnKey"        _recordFinishOnKey
+    , makeAttr "maxLength"          _recordMaxLength
+    , makeAttr "transcribe"         _recordTranscribe
+    , makeAttr "transcribeCallback" _recordTranscribeCallback
+    , makeAttr "playBeep"           _recordPlayBeep
+    ]
 
 -- | See <https://www.twilio.com/docs/api/twiml/sms#attributes>.
 data SmsAttributes = SmsAttributes
-  { smsTo             :: Maybe String
-  , smsFrom           :: Maybe String
-  , smsAction         :: Maybe URL
-  , smsMethod         :: Maybe Method
-  , smsStatusCallback :: Maybe URL
-  }
+  { _smsTo             :: Maybe String
+  , _smsFrom           :: Maybe String
+  , _smsAction         :: Maybe URL
+  , _smsMethod         :: Maybe Method
+  , _smsStatusCallback :: Maybe URL
+  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
-defaultSmsAttributes :: SmsAttributes
-defaultSmsAttributes = SmsAttributes
-  { smsTo             = Nothing
-  , smsFrom           = Nothing
-  , smsAction         = Nothing
-  , smsMethod         = Nothing
-  , smsStatusCallback = Nothing
-  }
+instance Default SmsAttributes where
+  def = SmsAttributes
+    { _smsTo             = def
+    , _smsFrom           = def
+    , _smsAction         = def
+    , _smsMethod         = def
+    , _smsStatusCallback = def
+    }
+
+instance ToAttrs SmsAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "to"             _smsTo
+    , makeAttr "from"           _smsFrom
+    , makeAttr "action"         _smsAction
+    , makeAttr "method"         _smsMethod
+    , makeAttr "statusCallback" _smsStatusCallback
+    ]
 
 -- | See <https://www.twilio.com/docs/api/twiml/dial#attributes>.
 data DialAttributes = DialAttributes
-  { dialAction       :: Maybe URL
-  , dialMethod       :: Maybe Method
-  , dialTimeout      :: Maybe Natural
-  , dialHangupOnStar :: Maybe Bool
-  , dialTimeLimit    :: Maybe Natural
-  , dialCallerId     :: Maybe String
-  , dialRecord       :: Maybe Bool
-  }
+  { _dialAction       :: Maybe URL
+  , _dialMethod       :: Maybe Method
+  , _dialTimeout      :: Maybe Natural
+  , _dialHangupOnStar :: Maybe Bool
+  , _dialTimeLimit    :: Maybe Natural
+  , _dialCallerId     :: Maybe String
+  , _dialRecord'      :: Maybe Bool
+  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
-defaultDialAttributes :: DialAttributes
-defaultDialAttributes = DialAttributes
-  { dialAction       = Nothing
-  , dialMethod       = Nothing
-  , dialTimeout      = Nothing
-  , dialHangupOnStar = Nothing
-  , dialTimeLimit    = Nothing
-  , dialCallerId     = Nothing
-  , dialRecord       = Nothing
-  }
+instance Default DialAttributes where
+  def = DialAttributes
+    { _dialAction       = def
+    , _dialMethod       = def
+    , _dialTimeout      = def
+    , _dialHangupOnStar = def
+    , _dialTimeLimit    = def
+    , _dialCallerId     = def
+    , _dialRecord'      = def
+    }
+
+instance ToAttrs DialAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "action"       _dialAction
+    , makeAttr "method"       _dialMethod
+    , makeAttr "timeout"      _dialTimeout
+    , makeAttr "hangupOnStar" _dialHangupOnStar
+    , makeAttr "timeLimit"    _dialTimeLimit
+    , makeAttr "callerId"     _dialCallerId
+    , makeAttr "record"       _dialRecord'
+    ]
 
 -- | See <https://www.twilio.com/docs/api/twiml/number#attributes>.
 data NumberAttributes = NumberAttributes
-  { numberSendDigits :: Maybe [Digit]
-  , numberURL        :: Maybe URL
-  , numberMethod     :: Maybe Method
-  }
+  { _numberSendDigits :: Maybe [Digit]
+  , _numberURL        :: Maybe URL
+  , _numberMethod     :: Maybe Method
+  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
-defaultNumberAttributes :: NumberAttributes
-defaultNumberAttributes = NumberAttributes
-  { numberSendDigits = Nothing
-  , numberURL        = Nothing
-  , numberMethod     = Nothing
-  }
+instance Default NumberAttributes where
+  def = NumberAttributes
+    { _numberSendDigits = def
+    , _numberURL        = def
+    , _numberMethod     = def
+    }
+
+instance With NumberAttributes where
+  with = def
+
+instance ToAttrs NumberAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "sendDigits" _numberSendDigits
+    , makeAttr "url"        _numberURL
+    , makeAttr "method"     _numberMethod
+    ]
 
 -- | See <https://www.twilio.com/docs/api/twiml/sip#attributes>.
 data SipAttributes = SipAttributes
-  { sipUsername  :: Maybe String
-  , sipPassword  :: Maybe String
-  , sipTransport :: Maybe Transport
-  , sipHeaders   :: Maybe String    -- NOTE: Under 1024 characters.
-  , sipURL       :: Maybe URL
-  , sipMethod    :: Maybe Method
-  }
+  { _sipUsername  :: Maybe String
+  , _sipPassword  :: Maybe String
+  , _sipTransport :: Maybe Transport
+  , _sipHeaders   :: Maybe String    -- NOTE: Under 1024 characters.
+  , _sipURL       :: Maybe URL
+  , _sipMethod    :: Maybe Method
+  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
-defaultSipAttributes :: SipAttributes
-defaultSipAttributes = SipAttributes
-  { sipUsername  = Nothing
-  , sipPassword  = Nothing
-  , sipTransport = Nothing
-  , sipHeaders   = Nothing
-  , sipURL       = Nothing
-  , sipMethod    = Nothing
-  }
+instance Default SipAttributes where
+  def = SipAttributes
+    { _sipUsername  = def
+    , _sipPassword  = def
+    , _sipTransport = def
+    , _sipHeaders   = def
+    , _sipURL       = def
+    , _sipMethod    = def
+    }
+
+instance With SipAttributes where
+  with = def
+
+instance ToAttrs SipAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "username"  _sipUsername
+    , makeAttr "password"  _sipPassword
+    , makeAttr "transport" _sipTransport
+    , makeAttr "headers"   _sipHeaders
+    , makeAttr "url"       _sipURL
+    , makeAttr "method"    _sipMethod
+    ]
 
 -- | See <https://www.twilio.com/docs/api/twiml/sip#transport>.
 data Transport = TCP | UDP
-  deriving Show
+  deriving (Bounded, Data, Enum, Eq, Generic, Ord, Read, Show, Typeable)
+
+instance ToAttrValue Transport where
+  toAttrValue TCP = "tcp"
+  toAttrValue UDP = "udp"
 
 -- | See <https://www.twilio.com/docs/api/twiml/client#attributes>.
 data ClientAttributes = ClientAttributes
-  { clientURL    :: Maybe URL
-  , clientMethod :: Maybe Method
-  }
+  { _clientURL    :: Maybe URL
+  , _clientMethod :: Maybe Method
+  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
-defaultClientAttributes :: ClientAttributes
-defaultClientAttributes = ClientAttributes
-  { clientURL    = Nothing
-  , clientMethod = Nothing
-  }
+instance Default ClientAttributes where
+  def = ClientAttributes
+    { _clientURL    = def
+    , _clientMethod = def
+    }
+
+instance With ClientAttributes where
+  with = def
+
+instance ToAttrs ClientAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "url"    _clientURL
+    , makeAttr "method" _clientMethod
+    ]
 
 -- | See <https://www.twilio.com/docs/api/twiml/conference#attributes>.
 data ConferenceAttributes = ConferenceAttributes
-  { conferenceMuted           :: Maybe Bool
-  , conferenceBeep            :: Maybe Bool
-  , conferenceStartOnEnter    :: Maybe Bool
-  , conferenceEndOnExit       :: Maybe Bool
-  , conferenceWaitURL         :: Maybe URL
-  , conferenceWaitMethod      :: Maybe Method
-  , conferenceMaxParticipants :: Maybe Natural -- FIXME: Non-zero, less than 40.
-  }
+  { _conferenceMuted           :: Maybe Bool
+  , _conferenceBeep            :: Maybe Bool
+  , _conferenceStartOnEnter    :: Maybe Bool
+  , _conferenceEndOnExit       :: Maybe Bool
+  , _conferenceWaitURL         :: Maybe URL
+  , _conferenceWaitMethod      :: Maybe Method
+  , _conferenceMaxParticipants :: Maybe Natural -- FIXME: Non-zero, less than 40.
+  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
-defaultConferenceAttributes :: ConferenceAttributes
-defaultConferenceAttributes = ConferenceAttributes
-  { conferenceMuted           = Nothing
-  , conferenceBeep            = Nothing
-  , conferenceStartOnEnter    = Nothing
-  , conferenceEndOnExit       = Nothing
-  , conferenceWaitURL         = Nothing
-  , conferenceWaitMethod      = Nothing
-  , conferenceMaxParticipants = Nothing
-  }
+instance Default ConferenceAttributes where
+  def = ConferenceAttributes
+    { _conferenceMuted           = def
+    , _conferenceBeep            = def
+    , _conferenceStartOnEnter    = def
+    , _conferenceEndOnExit       = def
+    , _conferenceWaitURL         = def
+    , _conferenceWaitMethod      = def
+    , _conferenceMaxParticipants = def
+    }
+
+instance With ConferenceAttributes where
+  with = def
+
+instance ToAttrs ConferenceAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "muted"                  _conferenceMuted
+    , makeAttr "beep"                   _conferenceBeep
+    , makeAttr "startConferenceOnEnter" _conferenceStartOnEnter
+    , makeAttr "endConferenceOnExit"    _conferenceEndOnExit
+    , makeAttr "waitURL"                _conferenceWaitURL
+    , makeAttr "waitMethod"             _conferenceWaitMethod
+    , makeAttr "maxParticipants"        _conferenceMaxParticipants
+    ]
 
 -- | See <https://www.twilio.com/docs/api/twiml/conference#attributes-beep>.
 data ConferenceBeep
@@ -372,24 +565,34 @@ data ConferenceBeep
   | No
   | OnExit
   | OnEnter
+  deriving (Bounded, Data, Enum, Eq, Generic, Ord, Read, Show, Typeable)
 
-instance Show ConferenceBeep where
-  show Yes     = "yes"
-  show No      = "no"
-  show OnExit  = "onExit"
-  show OnEnter = "onEnter"
+instance ToAttrValue ConferenceBeep where
+  toAttrValue Yes     = "yes"
+  toAttrValue No      = "no"
+  toAttrValue OnExit  = "on-exit"
+  toAttrValue OnEnter = "on-enter"
 
 -- | See <https://www.twilio.com/docs/api/twiml/queue#attributes>.
 data QueueAttributes = QueueAttributes
-  { queueURL    :: Maybe URL
-  , queueMethod :: Maybe Method
-  }
+  { _queueURL    :: Maybe URL
+  , _queueMethod :: Maybe Method
+  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
-defaultQueueAttributes :: QueueAttributes
-defaultQueueAttributes = QueueAttributes
-  { queueURL    = Nothing
-  , queueMethod = Nothing
-  }
+instance Default QueueAttributes where
+  def = QueueAttributes
+    { _queueURL    = def
+    , _queueMethod = def
+    }
+
+instance With QueueAttributes where
+  with = def
+
+instance ToAttrs QueueAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "url"    _queueURL
+    , makeAttr "method" _queueMethod
+    ]
 
 -- | See <https://www.twilio.com/docs/api/twiml/dial#nouns>.
 data DialNoun
@@ -398,42 +601,92 @@ data DialNoun
   | Client     ClientAttributes     String
   | Conference ConferenceAttributes String
   | Queue      QueueAttributes      String
+  deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+
+strToContent :: String -> Content
+strToContent str = Text $ CData CDataText str Nothing
+
+txtToContent :: Text -> Content
+txtToContent = strToContent . unpack
+
+urlToContent :: URL -> Content
+urlToContent (URL url) = strToContent url
+
+makeAttr' :: String -> (a -> Maybe b) -> (b -> String) -> a -> Maybe Attr
+makeAttr' str f g a = Attr (unqual str) . g <$> f a
+
+makeAttr :: ToAttrValue b => String -> (a -> Maybe b) -> a -> Maybe Attr
+makeAttr str f a = Attr (unqual str) . toAttrValue <$> f a
+
+makeAttrs :: a -> [a -> Maybe Attr] -> [Attr]
+makeAttrs a = catMaybes . map ($ a)
+
+makeElement :: Node t => String -> t -> [Attr] -> Element
+makeElement str c attrs = unode str c & add_attrs attrs
+
+instance ToElement DialNoun where
+  toElement (Number     attrs str) = makeElement "Number"     (strToContent str) $ toAttrs attrs
+  toElement (Sip        attrs url) = makeElement "Sip"        (urlToContent url) $ toAttrs attrs
+  toElement (Client     attrs str) = makeElement "Client"     (strToContent str) $ toAttrs attrs
+  toElement (Conference attrs str) = makeElement "Conference" (strToContent str) $ toAttrs attrs
+  toElement (Queue      attrs str) = makeElement "Queue"      (strToContent str) $ toAttrs attrs
 
 -- | See <https://www.twilio.com/docs/api/twiml/enqueue#attributes>.
 data EnqueueAttributes = EnqueueAttributes
-  { enqueueAction        :: Maybe URL
-  , enqueueMethod        :: Maybe Method
-  , enqueueWaitURL       :: Maybe URL
-  , enqueueWaitURLMethod :: Maybe Method
-  }
+  { _enqueueAction        :: Maybe URL
+  , _enqueueMethod        :: Maybe Method
+  , _enqueueWaitURL       :: Maybe URL
+  , _enqueueWaitURLMethod :: Maybe Method
+  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
-defaultEnqueueAttributes :: EnqueueAttributes
-defaultEnqueueAttributes = EnqueueAttributes
-  { enqueueAction        = Nothing
-  , enqueueMethod        = Nothing
-  , enqueueWaitURL       = Nothing
-  , enqueueWaitURLMethod = Nothing
-  }
+instance Default EnqueueAttributes where
+  def = EnqueueAttributes
+    { _enqueueAction        = def
+    , _enqueueMethod        = def
+    , _enqueueWaitURL       = def
+    , _enqueueWaitURLMethod = def
+    }
+
+instance ToAttrs EnqueueAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "action"        _enqueueAction
+    , makeAttr "method"        _enqueueMethod
+    , makeAttr "waitUrl"       _enqueueWaitURL
+    , makeAttr "waitUrlMethod" _enqueueWaitURLMethod
+    ]
 
 -- | See <https://www.twilio.com/docs/api/twiml/redirect#attributes>.
 data RedirectAttributes = RedirectAttributes
-  { redirectMethod :: Maybe Method
-  }
+  { _redirectMethod :: Maybe Method
+  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
-defaultRedirectAttributes :: RedirectAttributes
-defaultRedirectAttributes = RedirectAttributes
-  { redirectMethod = Nothing
-  }
+instance Default RedirectAttributes where
+  def = RedirectAttributes
+    { _redirectMethod = def
+    }
+
+instance ToAttrs RedirectAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "method" _redirectMethod
+    ]
 
 -- | See <https://www.twilio.com/docs/api/twiml/reject#attributes>.
 data RejectAttributes = RejectAttributes
-  { rejectReason :: Maybe Reason
-  }
+  { _rejectReason :: Maybe Reason
+  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
-defaultRejectAttributes :: RejectAttributes
-defaultRejectAttributes = RejectAttributes
-  { rejectReason = Nothing
-  }
+instance Default RejectAttributes where
+  def = RejectAttributes
+    { _rejectReason = def
+    }
+
+instance With RejectAttributes where
+  with = def
+
+instance ToAttrs RejectAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "reason" _rejectReason
+    ]
 
 -- | The reason attribute takes the values \"rejected\" and \"busy.\" This tells
 -- Twilio what message to play when rejecting a call. Selecting \"busy\" will
@@ -441,44 +694,39 @@ defaultRejectAttributes = RejectAttributes
 -- standard not-in-service response.
 -- See <https://www.twilio.com/docs/api/twiml/reject#attributes-reason>.
 data Reason = Rejected | Busy
+  deriving (Bounded, Data, Enum, Eq, Generic, Ord, Read, Show, Typeable)
 
-instance Show Reason where
-  show Rejected = "rejected"
-  show Busy     = "busy"
+instance ToAttrValue Reason where
+  toAttrValue Rejected = "rejected"
+  toAttrValue Busy     = "busy"
 
 -- | See <https://www.twilio.com/docs/api/twiml/pause#attributes>.
 data PauseAttributes = PauseAttributes
-  { pauseLength :: Maybe Natural
-  }
+  { _pauseDuration :: Maybe Natural
+  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
-defaultPauseAttributes :: PauseAttributes
-defaultPauseAttributes = PauseAttributes
-  { pauseLength = Nothing
-  }
+instance Default PauseAttributes where
+  def = PauseAttributes
+    { _pauseDuration = def
+    }
+
+instance With PauseAttributes where
+  with = def
+
+instance ToAttrs PauseAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "length" _pauseDuration
+    ]
 
 {- Attribute Lens Classes -}
 
-class HasLoop t where
-  loop :: Lens t t (Maybe Natural) Natural
-
-class HasAction t where
-  action :: Lens t t (Maybe URL) URL
-
-class HasMethod t where
-  method :: Lens t t (Maybe Method) Method
-
-class HasTimeout t where
-  timeout :: Lens t t (Maybe Natural) Natural
-
-class HasFinishOnKey t where
-  finishOnKey :: Lens t t (Maybe Key) Key
-
 {- URL, Method & Transport -}
 
-data URL = URL { getURL :: String }
+newtype URL = URL { getURL :: String }
+  deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
-instance Show URL where
-  show = getURL
+instance ToAttrValue URL where
+  toAttrValue = getURL
 
 -- | Checks whether a @URI@'s scheme, if any, is one of @"http:"@ or @"https:"@.
 isHttp :: URI -> Bool
@@ -493,9 +741,15 @@ parseURL url = parseURIReference url
            >>= (\uri -> if isHttp uri then Just (URL url) else Nothing)
 
 data Method = GET | POST
-  deriving Show
+  deriving (Bounded, Data, Enum, Eq, Generic, Ord, Read, Show, Typeable)
+
+instance ToAttrValue Method where
+  toAttrValue = show
 
 type Natural = Int
+
+instance ToAttrValue Natural where
+  toAttrValue = show
 
 {- Twiml Datatypes -}
 
@@ -512,20 +766,21 @@ data Key
   | K9      -- ^ 9
   | KStar   -- ^ \*
   | KPound  -- ^ #
+  deriving (Bounded, Data, Enum, Eq, Generic, Ord, Read, Show, Typeable)
 
-instance Show Key where
-  show K0     = "0"
-  show K1     = "1"
-  show K2     = "2"
-  show K3     = "3"
-  show K4     = "4"
-  show K5     = "5"
-  show K6     = "6"
-  show K7     = "7"
-  show K8     = "8"
-  show K9     = "9"
-  show KStar  = "*"
-  show KPound = "#"
+instance ToAttrValue Key where
+  toAttrValue K0     = "0"
+  toAttrValue K1     = "1"
+  toAttrValue K2     = "2"
+  toAttrValue K3     = "3"
+  toAttrValue K4     = "4"
+  toAttrValue K5     = "5"
+  toAttrValue K6     = "6"
+  toAttrValue K7     = "7"
+  toAttrValue K8     = "8"
+  toAttrValue K9     = "9"
+  toAttrValue KStar  = "*"
+  toAttrValue KPound = "#"
 
 {- Voices & Languages -}
 
@@ -543,108 +798,23 @@ data Digit
   | D8 -- ^ 8
   | D9 -- ^ 9
   | W  -- ^ w
+  deriving (Bounded, Data, Enum, Eq, Generic, Ord, Read, Show, Typeable)
 
-instance Show Digit where
-  show D0 = "0"
-  show D1 = "1"
-  show D2 = "2"
-  show D3 = "3"
-  show D4 = "4"
-  show D5 = "5"
-  show D6 = "6"
-  show D7 = "7"
-  show D8 = "8"
-  show D9 = "9"
-  show W  = "w"
+instance ToAttrValue Digit where
+  toAttrValue D0 = "0"
+  toAttrValue D1 = "1"
+  toAttrValue D2 = "2"
+  toAttrValue D3 = "3"
+  toAttrValue D4 = "4"
+  toAttrValue D5 = "5"
+  toAttrValue D6 = "6"
+  toAttrValue D7 = "7"
+  toAttrValue D8 = "8"
+  toAttrValue D9 = "9"
+  toAttrValue W  = "w"
 
-{- Basic Lens Functionality -}
-
--- $lens The following section extracts a number of definitions required to get
--- lenses, as defined in the lens package, working, without relying on the lens
--- package itself. Rather than use the following functions, consider installing
--- lens. See <https://hackage.haskell.org/package/lens>.
-
--- The following definitions were extracted from the lens package.
-
-type Lens s t a b = forall f. Functor f => (a -> f b) -> s -> f t
-
-lens :: (s -> a) -> (s -> b -> t) -> Lens s t a b
-lens sa sbt afb s = fmap (sbt s) $ afb (sa s)
-{-# INLINE lens #-}
-
-type Lens' s a = Lens s s a a
-
-newtype Accessor r a = Accessor { runAccessor :: r }
-
-instance Functor (Accessor r) where
-  fmap _ (Accessor m) = Accessor m
-  {-# INLINE fmap #-}
-
-instance Contravariant (Accessor r) where
-  contramap _ (Accessor m) = Accessor m
-  {-# INLINE contramap #-}
-
-type Getting r s a = (a -> Accessor r a) -> s -> Accessor r s
-
-infixl 8 ^.
-
-(^.) :: s -> Getting a s a -> a
-s ^. l = runAccessor (l Accessor s)
-{-# INLINE (^.) #-}
-
-type Setting p s t a b = p a (Mutator b) -> s -> Mutator t
-
-newtype Mutator a = Mutator { runMutator :: a }
-
-instance Functor Mutator where
-  fmap f (Mutator a) = Mutator $ f a
-  {-# INLINE fmap #-}
-
-over :: Profunctor p => Setting p s t a b -> p a b -> s -> t
-over l f = runMutator #. l (Mutator #. f)
-
-type IndexPreservingGetter s a
-  = forall p f. (Profunctor p, Contravariant f, Functor f) => p a (f a) -> p s (f s)
-
-to' :: (s -> a) -> IndexPreservingGetter s a
-to' f = dimap f coerce
-{-# INLINE to' #-}
-
-coerce :: (Contravariant f, Functor f) => f a -> f b
-coerce a = fmap absurd $ contramap absurd a
-
--- The following definition was extracted from the contravariant package.
-
-class Contravariant f where
-  contramap :: (a -> b) -> f b -> f a
-
--- The following definitions were extracted from the void package.
-
-newtype Void = Void Void
-
-absurd :: Void -> a
-absurd (Void a) = absurd a
-
--- The following definitions were extracted from the profunctors package.
-
-class Profunctor h where
-  lmap :: (a -> b) -> h b c -> h a c
-  rmap :: (b -> c) -> h a b -> h a c
-  dimap :: (a -> b) -> (c -> d) -> h b c -> h a d
-  dimap f g = lmap f . rmap g
-  (#.) :: (b -> c) -> h a b -> h a c
-  f #. p = p `seq` rmap f p
-
-
-instance Profunctor (->) where
-  dimap ab cd bc = cd . bc . ab
-  {-# INLINE dimap #-}
-  lmap = flip (.)
-  {-# INLINE lmap #-}
-  rmap = (.)
-  {-# INLINE rmap #-}
-  (#.) _ = unsafeCoerce
-  {-# INLINE (#.) #-}
+instance ToAttrValue [Digit] where
+  toAttrValue = concatMap toAttrValue
 
 {- Fix & Foldable -}
 
@@ -682,3 +852,216 @@ instance TypeCast No b => TypeEq x y b
 class TypeEq x y No => (:/~) x y
 
 instance TypeEq x y No => (:/~) x y
+
+{- Promoted Lists -}
+
+-- $promotedLists 'IxFree' relies on a promoted list of type constructors, so
+-- we'll need
+--
+-- * promoted list concatenation, @('++')@,
+-- * a proof that @('++')@ associates (used by 'iap' and 'ibind'), and
+-- * a right identity proof for @[]@ (used by 'iliftF').
+
+{- (++) -}
+
+-- | Promoted list concatenation
+type family (++) (a :: [k]) (b :: [k]) :: [k] where
+  '[] ++ bs = bs
+  (a ': as) ++ bs = a ': as ++ bs
+
+-- | 'SList' is the singleton type for promoted lists.
+data SList (i :: [k]) where
+  Nil :: SList '[]
+  Succ :: SList t -> SList (h ': t)
+
+class WitnessList (xs :: [k]) where
+  witness :: SList xs
+
+instance WitnessList '[] where
+  witness = Nil
+
+instance WitnessList xs => WitnessList (x ': xs) where
+  witness = Succ witness
+
+-- | A proof that @('++')@ associates, i.e.
+--
+-- @
+-- xs ++ (ys ++ zs) ≡ (xs ++ ys) ++ zs
+-- @
+associativity :: SList xs -> Proxy ys -> Proxy zs
+         -> (xs ++ (ys ++ zs)) :~: ((xs ++ ys) ++ zs)
+associativity Nil _ _ = Refl
+associativity (Succ xs) ys zs =
+  case associativity xs ys zs of Refl -> Refl
+
+-- | A proof that
+--
+-- @
+-- xs ≡ xs ++ []
+-- @
+rightIdentity :: SList xs -> xs :~: (xs ++ '[])
+rightIdentity Nil = Refl
+rightIdentity (Succ xs) = case rightIdentity xs of Refl -> Refl
+
+{- @elem@ -}
+
+-- $elem 'TwimlF' uses @∉@ in order to enforce nesting rules.
+
+-- | 'Elem' is like a promoted @elem@: it allows us to check whether a type
+-- constructor @t@ is present in a list of type constructors @ts@.
+type family Elem (t :: k) (ts :: [k]) :: Bool where
+  Elem t '[] = 'False
+  Elem t (t ': ts) = 'True
+  Elem t (u ': ts) = Elem t ts
+
+-- | @t ∉ ts@ is shorthand for asserting that a type constructor @t@ is not
+-- present in a list of types constructors @ts@.
+type t ∉ ts = Elem t ts ~ 'False
+
+{- Indexed -}
+
+{- Functor -}
+
+-- $indexedFunctor Every 'IxFunctor' is a functor, so you can use @fmap@ and
+-- @(\<$>)@ as normal.
+
+-- | An indexed functor @f@
+class IxFunctor f where
+  -- | The indexed equivalent of @fmap@
+  imap :: (a -> b) -> f i a -> f i b
+
+{- Applicative -}
+
+-- $indexedApplicative If you import @Prelude@ hiding @(\<*>)@ and @pure@, you
+-- can redefine @(\<*>)@ and @pure@ to use their indexed equivalents. For
+-- example,
+--
+-- @
+-- import Prelude hiding ((\<*>), pure)
+--
+-- pure :: 'IxApplicative' f -> a -> f 'Identity' a
+-- pure = 'ipure'
+--
+-- (\<*>) :: 'IxApplicative' f => f i (a -> b) -> f j a -> f (i '<>' j) b
+-- (\<*>) = 'iap'
+-- @
+
+-- | An applicative functor @f@ indexed by a monoid @(M,'<>','Identity')@
+class IxFunctor f => IxApplicative (f :: k -> * -> *) where
+  type Identity :: k
+
+  type (i :: k) <> (j :: k) :: k
+
+  -- | The indexed equivalent of @pure@
+  ipure :: a -> f Identity a
+
+  -- | The indexed equivalent of @(\<*>)@
+  iap :: f i (a -> b) -> f j a -> f (i <> j) b
+
+{- Monad -}
+
+-- $indexedMonad You can use do-notation with 'IxMonad' by enabling the
+-- RebindableSyntax extension and redefining @(>>=)@, @(>>)@, and @return@. For
+-- example,
+--
+-- @
+-- {-\#LANGUAGE RebindableSyntax #-}
+--
+-- import Prelude hiding ((>>=), (>>), return)
+--
+-- (>>=) :: 'IxMonad' m => m i a -> (a -> m j b) -> m (i '<>' j) b
+-- (>>=) = 'ibind'
+--
+-- (>>) :: 'IxMonad' m => m i a -> m j b -> m (i '<>' j) b
+-- a >> b = a >>= const b
+--
+-- return :: 'IxApplicative' m => a -> m 'Identity' a
+-- return = 'ipure'
+-- @
+
+-- | A monad @m@ indexed by a monoid @(M,'<>','Identity')@
+class IxApplicative m => IxMonad (m :: k -> * -> *) where
+  -- | The indexed equivalent of @(>>=)@
+  ibind :: m i a -> (a -> m j b) -> m (i <> j) b
+
+{- Free -}
+
+-- | A free monad indexed by a monoid @(M,'++',[])@
+data IxFree f (i :: [k]) a where
+  IxPure :: a -> IxFree f '[] a
+  IxFree :: WitnessList i => f i (IxFree f j a) -> IxFree f (i ++ j) a
+
+instance (IxShow f, Show a) => Show (IxFree f i a) where
+  show (IxPure a) = "IxPure (" ++ show a ++ ")"
+  show (IxFree fa) = "IxFree (" ++ ishow fa ++ ")"
+
+instance IxShow f => IxShow (IxFree f) where
+  ishow = show
+
+instance IxFunctor f => Functor (IxFree f i) where
+  fmap = imap
+
+instance IxFunctor f => IxFunctor (IxFree f) where
+  imap = fmap
+
+instance IxFunctor f => IxApplicative (IxFree f) where
+  type Identity = '[]
+
+  type i <> j = i ++ j
+
+  ipure = IxPure
+
+  iap = iap'
+
+iap'
+  :: forall f i j a b. IxFunctor f
+  => IxFree f i (a -> b) -> (IxFree f j a) -> IxFree f (i ++ j) b
+iap' (IxPure f) (IxPure a) = IxPure $ f a
+iap' (IxPure f) (IxFree mb) = IxFree $ imap (fmap f) mb
+iap' (IxFree (mf :: f i1 (IxFree f j1 (a -> b)))) a =
+  case associativity (witness :: SList i1) (Proxy :: Proxy j1) (Proxy :: Proxy j)
+  of Refl -> IxFree $ imap (`iap'` a) mf
+
+instance (IxFunctor m, IxApplicative (IxFree m)) => IxMonad (IxFree m) where
+  ibind = ibind'
+
+ibind'
+  :: forall f i j a b. IxFunctor f
+  => IxFree f i a -> (a -> IxFree f j b) -> IxFree f (i ++ j) b
+ibind' (IxPure a) f = f a
+ibind' (IxFree (x :: f i1 (IxFree f j1 a))) f =
+    case associativity (witness :: SList i1) (Proxy :: Proxy j1) (Proxy :: Proxy j)
+    of Refl -> IxFree $ imap (`ibind'` f) x
+
+-- | Lift an indexed functor into 'IxFree'
+iliftF :: forall f i a . (WitnessList i, IxFunctor f) => f i a -> IxFree f i a
+iliftF = case rightIdentity (witness :: SList i) of Refl -> IxFree . imap IxPure
+
+{- Show -}
+
+class IxShow (f :: k -> * -> *) where
+  ishow :: Show a => f i a -> String
+
+{- With -}
+
+class With a where
+  with :: a
+
+{- Lenses -}
+
+makeLensesWith abbreviatedFields ''SayAttributes
+makeLensesWith abbreviatedFields ''PlayAttributes
+makeLensesWith abbreviatedFields ''GatherAttributes
+makeLensesWith abbreviatedFields ''RecordAttributes
+makeLensesWith abbreviatedFields ''SmsAttributes
+makeLensesWith abbreviatedFields ''DialAttributes
+makeLensesWith abbreviatedFields ''DialNoun
+makeLensesWith abbreviatedFields ''NumberAttributes
+makeLensesWith abbreviatedFields ''SipAttributes
+makeLensesWith abbreviatedFields ''ClientAttributes
+makeLensesWith abbreviatedFields ''ConferenceAttributes
+makeLensesWith abbreviatedFields ''QueueAttributes
+makeLensesWith abbreviatedFields ''EnqueueAttributes
+makeLensesWith abbreviatedFields ''RedirectAttributes
+makeLensesWith abbreviatedFields ''RejectAttributes
+makeLensesWith abbreviatedFields ''PauseAttributes

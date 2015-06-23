@@ -1,235 +1,318 @@
-module Main where
+{-#LANGUAGE RebindableSyntax #-}
+{-#LANGUAGE RecordWildCards #-}
+
+module Test where
 
 import Text.XML.Twiml
+import qualified Text.XML.Twiml.Syntax as Twiml
 
-import Data.Functor ((<$>))
+import Control.Monad
 import Control.Lens
-import Control.Monad (when)
+import Data.Algorithm.Diff
+import Data.Algorithm.DiffOutput
+import Data.Default
 import Data.Maybe (fromJust)
+import Data.String
+import Distribution.TestSuite
 import System.IO
+
+import Prelude
 
 {- Say -}
 
+sayExample1 :: Twiml
 sayExample1 =
-  ( respond
-  . say "Hello World"
-  $ end
-  , "test/xml/sayExample1.xml" )
+  response $ do
+    say "Hello World" def
+    end
+  where Twiml.Syntax{..} = def
 
+sayExample2 :: Twiml
 sayExample2 =
-  ( respond
-  . (sayAlice' PtBR "Bom dia." <&> loop .~ 2)
-  $ end
-  , "test/xml/sayExample2.xml" )
+  response $ do
+    say "Bom dia." $ def & voice .~ Just (Alice $ Just PtBR)
+                         & loop  .~ Just 2
+    end
+  where Twiml.Syntax{..} = def
 
-sayExamples = [ sayExample1, sayExample2 ]
+sayExamples :: [(Twiml, FilePath)]
+sayExamples =
+  [ (sayExample1, "test/xml/sayExample1.xml")
+  , (sayExample2, "test/xml/sayExample2.xml")
+  ]
 
 {- Play -}
 
+playExample1 :: Twiml
 playExample1 =
-  ( respond
-  . play (parseURL "https://api.twilio.com/cowbell.mp3")
-  $ end
-  , "test/xml/playExample1.xml" )
+  response $ do
+    play (fromJust $ parseURL "https://api.twilio.com/cowbell.mp3") def
+    end
+  where Twiml.Syntax{..} = def
 
+playExample2 :: Twiml
 playExample2 =
-  ( respond
-  . (play Nothing <&> digits .~ [W, W, W, W, D3])
-  $ end
-  , "test/xml/playExample2.xml" )
+  response $ do
+    play' Nothing $ def & digits .~ Just [W, W, W, W, D3]
+    end
+  where Twiml.Syntax{..} = def
 
-playExamples = [ playExample1, playExample2 ]
+playExamples :: [(Twiml, FilePath)]
+playExamples =
+  [ (playExample1, "test/xml/playExample1.xml")
+  , (playExample2, "test/xml/playExample2.xml")
+  ]
 
 {- Gather -}
 
+gatherExample1 :: Twiml
 gatherExample1 =
-  ( respond
-  . gather end
-  $ end
-  , "test/xml/gatherExample1.xml" )
+  response $ do
+    gather with end
+    end
+  where Twiml.Syntax{..} = def
 
--- FIXME: Ugly.
+gatherExample2 :: Twiml
 gatherExample2 =
-  ( respond
-  . (gather <&> action .~ (fromJust $ parseURL "/process_gather.php")
-            <&> method .~ GET
-      $ say "Please enter your account number, followed by the pound sign"
-      $ end)
-  . say "We didn't receive any input. Goodbye!"
-  $ end
-  , "test/xml/gatherExample2.xml" )
+  response $ do
+    gather (with & action .~ parseURL "/process_gather.php"
+                 & method .~ Just GET) $ do
+      say "Please enter your account number, followed by the pound sign" def
+      end
+    say "We didn't receive any input. Goodbye!" def
+    end
+  where Twiml.Syntax{..} = def
 
-gatherExamples = [ gatherExample1, gatherExample2 ]
+gatherExamples :: [(Twiml, FilePath)]
+gatherExamples =
+  [ (gatherExample1, "test/xml/gatherExample1.xml")
+  , (gatherExample2, "test/xml/gatherExample2.xml")
+  ]
 
 {- Record -}
 
+recordExample1 :: Twiml
 recordExample1 =
-  ( respond
-  . record
-  $ end
-  , "test/xml/recordExample1.xml" )
+  response $ do
+    record with
+    end
+  where Twiml.Syntax{..} = def
 
+recordExample2 :: Twiml
 recordExample2 =
-  ( respond
-  . say "Please leave a message at the beep. Press the star key when finished."
-  . (record <&> action      .~ (fromJust $ parseURL "http://foo.edu/handleRecording.php")
-            <&> method      .~ GET
-            <&> maxLength   .~ 20
-            <&> finishOnKey .~ KStar)
-  . say "I did not receive a recording"
-  $ end
-  , "test/xml/recordExample2.xml" )
+  response $ do
+    say "Please leave a message at the beep. Press the star key when finished." def
+    record $ with & action      .~ parseURL "http://foo.edu/handleRecording.php"
+                  & method      .~ Just GET
+                  & maxLength   .~ Just 20
+                  & finishOnKey .~ Just KStar
+    say "I did not receive a recording" def
+    end
+  where Twiml.Syntax{..} = def
 
+recordExample3 :: Twiml
 recordExample3 =
-  ( respond
-  . (record <&> transcribe         .~ True
-            <&> transcribeCallback .~ (fromJust $ parseURL "/handle_transcribe.php"))
-  $ end
-  , "test/xml/recordExample3.xml" )
+  response $ do
+    record $ with & transcribe         .~ Just True
+                  & transcribeCallback .~ parseURL "/handle_transcribe.php"
+    end
+  where Twiml.Syntax{..} = def
 
-recordExamples = [ recordExample1, recordExample2, recordExample3 ]
+recordExamples :: [(Twiml, FilePath)]
+recordExamples =
+  [ (recordExample1, "test/xml/recordExample1.xml")
+  , (recordExample2, "test/xml/recordExample2.xml")
+  , (recordExample3, "test/xml/recordExample3.xml")
+  ]
 
 {- Sms -}
 
+smsExample1 :: Twiml
 smsExample1 =
-  ( respond
-  . say "Our store is located at 123 Easy St."
-  . sms "Store Location: 123 Easy St."
-  $ end
-  , "test/xml/smsExample1.xml" )
+  response $ do
+    say "Our store is located at 123 Easy St." def
+    sms "Store Location: 123 Easy St." def
+    end
+  where Twiml.Syntax{..} = def
 
+smsExample2 :: Twiml
 smsExample2 =
-  ( respond
-  . say "Our store is located at 123 Easy St."
-  . (sms "Store Location: 123 Easy St." <&> action .~ (fromJust $ parseURL "/smsHandler.php")
-                                        <&> method .~ POST)
-  $ end
-  , "test/xml/smsExample2.xml" )
+  response $ do
+    say "Our store is located at 123 Easy St." def
+    sms "Store Location: 123 Easy St." $ def
+            & action .~ parseURL "/smsHandler.php"
+            & method .~ Just POST
+    end
+  where Twiml.Syntax{..} = def
 
+smsExample3 :: Twiml
 smsExample3 =
-  ( respond
-  . say "Our store is located at 123 Easy St."
-  . (sms "Store Location: 123 Easy St." <&> statusCallback .~ (fromJust $ parseURL "/smsHandler.php"))
-  $ end
-  , "test/xml/smsExample3.xml" )
+  response $ do
+    say "Our store is located at 123 Easy St." def
+    sms "Store Location: 123 Easy St." $ def
+            & statusCallback .~ parseURL "/smsHandler.php"
+    end
+  where Twiml.Syntax{..} = def
 
-smsExamples = [ smsExample1, smsExample2, smsExample3 ]
+smsExamples :: [(Twiml, FilePath)]
+smsExamples =
+  [ (smsExample1, "test/xml/smsExample1.xml")
+  , (smsExample2, "test/xml/smsExample2.xml")
+  , (smsExample3, "test/xml/smsExample3.xml")
+  ]
 
 {- Dial -}
 
--- FIXME: Ugly.
+dialExample1 :: Twiml
 dialExample1 =
-  ( respond
-  . dial (Right "415-123-4567")
-  . say "Goodbye"
-  $ end
-  , "test/xml/dialExample1.xml" )
+  response $ do
+    dial "415-123-4567" def
+    say "Goodbye" def
+    end
+  where Twiml.Syntax{..} = def
 
+dialExample2 :: Twiml
 dialExample2 =
-  ( respond
-  . (dial (Right "415-123-4567") <&> action .~ (fromJust $ parseURL "/handleDialCallStatus.php")
-                                 <&> method .~ GET)
-  . say "I am unreachable"
-  $ end
-  , "test/xml/dialExample2.xml" )
+  response $ do
+    dial "415-123-4567" $ def
+             & action .~ parseURL "/handleDialCallStatus.php"
+             & method .~ Just GET
+    say "I am unreachable" def
+    end
+  where Twiml.Syntax{..} = def
 
+dialExample3 :: Twiml
 dialExample3 =
-  ( respond
-  . (dial
-        (Left $ Number (NumberAttributes Nothing Nothing Nothing) "+15558675309")
-      <&> callerId .~ "+15551112222")
-  $ end
-  , "test/xml/dialExample3.xml" )
+  response $ do
+    dial' (Left $ Number def "+15558675309") $ def
+             & callerId .~ Just "+15551112222"
+    end
+  where Twiml.Syntax{..} = def
 
-dialExamples = [ dialExample1, dialExample2, dialExample3 ]
+dialExamples :: [(Twiml, FilePath)]
+dialExamples =
+  [ (dialExample1, "test/xml/dialExample1.xml")
+  , (dialExample2, "test/xml/dialExample2.xml")
+  , (dialExample3, "test/xml/dialExample3.xml")
+  ]
 
 -- TODO: Dial nouns...
 
 {- Enqueue -}
 
+enqueueExample1 :: Twiml
 enqueueExample1 =
-  ( respond
-  . (enqueue "support" <&> waitURL .~ (fromJust $ parseURL "wait-music.xml"))
-  $ end
-  , "test/xml/enqueueExample1.xml" )
+  response $ do
+    enqueue "support" $ def & waitURL .~ parseURL "wait-music.xml"
+    end
+  where Twiml.Syntax{..} = def
 
-enqueueExamples = [ enqueueExample1 ]
+enqueueExamples :: [(Twiml, FilePath)]
+enqueueExamples =
+  [ (enqueueExample1, "test/xml/enqueueExample1.xml")
+  ]
 
 {- Leave -}
 
+leaveExample1 :: Twiml
 leaveExample1 =
-  ( respond
-  . leave
-  $ end
-  , "test/xml/leaveExample1.xml" )
+  response $ do
+    leave
+    end
+  where Twiml.Syntax{..} = def
 
-leaveExamples = [ leaveExample1 ]
+leaveExamples :: [(Twiml, FilePath)]
+leaveExamples =
+  [ (leaveExample1, "test/xml/leaveExample1.xml")
+  ]
 
 {- Hangup -}
 
+hangupExample1 :: Twiml
 hangupExample1 =
-  ( respond
-  . hangup
-  $ end
-  , "test/xml/hangupExample1.xml" )
+  response $ do
+    hangup
+    end
+  where Twiml.Syntax{..} = def
 
-hangupExamples = [ hangupExample1 ]
+hangupExamples :: [(Twiml, FilePath)]
+hangupExamples =
+  [ (hangupExample1, "test/xml/hangupExample1.xml")
+  ]
 
 {- Redirect -}
 
--- FIXME: Ugly.
+redirectExample1 :: Twiml
 redirectExample1 =
-  ( respond
-  . dial (Right "415-123-4567")
-  . redirect (fromJust $ parseURL "http://www.foo.com/nextInstructions")
-  $ end
-  , "test/xml/redirectExample1.xml" )
+  response $ do
+    dial "415-123-4567" def
+    redirect (fromJust $ parseURL "http://www.foo.com/nextInstructions") def
+    end
+  where Twiml.Syntax{..} = def
 
+redirectExample2 :: Twiml
 redirectExample2 =
-  ( respond
-  . redirect (fromJust $ parseURL "../nextInstructions")
-  $ end
-  , "test/xml/redirectExample2.xml" )
+  response $ do
+    redirect (fromJust $ parseURL "../nextInstructions") def
+    end
+  where Twiml.Syntax{..} = def
 
-redirectExamples = [ redirectExample1, redirectExample2 ]
+redirectExamples :: [(Twiml, FilePath)]
+redirectExamples =
+  [ (redirectExample1, "test/xml/redirectExample1.xml")
+  , (redirectExample2, "test/xml/redirectExample2.xml")
+  ]
 
 {- Reject -}
 
+rejectExample1 :: Twiml
 rejectExample1 =
-  ( respond
-  . reject
-  $ end
-  , "test/xml/rejectExample1.xml" )
+  response $ do
+    reject def
+    end
+  where Twiml.Syntax{..} = def
 
+rejectExample2 :: Twiml
 rejectExample2 =
-  ( respond
-  . (reject <&> reason .~ Busy)
-  $ end
-  , "test/xml/rejectExample2.xml" )
+  response $ do
+    reject $ with & reason .~ Just Busy
+    end
+  where Twiml.Syntax{..} = def
 
-rejectExamples = [ rejectExample1, rejectExample2 ]
+rejectExamples :: [(Twiml, FilePath)]
+rejectExamples =
+  [ (rejectExample1, "test/xml/rejectExample1.xml")
+  , (rejectExample2, "test/xml/rejectExample2.xml")
+  ]
 
 {- Pause -}
 
+pauseExample1 :: Twiml
 pauseExample1 =
-  ( respond
-  . say "I will pause 10 seconds starting now!"
-  . (pause <&> duration .~ 10)
-  . say "I just paused 10 seconds"
-  $ end
-  , "test/xml/pauseExample1.xml" )
+  response $ do
+    say "I will pause 10 seconds starting now!" def
+    pause $ with & duration .~ Just 10
+    say "I just paused 10 seconds" def
+    end
+  where Twiml.Syntax{..} = def
 
+pauseExample2 :: Twiml
 pauseExample2 =
-  ( respond
-  . (pause <&> duration .~ 5)
-  . say "Hi there."
-  $ end
-  , "test/xml/pauseExample2.xml" )
+  response $ do
+    pause $ with & duration .~ Just 5
+    say "Hi there." def
+    end
+  where Twiml.Syntax{..} = def
 
-pauseExamples = [ pauseExample1, pauseExample2 ]
+pauseExamples :: [(Twiml, FilePath)]
+pauseExamples =
+  [ (pauseExample1, "test/xml/pauseExample1.xml")
+  , (pauseExample2, "test/xml/pauseExample2.xml")
+  ]
 
 {- Main -}
 
+examples :: [(Twiml, FilePath)]
 examples = concat
   [ sayExamples
   , playExamples
@@ -244,21 +327,28 @@ examples = concat
   , rejectExamples
   ] 
 
-main :: IO ()
-main = do
-  results <- sequence $ map check examples
-  when (not $ and results) $ error "Failed"
+ifThenElse :: Bool -> t -> t -> t
+ifThenElse b x y | b = x
+                 | otherwise = y
 
-check :: (Response, FilePath) -> IO Bool
-check (twiml, filePath) = do
-  let a = show twiml
-  b <- readFile filePath
-  let equal = a == b
-  if (not equal)
-    then do
-      putStrLn $ "Failed: " ++ filePath
-      putStrLn $ "Expected:\n" ++ b
-      putStrLn $ "Got:\n" ++ a ++ "\n"
-    else do
-      putStrLn $ "Passed: " ++ filePath
-  return equal
+tests :: IO [Test]
+tests = return $ map check examples
+
+check :: (Twiml, FilePath) -> Test
+check (twiml, filePath) = Test test
+  where test = TestInstance {
+    run = do
+      let a = show twiml
+      b <- readFile filePath
+      let equal = a == b
+      when (not equal) $ do
+        putStrLn ""
+        putStrLn . ppDiff $ getGroupedDiff (lines b) (lines a)
+      return . Finished $ case equal of
+        True  -> Pass
+        False -> Error "Check preceding diff",
+    name = filePath,
+    tags = [],
+    options = [],
+    setOption = \_ _ -> Right test
+  }

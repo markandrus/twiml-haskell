@@ -2,7 +2,7 @@
 --  see http://haskell.org/cabal/users-guide/
 
 name:                twiml
-version:             0.2.0.0
+version:             1.0.0.0
 synopsis:            TwiML library for Haskell
 description:         TwiML library for Haskell
 homepage:            https://github.com/markandrus/twiml-haskell
@@ -46,27 +46,27 @@ source-repository head
 library
   exposed-modules:     Text.XML.Twiml,
                        Text.XML.Twiml.Types,
-                       Text.XML.Twiml.Verbs,
-                       Text.XML.Twiml.Verbs.End,
-                       Text.XML.Twiml.Verbs.Say,
-                       Text.XML.Twiml.Verbs.Play,
-                       Text.XML.Twiml.Verbs.Gather,
-                       Text.XML.Twiml.Verbs.Record,
-                       Text.XML.Twiml.Verbs.Sms,
-                       Text.XML.Twiml.Verbs.Dial,
-                       Text.XML.Twiml.Verbs.Enqueue,
-                       Text.XML.Twiml.Verbs.Leave,
-                       Text.XML.Twiml.Verbs.Hangup,
-                       Text.XML.Twiml.Verbs.Redirect,
-                       Text.XML.Twiml.Verbs.Reject,
-                       Text.XML.Twiml.Verbs.Pause,
                        Text.XML.Twiml.Internal
+                       Text.XML.Twiml.Syntax
   hs-source-dirs:      src
   -- other-modules:       
-  build-depends:       base ==4.*, xml >=1.3, network-uri >=2.6
+  build-depends:       base ==4.*,
+                       data-default ==0.5.*,
+                       lens ==4.*,
+                       network-uri >=2.6,
+                       text ==1.*,
+                       void ==0.*,
+                       xml >=1.3
+  ghc-options:         -Wall -fno-warn-unused-do-bind
 
-test-suite Tests
+test-suite Test
   hs-source-dirs:      test
-  main-is:             Test.hs
-  Type:                exitcode-stdio-1.0
-  build-depends:       base ==4.*, Cabal >=1.16.0, lens >=3.9, twiml
+  type:                detailed-0.9
+  test-module:         Test
+  build-depends:       base ==4.*,
+                       Cabal >=1.16.0,
+                       data-default ==0.5.*,
+                       Diff ==0.3.2,
+                       lens ==4.*,
+                       twiml
+  ghc-options:         -Wall -fno-warn-unused-do-bind -fno-warn-name-shadowing

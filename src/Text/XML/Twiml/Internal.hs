@@ -1,3 +1,5 @@
+{-#LANGUAGE DataKinds #-}
+{-#LANGUAGE EmptyDataDecls #-}
 {-#LANGUAGE FlexibleContexts #-}
 {-#LANGUAGE FlexibleInstances #-}
 {-#LANGUAGE FunctionalDependencies #-}
@@ -5,74 +7,165 @@
 {-#LANGUAGE MultiParamTypeClasses #-}
 {-#LANGUAGE RankNTypes #-}
 {-#LANGUAGE TypeFamilies #-}
-{-#LANGUAGE UndecidableInstances #-}
 {-#LANGUAGE TypeOperators #-}
+{-#LANGUAGE UndecidableInstances #-}
 
 module Text.XML.Twiml.Internal
-  ( TwimlF(..)
+  (
+    response
+  , say
+  , play
+  , play'
+  , gather
+  , record
+  , sms
+  , dial
+  , dial'
+  , enqueue
+  , leave
+  , hangup
+  , redirect
+  , reject
+  , pause
+  , end
   , Twiml(..)
   , Twiml'
+  , In
+  , Nest
+  , TwimlF(..)
+  , Say
+  , Play
+  , Gather
+  , Record
+  , Sms
+  , Dial
+  , Enqueue
+  , Leave
+  , Hangup
+  , Redirect
+  , Reject
+  , Pause
+  , End
   ) where
 
 import Text.XML.Twiml.Types
-
-import Data.Maybe (catMaybes)
 import Text.XML.Light
 
-{- TwimlF -}
+import Data.Void
 
--- | This is the 'Functor' we use when folding 'Twiml'.
-data TwimlF p a where
-  EndF      :: TwimlF p a
-  SayF      :: SayAttributes
-            -> String
+response :: Twiml' i Void -> Twiml
+response = Response
+
+say :: String -> SayAttributes -> Twiml' '[Say] ()
+say a b = iliftF $ SayF a b ()
+
+play :: URL -> PlayAttributes -> Twiml' '[Play] ()
+play a b = iliftF $ PlayF (Just a) b ()
+
+play' :: Maybe URL -> PlayAttributes -> Twiml' '[Play] ()
+play' a b = iliftF $ PlayF a b ()
+
+gather :: Nest i In Gather
+       => GatherAttributes -> Twiml' i Void -> Twiml' '[Gather] ()
+gather a b = iliftF $ GatherF a b ()
+
+record :: RecordAttributes -> Twiml' '[Record] ()
+record a = iliftF $ RecordF a ()
+
+sms :: String -> SmsAttributes -> Twiml' '[Sms] ()
+sms a b = iliftF $ SmsF a b ()
+
+dial :: String -> DialAttributes -> Twiml' '[Dial] ()
+dial a b = iliftF $ DialF (Right a) b ()
+
+dial' :: Either DialNoun String -> DialAttributes -> Twiml' '[Dial] ()
+dial' a b = iliftF $ DialF a b ()
+
+enqueue :: String -> EnqueueAttributes -> Twiml' '[Enqueue] ()
+enqueue a b = iliftF $ EnqueueF a b ()
+
+leave :: Twiml' '[Leave] a
+leave = iliftF $ LeaveF
+
+hangup :: Twiml' '[Hangup] a
+hangup = iliftF $ HangupF
+
+redirect :: URL -> RedirectAttributes -> Twiml' '[Redirect] a
+redirect a b = iliftF $ RedirectF a b
+
+reject :: RejectAttributes -> Twiml' '[Reject] a
+reject a = iliftF $ RejectF a
+
+pause :: PauseAttributes -> Twiml' '[Pause] ()
+pause a = iliftF $ PauseF a ()
+
+end :: Twiml' '[] a
+end = iliftF $ EndF
+
+data Twiml = forall i. Response (Twiml' (i :: [*]) Void)
+
+instance Show Twiml where
+  show = showTwiml -- show (Response a) = "Response (" ++ show a ++ ")"
+
+type Twiml' = IxFree TwimlF
+
+data In
+
+type family Nest a i b where
+  Nest i In Gather =
+    ( Record   ∉ i
+    , Gather   ∉ i
+    , Sms      ∉ i
+    , Dial     ∉ i
+    , Enqueue  ∉ i
+    , Leave    ∉ i
+    , Hangup   ∉ i
+    , Redirect ∉ i
+    , Reject   ∉ i
+    )
+
+data TwimlF i a where
+  SayF      :: String
+            -> SayAttributes
             -> a
-            -> TwimlF p a
-  PlayF     :: PlayAttributes
-            -> Maybe URL
+            -> TwimlF '[Say] a
+  PlayF     :: Maybe URL
+            -> PlayAttributes
             -> a
-            -> TwimlF p a
-  GatherF   :: (p :/~ Gather')
+            -> TwimlF '[Play] a
+  GatherF   :: Nest i In Gather
             => GatherAttributes
-            -> Twiml' Gather'
+            -> Twiml' i Void
             -> a
-            -> TwimlF p a
-  RecordF   :: (p :/~ Gather')
-            => RecordAttributes
+            -> TwimlF '[Gather] a
+  RecordF   :: RecordAttributes
             -> a
-            -> TwimlF p a
-  SmsF      :: (p :/~ Gather')
-            => SmsAttributes
-            -> String
+            -> TwimlF '[Record] a
+  SmsF      :: String
+            -> SmsAttributes
             -> a
-            -> TwimlF p a
-  DialF     :: (p :/~ Gather')
-            => DialAttributes
-            -> Either DialNoun String
+            -> TwimlF '[Sms] a
+  DialF     :: Either DialNoun String
+            -> DialAttributes
             -> a
-            -> TwimlF p a
-  EnqueueF  :: (p :/~ Gather')
-            => EnqueueAttributes
-            -> String
+            -> TwimlF '[Dial] a
+  EnqueueF  :: String
+            -> EnqueueAttributes
             -> a
-            -> TwimlF p a
-  LeaveF    :: (p :/~ Gather')
-            => TwimlF p a
-  HangupF   :: (p :/~ Gather')
-            => TwimlF p a
-  RedirectF :: (p :/~ Gather')
-            => RedirectAttributes
-            -> URL
-            -> TwimlF p a
-  RejectF   :: (p :/~ Gather')
-            => RejectAttributes
-            -> TwimlF p a
+            -> TwimlF '[Enqueue] a
+  LeaveF    :: TwimlF '[Leave] a
+  HangupF   :: TwimlF '[Hangup] a
+  RedirectF :: URL
+            -> RedirectAttributes
+            -> TwimlF '[Redirect] a
+  RejectF   :: RejectAttributes
+            -> TwimlF '[Reject] a
   PauseF    :: PauseAttributes
             -> a
-            -> TwimlF p a
+            -> TwimlF '[Pause] a
+  EndF      :: TwimlF '[] a
 
-instance Functor (TwimlF p) where
-  fmap _  EndF             = EndF
+instance Functor (TwimlF i) where
   fmap f (SayF      a b c) = SayF      a b $ f c
   fmap f (PlayF     a b c) = PlayF     a b $ f c
   fmap f (GatherF   a b c) = GatherF   a b $ f c
@@ -85,140 +178,76 @@ instance Functor (TwimlF p) where
   fmap _ (RedirectF a b)   = RedirectF a b
   fmap _ (RejectF   a)     = RejectF   a
   fmap f (PauseF    a b)   = PauseF    a   $ f b
+  fmap _  EndF             = EndF
 
+instance IxFunctor TwimlF where
+  imap = fmap
+
+instance Show a => Show (TwimlF i a) where
+  show (SayF      a b c) = "SayF ("      ++ show a ++ ") (" ++  show b ++ ") (" ++ show c ++ ")"
+  show (PlayF     a b c) = "PlayF ("     ++ show a ++ ") (" ++  show b ++ ") (" ++ show c ++ ")"
+  show (GatherF   a b c) = "GatherF ("   ++ show a ++ ") (" ++ ishow b ++ ") (" ++ show c ++ ")"
+  show (RecordF   a b)   = "RecordF ("   ++ show a ++ ") (" ++  show b ++ ")"
+  show (SmsF      a b c) = "SmsF ("      ++ show a ++ ") (" ++  show b ++ ") (" ++ show c ++ ")"
+  show (DialF     a b c) = "DialF ("     ++ show a ++ ") (" ++  show b ++ ") (" ++ show c ++ ")"
+  show (EnqueueF  a b c) = "EnqueueF ("  ++ show a ++ ") (" ++  show b ++ ") (" ++ show c ++ ")"
+  show  LeaveF           = "LeaveF"
+  show  HangupF          = "HangupF"
+  show (RedirectF a b)   = "RedirectF (" ++ show a ++ ") (" ++  show b ++ ")"
+  show (RejectF   a)     = "RejectF ("   ++ show a ++ ")"
+  show (PauseF    a b)   = "PauseF ("    ++ show a ++ ") (" ++  show b
+  show  EndF             = "EndF"
+
+instance IxShow TwimlF where
+  ishow = show
+
+data Say
+data Play
+data Gather
+data Record
+data Sms
+data Dial
+data Enqueue
+data Leave
+data Hangup
+data Redirect
+data Reject
+data Pause
+data End
+
+{-
 type instance Base (Fix (TwimlF p)) = TwimlF p
 
 instance Text.XML.Twiml.Types.Foldable (Fix (TwimlF p)) where
   project = unFix
 
-{- Twiml -}
-
-type Twiml' p = Fix (TwimlF p)
-
-class Twiml p t | t -> p where
-  toTwiml' :: t -> Twiml' p
-
-instance Twiml p (Twiml' p) where
-  toTwiml' = id
-
-instance Show (Twiml' p) where
+instance Show a => Show (Twiml' i a) where
   show twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" ++ (ppElement . unode "Response" $ toXML twiml) ++ "\n"
+-}
 
-(&) :: a -> (a -> b) -> b
-a & f = f a
-{-# INLINE (&) #-}
+showTwiml :: Twiml -> String
+showTwiml twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" ++ (ppElement $ toElement twiml) ++ "\n"
 
-string :: String -> Content
-string str = Text $ CData CDataText str Nothing
+instance ToElement Twiml where
+  toElement (Response twiml) = unode "Response" $ toXML twiml
 
-showBool :: Bool -> String
-showBool True = "true"
-showBool False = "false"
+instance ToXML (Twiml' i Void) where
+  toXML (IxFree twiml) = toXML twiml
+  toXML (IxPure _) = []
 
-showVoice :: Voice -> String
-showVoice (Man _) = "man"
-showVoice (Woman _) = "woman"
-showVoice (Alice _) = "alice"
-
-showLang :: Voice -> Maybe String
-showLang (Man lang) = fmap show lang
-showLang (Woman lang) = fmap show lang
-showLang (Alice lang) = fmap show lang
-
-dialNoun :: Either DialNoun String -> Content
-dialNoun (Left (Number a b))
-  = Elem $ unode "Number" (string b) & add_attrs (catMaybes
-      [ fmap ((Attr $ unqual "sendDigits") . concatMap show) $ numberSendDigits a
-      , fmap ((Attr $ unqual "url") . show) $ numberURL a
-      , fmap ((Attr $ unqual "method") . show) $ numberMethod a
-      ])
-dialNoun (Left (Sip a b))
-  = Elem $ unode "Sip" (string $ show b) & add_attrs (catMaybes
-      [ fmap ((Attr $ unqual "url") . show) $ sipURL a
-      , fmap ((Attr $ unqual "method") . show) $ sipMethod a
-      ])
-dialNoun (Left (Client a b))
-  = Elem $ unode "Client" (string b) & add_attrs (catMaybes
-      [ fmap ((Attr $ unqual "url") . show) $ clientURL a
-      , fmap ((Attr $ unqual "method") . show) $ clientMethod a
-      ])
-dialNoun (Left (Conference a b))
-  = Elem $ unode "Conference" (string b) & add_attrs (catMaybes
-      [ fmap ((Attr $ unqual "muted") . showBool) $ conferenceMuted a
-      , fmap ((Attr $ unqual "beep") . show) $ conferenceBeep a
-      , fmap ((Attr $ unqual "startConferenceOnEnter") . showBool) $ conferenceStartOnEnter a
-      , fmap ((Attr $ unqual "endConferenceOnExit") . showBool) $ conferenceEndOnExit a
-      , fmap ((Attr $ unqual "waitUrl") . show) $ conferenceWaitURL a
-      , fmap ((Attr $ unqual "waitMethod") . show) $ conferenceWaitMethod a
-      , fmap ((Attr $ unqual "maxParticipants") . show) $ conferenceMaxParticipants a
-      ])
-dialNoun (Left (Queue a b))
-  = Elem $ unode "Queue" (string b) & add_attrs (catMaybes
-      [ fmap ((Attr $ unqual "url") . show) $ queueURL a
-      , fmap ((Attr $ unqual "method") . show) $ queueMethod a
-      ])
-dialNoun (Right str) = string str
-
-toXML :: Twiml' p -> [Element]
-toXML = cata go where
-  go EndF = []
-  go (SayF a b c) = unode "Say" (string b) & add_attrs (catMaybes
-    [ fmap ((Attr $ unqual "voice") . showVoice) $ sayVoice a
-    , fmap ((Attr $ unqual "loop") . show) $ sayLoop a
-    , fmap (Attr $ unqual "language") (sayVoice a >>= showLang)
-    ]) : c
-  go (PlayF a b c) = maybe (unode "Play" ()) (unode "Play" . string . show) b
-      & add_attrs (catMaybes
-    [ fmap ((Attr $ unqual "loop") . show) $ playLoop a
-    , fmap ((Attr $ unqual "digits") . concatMap show) $ playDigits a
-    ]) : c
-  go (GatherF a b c) = unode "Gather" (toXML b) & add_attrs (catMaybes
-    [ fmap ((Attr $ unqual "action") . show) $ gatherAction a
-    , fmap ((Attr $ unqual "method") . show) $ gatherMethod a
-    , fmap ((Attr $ unqual "timeout") . show) $ gatherTimeout a
-    , fmap ((Attr $ unqual "finishOnKey") . show) $ gatherFinishOnKey a
-    , fmap ((Attr $ unqual "numDigits") . show) $ gatherNumDigits a
-    ]) : c
-  go (RecordF a b) = unode "Record" () & add_attrs (catMaybes
-    [ fmap ((Attr $ unqual "action") . show) $ recordAction a
-    , fmap ((Attr $ unqual "method") . show) $ recordMethod a
-    , fmap ((Attr $ unqual "timeout") . show) $ recordTimeout a
-    , fmap ((Attr $ unqual "finishOnKey") . show) $ recordFinishOnKey a
-    , fmap ((Attr $ unqual "maxLength") . show) $ recordMaxLength a
-    , fmap ((Attr $ unqual "transcribe") . showBool) $ recordTranscribe a
-    , fmap ((Attr $ unqual "transcribeCallback") . show) $ recordTranscribeCallback a
-    , fmap ((Attr $ unqual "playBeep") . show) $ recordPlayBeep a
-    ]) : b
-  go (SmsF a b c) = unode "Sms" (string b) & add_attrs (catMaybes
-    [ fmap ((Attr $ unqual "to") . show) $ smsTo a
-    , fmap ((Attr $ unqual "from") . show) $ smsFrom a
-    , fmap ((Attr $ unqual "action") . show) $ smsAction a
-    , fmap ((Attr $ unqual "method") . show) $ smsMethod a
-    , fmap ((Attr $ unqual "statusCallback") . show) $ smsStatusCallback a
-    ]) : c
-  go (DialF a b c) = unode "Dial" (dialNoun b) & add_attrs (catMaybes
-    [ fmap ((Attr $ unqual "action") . show) $ dialAction a
-    , fmap ((Attr $ unqual "method") . show) $ dialMethod a
-    , fmap ((Attr $ unqual "timeout") . show) $ dialTimeout a
-    , fmap ((Attr $ unqual "hangupOnStar") . showBool) $ dialHangupOnStar a
-    , fmap ((Attr $ unqual "timeLimit") . show) $ dialTimeLimit a
-    , fmap (Attr $ unqual "callerId") $ dialCallerId a
-    , fmap ((Attr $ unqual "record") . showBool) $ dialRecord a
-    ]) : c
-  go (EnqueueF a b c) = unode "Enqueue" (string b) & add_attrs (catMaybes
-    [ fmap ((Attr $ unqual "action") . show) $ enqueueAction a
-    , fmap ((Attr $ unqual "method") . show) $ enqueueMethod a
-    , fmap ((Attr $ unqual "waitUrl") . show) $ enqueueWaitURL a
-    , fmap ((Attr $ unqual "waitUrlMethod") . show) $ enqueueWaitURLMethod a
-    ]) : c
-  go LeaveF = [unode "Leave" ()]
-  go HangupF = [unode "Hangup" ()]
-  go (RedirectF a b) = [unode "Redirect" (string $ show b) & add_attrs (catMaybes
-    [ fmap ((Attr $ unqual "method") . show) $ redirectMethod a
-    ])]
-  go (RejectF a) = [unode "Reject" () & add_attrs (catMaybes
-    [ fmap ((Attr $ unqual "reason") . show) $ rejectReason a
-    ])]
-  go (PauseF a b) = unode "Pause" () & add_attrs (catMaybes
-    [ fmap ((Attr $ unqual "length") . show) $ pauseLength a
-    ]) : b
+instance ToXML (TwimlF i (Twiml' j Void)) where
+  toXML (SayF      a         attrs b) = (makeElement "Say"      (strToContent a) $ toAttrs attrs) : toXML b
+  toXML (PlayF     (Just a)  attrs b) = (makeElement "Play"     (urlToContent a) $ toAttrs attrs) : toXML b
+  toXML (PlayF     _         attrs b) = (makeElement "Play"     ()               $ toAttrs attrs) : toXML b
+  toXML (GatherF   attrs     a     b) = (makeElement "Gather"   (toXML        a) $ toAttrs attrs) : toXML b
+  toXML (RecordF             attrs a) = (makeElement "Record"   ()               $ toAttrs attrs) : toXML a
+  toXML (SmsF      a         attrs b) = (makeElement "Sms"      (strToContent a) $ toAttrs attrs) : toXML b
+  toXML (DialF     (Left  a) attrs b) = (makeElement "Dial"     (toElement    a) $ toAttrs attrs) : toXML b
+  toXML (DialF     (Right a) attrs b) = (makeElement "Dial"     (strToContent a) $ toAttrs attrs) : toXML b
+  toXML (EnqueueF  a         attrs b) = (makeElement "Enqueue"  (strToContent a) $ toAttrs attrs) : toXML b
+  toXML  LeaveF                       = [makeElement "Leave"    ()               []]
+  toXML  HangupF                      = [makeElement "Hangup"   ()               []]
+  toXML (RedirectF a         attrs)   = [makeElement "Redirect" (urlToContent a) $ toAttrs attrs]
+  toXML (RejectF             attrs)   = [makeElement "Reject"   ()               $ toAttrs attrs]
+  toXML (PauseF              attrs a) = (makeElement "Pause"    ()               $ toAttrs attrs) : toXML a
+  toXML  EndF                         = []

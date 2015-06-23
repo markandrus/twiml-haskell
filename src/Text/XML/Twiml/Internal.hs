@@ -88,7 +88,7 @@ instance Functor (TwimlF p) where
 
 type instance Base (Fix (TwimlF p)) = TwimlF p
 
-instance Foldable (Fix (TwimlF p)) where
+instance Text.XML.Twiml.Types.Foldable (Fix (TwimlF p)) where
   project = unFix
 
 {- Twiml -}

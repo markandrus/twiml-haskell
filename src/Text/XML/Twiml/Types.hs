@@ -87,7 +87,7 @@ module Text.XML.Twiml.Types
     -- ** Fix & Foldable
     -- $fix
   , Fix(..)
-  , Foldable(..)
+  , Text.XML.Twiml.Types.Foldable(..)
   , Base
     -- ** Type Inequality
     -- $type

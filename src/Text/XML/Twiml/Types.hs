@@ -619,7 +619,7 @@ makeAttr :: ToAttrValue b => String -> (a -> Maybe b) -> a -> Maybe Attr
 makeAttr str f a = Attr (unqual str) . toAttrValue <$> f a
 
 makeAttrs :: a -> [a -> Maybe Attr] -> [Attr]
-makeAttrs a = catMaybes . map ($ a)
+makeAttrs a = mapMaybe ($ a)
 
 makeElement :: Node t => String -> t -> [Attr] -> Element
 makeElement str c attrs = unode str c & add_attrs attrs
@@ -1015,7 +1015,7 @@ instance IxFunctor f => IxApplicative (IxFree f) where
 
 iap'
   :: forall f i j a b. IxFunctor f
-  => IxFree f i (a -> b) -> (IxFree f j a) -> IxFree f (i ++ j) b
+  => IxFree f i (a -> b) -> IxFree f j a -> IxFree f (i ++ j) b
 iap' (IxPure f) (IxPure a) = IxPure $ f a
 iap' (IxPure f) (IxFree mb) = IxFree $ imap (fmap f) mb
 iap' (IxFree (mf :: f i1 (IxFree f j1 (a -> b)))) a =

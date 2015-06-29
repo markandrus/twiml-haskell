@@ -2,7 +2,6 @@
 {-#LANGUAGE EmptyDataDecls #-}
 {-#LANGUAGE FlexibleContexts #-}
 {-#LANGUAGE FlexibleInstances #-}
-{-#LANGUAGE FunctionalDependencies #-}
 {-#LANGUAGE GADTs #-}
 {-#LANGUAGE MultiParamTypeClasses #-}
 {-#LANGUAGE RankNTypes #-}
@@ -85,10 +84,10 @@ enqueue :: String -> EnqueueAttributes -> Twiml' '[Enqueue] ()
 enqueue a b = iliftF $ EnqueueF a b ()
 
 leave :: Twiml' '[Leave] a
-leave = iliftF $ LeaveF
+leave = iliftF LeaveF
 
 hangup :: Twiml' '[Hangup] a
-hangup = iliftF $ HangupF
+hangup = iliftF HangupF
 
 redirect :: URL -> RedirectAttributes -> Twiml' '[Redirect] a
 redirect a b = iliftF $ RedirectF a b
@@ -100,7 +99,7 @@ pause :: PauseAttributes -> Twiml' '[Pause] ()
 pause a = iliftF $ PauseF a ()
 
 end :: Twiml' '[] a
-end = iliftF $ EndF
+end = iliftF EndF
 
 data Twiml = forall i. Response (Twiml' (i :: [*]) Void)
 
@@ -226,7 +225,7 @@ instance Show a => Show (Twiml' i a) where
 -}
 
 showTwiml :: Twiml -> String
-showTwiml twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" ++ (ppElement $ toElement twiml) ++ "\n"
+showTwiml twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" ++ ppElement (toElement twiml) ++ "\n"
 
 instance ToElement Twiml where
   toElement (Response twiml) = unode "Response" $ toXML twiml
@@ -236,18 +235,18 @@ instance ToXML (Twiml' i Void) where
   toXML (IxPure _) = []
 
 instance ToXML (TwimlF i (Twiml' j Void)) where
-  toXML (SayF      a         attrs b) = (makeElement "Say"      (strToContent a) $ toAttrs attrs) : toXML b
-  toXML (PlayF     (Just a)  attrs b) = (makeElement "Play"     (urlToContent a) $ toAttrs attrs) : toXML b
-  toXML (PlayF     _         attrs b) = (makeElement "Play"     ()               $ toAttrs attrs) : toXML b
-  toXML (GatherF   attrs     a     b) = (makeElement "Gather"   (toXML        a) $ toAttrs attrs) : toXML b
-  toXML (RecordF             attrs a) = (makeElement "Record"   ()               $ toAttrs attrs) : toXML a
-  toXML (SmsF      a         attrs b) = (makeElement "Sms"      (strToContent a) $ toAttrs attrs) : toXML b
-  toXML (DialF     (Left  a) attrs b) = (makeElement "Dial"     (toElement    a) $ toAttrs attrs) : toXML b
-  toXML (DialF     (Right a) attrs b) = (makeElement "Dial"     (strToContent a) $ toAttrs attrs) : toXML b
-  toXML (EnqueueF  a         attrs b) = (makeElement "Enqueue"  (strToContent a) $ toAttrs attrs) : toXML b
+  toXML (SayF      a         attrs b) =  makeElement "Say"      (strToContent a)  (toAttrs attrs) : toXML b
+  toXML (PlayF     (Just a)  attrs b) =  makeElement "Play"     (urlToContent a)  (toAttrs attrs) : toXML b
+  toXML (PlayF     _         attrs b) =  makeElement "Play"     ()                (toAttrs attrs) : toXML b
+  toXML (GatherF   attrs     a     b) =  makeElement "Gather"   (toXML        a)  (toAttrs attrs) : toXML b
+  toXML (RecordF             attrs a) =  makeElement "Record"   ()                (toAttrs attrs) : toXML a
+  toXML (SmsF      a         attrs b) =  makeElement "Sms"      (strToContent a)  (toAttrs attrs) : toXML b
+  toXML (DialF     (Left  a) attrs b) =  makeElement "Dial"     (toElement    a)  (toAttrs attrs) : toXML b
+  toXML (DialF     (Right a) attrs b) =  makeElement "Dial"     (strToContent a)  (toAttrs attrs) : toXML b
+  toXML (EnqueueF  a         attrs b) =  makeElement "Enqueue"  (strToContent a)  (toAttrs attrs) : toXML b
   toXML  LeaveF                       = [makeElement "Leave"    ()               []]
   toXML  HangupF                      = [makeElement "Hangup"   ()               []]
   toXML (RedirectF a         attrs)   = [makeElement "Redirect" (urlToContent a) $ toAttrs attrs]
   toXML (RejectF             attrs)   = [makeElement "Reject"   ()               $ toAttrs attrs]
-  toXML (PauseF              attrs a) = (makeElement "Pause"    ()               $ toAttrs attrs) : toXML a
+  toXML (PauseF              attrs a) =  makeElement "Pause"    ()                (toAttrs attrs) : toXML a
   toXML  EndF                         = []

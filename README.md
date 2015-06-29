@@ -20,10 +20,11 @@ Example
 The following Haskell code
 
 ```hs
-example
-  = respond
-  . sayMan "Hello, world"
-  $ hangup
+example =
+  response $ do
+    say "Hello, world" $ def & voice .~ Man
+    hangup
+  where Twiml.Syntax{..} = def
 ```
 
 is transformed into

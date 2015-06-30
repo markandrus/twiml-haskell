@@ -50,6 +50,7 @@ module Text.XML.Twiml.Internal
 import Text.XML.Twiml.Types
 import Text.XML.Light
 
+import Control.DeepSeq (NFData(..))
 import Data.Void
 
 response :: Twiml' i Void -> Twiml
@@ -102,6 +103,9 @@ end :: Twiml' '[] a
 end = iliftF EndF
 
 data Twiml = forall i. Response (Twiml' (i :: [*]) Void)
+
+instance NFData Twiml where
+  rnf (Response twiml) = rnf twiml
 
 instance Show Twiml where
   show = showTwiml -- show (Response a) = "Response (" ++ show a ++ ")"
@@ -183,22 +187,40 @@ instance IxFunctor TwimlF where
   imap = fmap
 
 instance Show a => Show (TwimlF i a) where
-  show (SayF      a b c) = "SayF ("      ++ show a ++ ") (" ++  show b ++ ") (" ++ show c ++ ")"
-  show (PlayF     a b c) = "PlayF ("     ++ show a ++ ") (" ++  show b ++ ") (" ++ show c ++ ")"
-  show (GatherF   a b c) = "GatherF ("   ++ show a ++ ") (" ++ ishow b ++ ") (" ++ show c ++ ")"
-  show (RecordF   a b)   = "RecordF ("   ++ show a ++ ") (" ++  show b ++ ")"
-  show (SmsF      a b c) = "SmsF ("      ++ show a ++ ") (" ++  show b ++ ") (" ++ show c ++ ")"
-  show (DialF     a b c) = "DialF ("     ++ show a ++ ") (" ++  show b ++ ") (" ++ show c ++ ")"
-  show (EnqueueF  a b c) = "EnqueueF ("  ++ show a ++ ") (" ++  show b ++ ") (" ++ show c ++ ")"
+  show (SayF      a b c) = "SayF ("      ++ show a ++ ") (" ++ show b ++ ") (" ++ show c ++ ")"
+  show (PlayF     a b c) = "PlayF ("     ++ show a ++ ") (" ++ show b ++ ") (" ++ show c ++ ")"
+  show (GatherF   a b c) = "GatherF ("   ++ show a ++ ") (" ++ show b ++ ") (" ++ show c ++ ")"
+  show (RecordF   a b)   = "RecordF ("   ++ show a ++ ") (" ++ show b ++ ")"
+  show (SmsF      a b c) = "SmsF ("      ++ show a ++ ") (" ++ show b ++ ") (" ++ show c ++ ")"
+  show (DialF     a b c) = "DialF ("     ++ show a ++ ") (" ++ show b ++ ") (" ++ show c ++ ")"
+  show (EnqueueF  a b c) = "EnqueueF ("  ++ show a ++ ") (" ++ show b ++ ") (" ++ show c ++ ")"
   show  LeaveF           = "LeaveF"
   show  HangupF          = "HangupF"
-  show (RedirectF a b)   = "RedirectF (" ++ show a ++ ") (" ++  show b ++ ")"
+  show (RedirectF a b)   = "RedirectF (" ++ show a ++ ") (" ++ show b ++ ")"
   show (RejectF   a)     = "RejectF ("   ++ show a ++ ")"
-  show (PauseF    a b)   = "PauseF ("    ++ show a ++ ") (" ++  show b
+  show (PauseF    a b)   = "PauseF ("    ++ show a ++ ") (" ++ show b
   show  EndF             = "EndF"
 
 instance IxShow TwimlF where
   ishow = show
+
+instance IxNFData TwimlF where
+  irnf (SayF      a b c) = rnf a `seq` rnf b `seq` rnf c
+  irnf (PlayF     a b c) = rnf a `seq` rnf b `seq` rnf c
+  irnf (GatherF   a b c) = rnf a `seq` rnf b `seq` rnf c
+  irnf (RecordF   a b)   = rnf a `seq` rnf b
+  irnf (SmsF      a b c) = rnf a `seq` rnf b `seq` rnf c
+  irnf (DialF     a b c) = rnf a `seq` rnf b `seq` rnf c
+  irnf (EnqueueF  a b c) = rnf a `seq` rnf b `seq` rnf c
+  irnf  LeaveF           = ()
+  irnf  HangupF          = ()
+  irnf (RedirectF a b)   = rnf a `seq` rnf b
+  irnf (RejectF   a)     = rnf a
+  irnf (PauseF    a b)   = rnf a `seq` rnf b
+  irnf  EndF             = ()
+
+instance NFData a => NFData (TwimlF i a) where
+  rnf = irnf
 
 data Say
 data Play
@@ -214,16 +236,6 @@ data Reject
 data Pause
 data End
 
-{-
-type instance Base (Fix (TwimlF p)) = TwimlF p
-
-instance Text.XML.Twiml.Types.Foldable (Fix (TwimlF p)) where
-  project = unFix
-
-instance Show a => Show (Twiml' i a) where
-  show twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" ++ (ppElement . unode "Response" $ toXML twiml) ++ "\n"
--}
-
 showTwiml :: Twiml -> String
 showTwiml twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" ++ ppElement (toElement twiml) ++ "\n"
 
@@ -232,7 +244,7 @@ instance ToElement Twiml where
 
 instance ToXML (Twiml' i Void) where
   toXML (IxFree twiml) = toXML twiml
-  toXML (IxPure _) = []
+  toXML (IxPure _) = error "Impossible"
 
 instance ToXML (TwimlF i (Twiml' j Void)) where
   toXML (SayF      a         attrs b) =  makeElement "Say"      (strToContent a)  (toAttrs attrs) : toXML b

@@ -1,7 +1,7 @@
 {-#LANGUAGE RebindableSyntax #-}
 {-#LANGUAGE RecordWildCards #-}
 
-module Test where
+module Golden where
 
 import Text.XML.Twiml
 import qualified Text.XML.Twiml.Syntax as Twiml
@@ -341,12 +341,12 @@ check (twiml, filePath) = Test test
       let a = show twiml
       b <- readFile filePath
       let equal = a == b
-      when (not equal) $ do
+      unless equal $ do
         putStrLn ""
         putStrLn . ppDiff $ getGroupedDiff (lines b) (lines a)
-      return . Finished $ case equal of
-        True  -> Pass
-        False -> Error "Check preceding diff",
+      return . Finished $ if equal
+        then Pass
+        else Error "Check preceding diff",
     name = filePath,
     tags = [],
     options = [],

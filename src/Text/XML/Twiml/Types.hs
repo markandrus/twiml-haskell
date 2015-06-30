@@ -1,5 +1,6 @@
 {-#LANGUAGE ConstraintKinds #-}
 {-#LANGUAGE DataKinds #-}
+{-#LANGUAGE DeriveAnyClass #-}
 {-#LANGUAGE DeriveDataTypeable #-}
 {-#LANGUAGE DeriveFunctor #-}
 {-#LANGUAGE DeriveGeneric #-}
@@ -104,16 +105,6 @@ module Text.XML.Twiml.Types
   , HasTimeout(..)
   , HasFinishOnKey(..)
   -- * Internal
-    -- ** Fix & Foldable
-    -- $fix
-  , Fix(..)
-  , Text.XML.Twiml.Types.Foldable(..)
-  , Base
-    -- ** Type Inequality
-    -- $type
-  , (:/~)
-  , Yes
-  , No
     -- * Promoted Lists
     -- ** @(++)@
     -- $promotedLists
@@ -144,6 +135,7 @@ module Text.XML.Twiml.Types
   ) where
 -}
 
+import Control.DeepSeq (NFData(..))
 import Control.Lens hiding (Identity, imap, to)
 import Control.Monad
 import Data.Data
@@ -179,7 +171,7 @@ instance ToAttrValue String where
 data SayAttributes = SayAttributes
   { _sayVoice :: Maybe Voice
   , _sayLoop  :: Maybe Natural
-  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance Default SayAttributes where
   def = SayAttributes
@@ -200,7 +192,7 @@ data Voice
   = Man   (Maybe Lang)
   | Woman (Maybe Lang)
   | Alice (Maybe LangAlice)
-  deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance ToAttrValue Voice where
   toAttrValue (Man   _) = "man"
@@ -221,7 +213,7 @@ data Lang
   | French
   | German
   | Italian
-  deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance ToAttrValue Lang where
   toAttrValue English   = "en"
@@ -260,7 +252,7 @@ data LangAlice
   | ZhCN -- ^ Chinese (Mandarin)
   | ZhHK -- ^ Chinese (Cantonese)
   | ZhTW -- ^ Chinese (Taiwanese Mandarin)
-  deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance ToAttrValue LangAlice where
   toAttrValue DaDK = "da-DK"
@@ -294,7 +286,7 @@ instance ToAttrValue LangAlice where
 data PlayAttributes = PlayAttributes
   { _playLoop   :: Maybe Natural
   , _playDigits :: Maybe [Digit]
-  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance Default PlayAttributes where
   def = PlayAttributes
@@ -315,7 +307,7 @@ data GatherAttributes = GatherAttributes
   , _gatherTimeout     :: Maybe Natural
   , _gatherFinishOnKey :: Maybe Key
   , _gatherNumDigits   :: Maybe Natural
-  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance Default GatherAttributes where
   def = GatherAttributes
@@ -348,7 +340,7 @@ data RecordAttributes = RecordAttributes
   , _recordTranscribe         :: Maybe Bool
   , _recordTranscribeCallback :: Maybe URL
   , _recordPlayBeep           :: Maybe Bool
-  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance Default RecordAttributes where
   def = RecordAttributes
@@ -384,7 +376,7 @@ data SmsAttributes = SmsAttributes
   , _smsAction         :: Maybe URL
   , _smsMethod         :: Maybe Method
   , _smsStatusCallback :: Maybe URL
-  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance Default SmsAttributes where
   def = SmsAttributes
@@ -413,7 +405,7 @@ data DialAttributes = DialAttributes
   , _dialTimeLimit    :: Maybe Natural
   , _dialCallerId     :: Maybe String
   , _dialRecord'      :: Maybe Bool
-  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance Default DialAttributes where
   def = DialAttributes
@@ -442,7 +434,7 @@ data NumberAttributes = NumberAttributes
   { _numberSendDigits :: Maybe [Digit]
   , _numberURL        :: Maybe URL
   , _numberMethod     :: Maybe Method
-  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance Default NumberAttributes where
   def = NumberAttributes
@@ -469,7 +461,7 @@ data SipAttributes = SipAttributes
   , _sipHeaders   :: Maybe String    -- NOTE: Under 1024 characters.
   , _sipURL       :: Maybe URL
   , _sipMethod    :: Maybe Method
-  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance Default SipAttributes where
   def = SipAttributes
@@ -496,7 +488,7 @@ instance ToAttrs SipAttributes where
 
 -- | See <https://www.twilio.com/docs/api/twiml/sip#transport>.
 data Transport = TCP | UDP
-  deriving (Bounded, Data, Enum, Eq, Generic, Ord, Read, Show, Typeable)
+  deriving (Bounded, Data, Enum, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance ToAttrValue Transport where
   toAttrValue TCP = "tcp"
@@ -506,7 +498,7 @@ instance ToAttrValue Transport where
 data ClientAttributes = ClientAttributes
   { _clientURL    :: Maybe URL
   , _clientMethod :: Maybe Method
-  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance Default ClientAttributes where
   def = ClientAttributes
@@ -532,7 +524,7 @@ data ConferenceAttributes = ConferenceAttributes
   , _conferenceWaitURL         :: Maybe URL
   , _conferenceWaitMethod      :: Maybe Method
   , _conferenceMaxParticipants :: Maybe Natural -- FIXME: Non-zero, less than 40.
-  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance Default ConferenceAttributes where
   def = ConferenceAttributes
@@ -565,7 +557,7 @@ data ConferenceBeep
   | No
   | OnExit
   | OnEnter
-  deriving (Bounded, Data, Enum, Eq, Generic, Ord, Read, Show, Typeable)
+  deriving (Bounded, Data, Enum, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance ToAttrValue ConferenceBeep where
   toAttrValue Yes     = "yes"
@@ -577,7 +569,7 @@ instance ToAttrValue ConferenceBeep where
 data QueueAttributes = QueueAttributes
   { _queueURL    :: Maybe URL
   , _queueMethod :: Maybe Method
-  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance Default QueueAttributes where
   def = QueueAttributes
@@ -601,7 +593,7 @@ data DialNoun
   | Client     ClientAttributes     String
   | Conference ConferenceAttributes String
   | Queue      QueueAttributes      String
-  deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 strToContent :: String -> Content
 strToContent str = Text $ CData CDataText str Nothing
@@ -637,7 +629,7 @@ data EnqueueAttributes = EnqueueAttributes
   , _enqueueMethod        :: Maybe Method
   , _enqueueWaitURL       :: Maybe URL
   , _enqueueWaitURLMethod :: Maybe Method
-  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance Default EnqueueAttributes where
   def = EnqueueAttributes
@@ -658,7 +650,7 @@ instance ToAttrs EnqueueAttributes where
 -- | See <https://www.twilio.com/docs/api/twiml/redirect#attributes>.
 data RedirectAttributes = RedirectAttributes
   { _redirectMethod :: Maybe Method
-  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance Default RedirectAttributes where
   def = RedirectAttributes
@@ -673,7 +665,7 @@ instance ToAttrs RedirectAttributes where
 -- | See <https://www.twilio.com/docs/api/twiml/reject#attributes>.
 data RejectAttributes = RejectAttributes
   { _rejectReason :: Maybe Reason
-  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance Default RejectAttributes where
   def = RejectAttributes
@@ -694,7 +686,7 @@ instance ToAttrs RejectAttributes where
 -- standard not-in-service response.
 -- See <https://www.twilio.com/docs/api/twiml/reject#attributes-reason>.
 data Reason = Rejected | Busy
-  deriving (Bounded, Data, Enum, Eq, Generic, Ord, Read, Show, Typeable)
+  deriving (Bounded, Data, Enum, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance ToAttrValue Reason where
   toAttrValue Rejected = "rejected"
@@ -703,7 +695,7 @@ instance ToAttrValue Reason where
 -- | See <https://www.twilio.com/docs/api/twiml/pause#attributes>.
 data PauseAttributes = PauseAttributes
   { _pauseDuration :: Maybe Natural
-  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance Default PauseAttributes where
   def = PauseAttributes
@@ -723,7 +715,7 @@ instance ToAttrs PauseAttributes where
 {- URL, Method & Transport -}
 
 newtype URL = URL { getURL :: String }
-  deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance ToAttrValue URL where
   toAttrValue = getURL
@@ -741,7 +733,7 @@ parseURL url = parseURIReference url
            >>= (\uri -> if isHttp uri then Just (URL url) else Nothing)
 
 data Method = GET | POST
-  deriving (Bounded, Data, Enum, Eq, Generic, Ord, Read, Show, Typeable)
+  deriving (Bounded, Data, Enum, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance ToAttrValue Method where
   toAttrValue = show
@@ -766,7 +758,7 @@ data Key
   | K9      -- ^ 9
   | KStar   -- ^ \*
   | KPound  -- ^ #
-  deriving (Bounded, Data, Enum, Eq, Generic, Ord, Read, Show, Typeable)
+  deriving (Bounded, Data, Enum, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance ToAttrValue Key where
   toAttrValue K0     = "0"
@@ -798,7 +790,7 @@ data Digit
   | D8 -- ^ 8
   | D9 -- ^ 9
   | W  -- ^ w
-  deriving (Bounded, Data, Enum, Eq, Generic, Ord, Read, Show, Typeable)
+  deriving (Bounded, Data, Enum, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance ToAttrValue Digit where
   toAttrValue D0 = "0"
@@ -815,43 +807,6 @@ instance ToAttrValue Digit where
 
 instance ToAttrValue [Digit] where
   toAttrValue = concatMap toAttrValue
-
-{- Fix & Foldable -}
-
--- $fix The following definitions were extracted from the recursion-schemes
--- package. See <https://hackage.haskell.org/package/recursion-schemes>.
-
-newtype Fix f = Fix { unFix :: f (Fix f) }
-
-type family Base t :: * -> *
-
-class Functor (Base t) => Foldable t where
-  project :: t -> Base t t
-  cata :: (Base t a -> a) -> t -> a
-  cata f = c where c = f . fmap c . project
-
-{- Type Inequality -}
-
--- $type The following defines ':/~' to mean inequality at the type level.
--- Borrowed from HList. See <http://okmij.org/ftp/Haskell/typeEQ.html>.
-
-data Yes
-
-data No
-
-class TypeCast a b | a -> b
-
-instance TypeCast a a
-
-class TypeEq a b c | a b -> c
-
-instance TypeEq x x Yes
-
-instance TypeCast No b => TypeEq x y b
-
-class TypeEq x y No => (:/~) x y
-
-instance TypeEq x y No => (:/~) x y
 
 {- Promoted Lists -}
 
@@ -1036,6 +991,16 @@ ibind' (IxFree (x :: f i1 (IxFree f j1 a))) f =
 -- | Lift an indexed functor into 'IxFree'
 iliftF :: forall f i a . (WitnessList i, IxFunctor f) => f i a -> IxFree f i a
 iliftF = case rightIdentity (witness :: SList i) of Refl -> IxFree . imap IxPure
+
+class IxNFData (f :: k -> * -> *) where
+  irnf :: NFData a => f i a -> ()
+
+instance IxNFData f => IxNFData (IxFree f) where
+  irnf = rnf
+
+instance (IxNFData f, NFData a) => NFData (IxFree f i a) where
+  rnf (IxPure a) = rnf a
+  rnf (IxFree fa) = irnf fa
 
 {- Show -}
 

@@ -22,3 +22,5 @@ script:
   - cabal sdist
   - SRC_TGZ=$(cabal info . | awk '{print $2;exit}').tar.gz &&
     (cd dist && cabal install --force-reinstalls "$SRC_TGZ")
+
+after_success: script/publish_haddock.sh

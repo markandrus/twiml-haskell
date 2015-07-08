@@ -58,6 +58,7 @@ runTest = fmap snd . H.performTest onStart onError onFailure (Finished Pass)
     onFailure :: String -> H.State -> Progress -> IO Progress
     onFailure msg _ _ = return $ Finished (Fail msg)
 
+{-
 someGather :: Twiml' '[Gather] Void
 someGather =
   do
@@ -71,3 +72,4 @@ gatherInGather =
     gather def someGather
     end
   where Twiml.Syntax{..} = def
+-}

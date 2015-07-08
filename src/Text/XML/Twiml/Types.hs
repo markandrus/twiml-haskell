@@ -14,6 +14,7 @@
 {-#LANGUAGE MultiParamTypeClasses #-}
 {-#LANGUAGE NamedFieldPuns #-}
 {-#LANGUAGE OverloadedStrings #-}
+{-#LANGUAGE OverlappingInstances #-}
 {-#LANGUAGE PolyKinds #-}
 {-#LANGUAGE RankNTypes #-}
 {-#LANGUAGE ScopedTypeVariables #-}
@@ -47,24 +48,36 @@ module Text.XML.Twiml.Types
   , Reject'
   , Pause'
     -- * @\<Say\>@
+  , Say
+  , SayF'(..)
   , SayAttributes(..)
   , defaultSayAttributes
   , Voice(..)
   , Lang(..)
   , LangAlice(..)
     -- * @\<Play\>@
+  , Play
+  , PlayF'
   , PlayAttributes(..)
   , defaultPlayAttributes
     -- * @\<Gather\>@
+  , Gather
+  , GatherF'
   , GatherAttributes(..)
   , defaultGatherAttributes
     -- * @\<Record\>@
+  , Record
+  , RecordF'
   , RecordAttributes(..)
   , defaultRecordAttributes
     -- * @\<Sms\>@
+  , Sms
+  , SmsF'
   , SmsAttributes(..)
   , defaultSmsAttributes
     -- * @\<Dial\>@
+  , Dial
+  , DialF'
   , DialAttributes(..)
   , defaultDialAttributes
   , DialNoun(..)
@@ -86,16 +99,24 @@ module Text.XML.Twiml.Types
   , QueueAttributes(..)
   , defaultQueueAttributes
     -- * @\<Enqueue\>@
+  , Enqueue
+  , EnqueueF'
   , EnqueueAttributes(..)
   , defaultEnqueueAttributes
     -- * @\<Redirect\>@
+  , Redirect
+  , RedirectF'
   , RedirectAttributes(..)
   , defaultRedirectAttributes
     -- * @\<Reject\>@
+  , Reject
+  , RejectF'
   , RejectAttributes(..)
   , defaultRejectAttributes
   , Reason(..)
     -- * @\<Pause\>@
+  , Pause
+  , PauseF'
   , PauseAttributes(..)
   , defaultPauseAttributes
     -- * Lens Classes
@@ -142,6 +163,7 @@ import Data.Data
 import Data.Default
 import Data.Maybe
 import Data.Text hiding (concatMap, map)
+import Data.Void
 import GHC.Generics (Generic)
 import Network.URI (URI(..), parseURIReference)
 import Text.XML.Light
@@ -166,6 +188,39 @@ instance ToAttrValue String where
   toAttrValue = id
 
 {- Attributes -}
+
+say :: (IxFunctor f, SayF' '[Say] :<: f '[Say]) => String -> SayAttributes -> IxFree f '[Say] ()
+say a b = iliftF . inj $ SayF' a b ()
+
+data Say
+
+data SayF' i a where
+  SayF' :: String -> SayAttributes -> a -> SayF' '[Say] a
+
+-- instance SayF' i :<: VoiceTwimlF i where
+--   inj = VoiceTwimlF . inj
+--   prj = prj . getVoiceTwimlF
+
+deriving instance Data a => Data (SayF' '[Say] a)
+
+deriving instance Eq a => Eq (SayF' i a)
+
+deriving instance Functor (SayF' i)
+
+instance IxFunctor SayF' where
+  imap = fmap
+
+instance NFData a => NFData (SayF' i a) where
+  rnf (SayF' a b c) = rnf a `seq` rnf b `seq` rnf c
+
+deriving instance Ord a => Ord (SayF' i a)
+
+deriving instance Read a => Read (SayF' '[Say] a)
+
+deriving instance Show a => Show (SayF' i a)
+
+instance ToXML a => ToXML (SayF' i a) where
+  toXML (SayF' a attrs b) = makeElement "Say" (strToContent a) (toAttrs attrs) : toXML b
 
 -- | See <https://www.twilio.com/docs/api/twiml/say#attributes>.
 data SayAttributes = SayAttributes
@@ -282,6 +337,43 @@ instance ToAttrValue LangAlice where
   toAttrValue ZhHK = "zh-HK"
   toAttrValue ZhTW = "zh-TW"
 
+play :: (IxFunctor f, PlayF' '[Play] :<: f '[Play]) => URL -> PlayAttributes -> IxFree f '[Play] ()
+play a b = iliftF . inj $ PlayF' (pure a) b ()
+
+play' :: (IxFunctor f, PlayF' '[Play] :<: f '[Play]) => Maybe URL -> PlayAttributes -> IxFree f '[Play] ()
+play' a b = iliftF . inj $ PlayF' a b ()
+
+data Play
+
+data PlayF' i a where
+  PlayF' :: Maybe URL -> PlayAttributes -> a -> PlayF' '[Play] a
+
+-- instance PlayF' i :<: VoiceTwimlF i where
+--   inj = VoiceTwimlF . inj
+--   prj = prj . getVoiceTwimlF
+
+deriving instance Data a => Data (PlayF' '[Play] a)
+
+deriving instance Eq a => Eq (PlayF' i a)
+
+deriving instance Functor (PlayF' i)
+
+instance IxFunctor PlayF' where
+  imap = fmap
+
+instance NFData a => NFData (PlayF' i a) where
+  rnf (PlayF' a b c) = rnf a `seq` rnf b `seq` rnf c
+
+deriving instance Ord a => Ord (PlayF' i a)
+
+deriving instance Read a => Read (PlayF' '[Play] a)
+
+deriving instance Show a => Show (PlayF' i a)
+
+instance ToXML a => ToXML (PlayF' i a) where
+  toXML (PlayF' (Just a) attrs b) = makeElement "Play" (urlToContent a) (toAttrs attrs) : toXML b
+  toXML (PlayF' _        attrs b) = makeElement "Play" ()               (toAttrs attrs) : toXML b
+
 -- | See <https://www.twilio.com/docs/api/twiml/play#attributes>.
 data PlayAttributes = PlayAttributes
   { _playLoop   :: Maybe Natural
@@ -299,6 +391,55 @@ instance ToAttrs PlayAttributes where
     [ makeAttr "loop"   _playLoop
     , makeAttr "digits" _playDigits
     ]
+
+gather :: (IxFunctor f, Nest i In Gather, GatherF' '[Gather] :<: f '[Gather]) => GatherAttributes -> VoiceTwiml' i Void -> IxFree f '[Gather] ()
+gather a b = iliftF . inj $ GatherF' a b ()
+
+data Gather
+
+data In
+
+type family Nest a i b where
+  Nest i In Gather =
+    ( Record   ∉ i
+    , Gather   ∉ i
+    , Sms      ∉ i
+    , Dial     ∉ i
+    , Enqueue  ∉ i
+    , Leave    ∉ i
+    , Hangup   ∉ i
+    , Redirect ∉ i
+    , Reject   ∉ i
+    )
+
+data GatherF' i a where
+  GatherF' :: Nest i In Gather
+           => GatherAttributes
+           -> VoiceTwiml' i Void
+           -> a
+           -> GatherF' '[Gather] a
+
+-- instance GatherF' i :<: VoiceTwimlF i where
+--   inj = VoiceTwimlF . inj
+--   prj = prj . getVoiceTwimlF
+
+-- deriving instance Data a => Data (GatherF' '[Gather] a)
+
+-- deriving instance Eq a => Eq (GatherF' i a)
+
+deriving instance Functor (GatherF' i)
+
+instance IxFunctor GatherF' where
+  imap = fmap
+
+-- deriving instance Read a => Read (GatherF' '[Gather] a)
+
+-- deriving instance Ord a => Ord (GatherF' i a)
+
+deriving instance Show a => Show (GatherF' i a)
+
+instance ToXML a => ToXML (GatherF' i a) where
+  toXML (GatherF' attrs a b) = makeElement "Gather" (toXML a) (toAttrs attrs) : toXML b
 
 -- | See <https://www.twilio.com/docs/api/twiml/gather#attributes>.
 data GatherAttributes = GatherAttributes
@@ -329,6 +470,39 @@ instance ToAttrs GatherAttributes where
     , makeAttr "finishOnKey" _gatherFinishOnKey
     , makeAttr "numDigits"   _gatherNumDigits
     ]
+
+record :: (IxFunctor f, RecordF' '[Record] :<: f '[Record]) => RecordAttributes -> IxFree f '[Record] ()
+record a = iliftF . inj $ RecordF' a ()
+
+data Record
+
+data RecordF' i a where
+  RecordF' :: RecordAttributes -> a -> RecordF' '[Record] a
+
+-- instance RecordF' i :<: VoiceTwimlF i where
+--   inj = VoiceTwimlF . inj
+--   prj = prj . getVoiceTwimlF
+
+deriving instance Data a => Data (RecordF' '[Record] a)
+
+deriving instance Eq a => Eq (RecordF' i a)
+
+deriving instance Functor (RecordF' i)
+
+instance IxFunctor RecordF' where
+  imap = fmap
+
+instance NFData a => NFData (RecordF' i a) where
+  rnf (RecordF' a b) = rnf a `seq` rnf b
+
+deriving instance Ord a => Ord (RecordF' i a)
+
+deriving instance Read a => Read (RecordF' '[Record] a)
+
+deriving instance Show a => Show (RecordF' i a)
+
+instance ToXML a => ToXML (RecordF' i a) where
+  toXML (RecordF' attrs a) = makeElement "Record" () (toAttrs attrs) : toXML a
 
 -- | See <https://www.twilio.com/docs/api/twiml/record#attributes>.
 data RecordAttributes = RecordAttributes
@@ -369,6 +543,39 @@ instance ToAttrs RecordAttributes where
     , makeAttr "playBeep"           _recordPlayBeep
     ]
 
+sms :: (IxFunctor f, SmsF' '[Sms] :<: f '[Sms]) => String -> SmsAttributes -> IxFree f '[Sms] ()
+sms a b = iliftF . inj $ SmsF' a b ()
+
+data Sms
+
+data SmsF' i a where
+  SmsF' :: String -> SmsAttributes -> a -> SmsF' '[Sms] a
+
+-- instance SmsF' i :<: VoiceTwimlF i where
+--   inj = VoiceTwimlF . inj
+--   prj = prj . getVoiceTwimlF
+
+deriving instance Data a => Data (SmsF' '[Sms] a)
+
+deriving instance Eq a => Eq (SmsF' i a)
+
+deriving instance Functor (SmsF' i)
+
+instance IxFunctor SmsF' where
+  imap = fmap
+
+instance NFData a => NFData (SmsF' i a) where
+  rnf (SmsF' a b c) = rnf a `seq` rnf b `seq` rnf c
+
+deriving instance Ord a => Ord (SmsF' i a)
+
+deriving instance Read a => Read (SmsF' '[Sms] a)
+
+deriving instance Show a => Show (SmsF' i a)
+
+instance ToXML a => ToXML (SmsF' i a) where
+  toXML (SmsF' a attrs b) = makeElement "Sms" (strToContent a) (toAttrs attrs) : toXML b
+
 -- | See <https://www.twilio.com/docs/api/twiml/sms#attributes>.
 data SmsAttributes = SmsAttributes
   { _smsTo             :: Maybe String
@@ -395,6 +602,43 @@ instance ToAttrs SmsAttributes where
     , makeAttr "method"         _smsMethod
     , makeAttr "statusCallback" _smsStatusCallback
     ]
+
+dial :: (IxFunctor f, DialF' '[Dial] :<: f '[Dial]) => String -> DialAttributes -> IxFree f '[Dial] ()
+dial a b = iliftF . inj $ DialF' (pure a) b ()
+
+dial' :: (IxFunctor f, DialF' '[Dial] :<: f '[Dial]) => Either DialNoun String -> DialAttributes -> IxFree f '[Dial] ()
+dial' a b = iliftF . inj $ DialF' a b ()
+
+data Dial
+
+data DialF' i a where
+  DialF' :: Either DialNoun String -> DialAttributes -> a -> DialF' '[Dial] a
+
+-- instance DialF' i :<: VoiceTwimlF i where
+--   inj = VoiceTwimlF . inj
+--   prj = prj . getVoiceTwimlF
+
+deriving instance Data a => Data (DialF' '[Dial] a)
+
+deriving instance Eq a => Eq (DialF' i a)
+
+deriving instance Functor (DialF' i)
+
+instance IxFunctor DialF' where
+  imap = fmap
+
+instance NFData a => NFData (DialF' i a) where
+  rnf (DialF' a b c) = rnf a `seq` rnf b `seq` rnf c
+
+deriving instance Ord a => Ord (DialF' i a)
+
+deriving instance Read a => Read (DialF' '[Dial] a)
+
+deriving instance Show a => Show (DialF' i a)
+
+instance ToXML a => ToXML (DialF' i a) where
+  toXML (DialF' (Left  a) attrs b) = makeElement "Dial" (toElement    a) (toAttrs attrs) : toXML b
+  toXML (DialF' (Right a) attrs b) = makeElement "Dial" (strToContent a) (toAttrs attrs) : toXML b
 
 -- | See <https://www.twilio.com/docs/api/twiml/dial#attributes>.
 data DialAttributes = DialAttributes
@@ -623,6 +867,39 @@ instance ToElement DialNoun where
   toElement (Conference attrs str) = makeElement "Conference" (strToContent str) $ toAttrs attrs
   toElement (Queue      attrs str) = makeElement "Queue"      (strToContent str) $ toAttrs attrs
 
+enqueue :: (IxFunctor f, EnqueueF' '[Enqueue] :<: f '[Enqueue]) => String -> EnqueueAttributes -> IxFree f '[Enqueue] ()
+enqueue a b = iliftF . inj $ EnqueueF' a b ()
+
+data Enqueue
+
+data EnqueueF' i a where
+  EnqueueF' :: String -> EnqueueAttributes -> a -> EnqueueF' '[Enqueue] a
+
+-- instance EnqueueF' i :<: VoiceTwimlF i where
+--   inj = VoiceTwimlF . inj
+--   prj = prj . getVoiceTwimlF
+
+deriving instance Data a => Data (EnqueueF' '[Enqueue] a)
+
+deriving instance Eq a => Eq (EnqueueF' i a)
+
+deriving instance Functor (EnqueueF' i)
+
+instance IxFunctor EnqueueF' where
+  imap = fmap
+
+instance NFData a => NFData (EnqueueF' i a) where
+  rnf (EnqueueF' a b c) = rnf a `seq` rnf b `seq` rnf c
+
+deriving instance Ord a => Ord (EnqueueF' i a)
+
+deriving instance Read a => Read (EnqueueF' '[Enqueue] a)
+
+deriving instance Show a => Show (EnqueueF' i a)
+
+instance ToXML a => ToXML (EnqueueF' i a) where
+  toXML (EnqueueF' a attrs b) = makeElement "Enqueue" (strToContent a) (toAttrs attrs) : toXML b
+
 -- | See <https://www.twilio.com/docs/api/twiml/enqueue#attributes>.
 data EnqueueAttributes = EnqueueAttributes
   { _enqueueAction        :: Maybe URL
@@ -647,6 +924,105 @@ instance ToAttrs EnqueueAttributes where
     , makeAttr "waitUrlMethod" _enqueueWaitURLMethod
     ]
 
+leave :: (IxFunctor f, LeaveF' '[Leave] :<: f '[Leave]) => IxFree f '[Leave] a
+leave = iliftF . inj $ LeaveF'
+
+data Leave
+
+data LeaveF' i a where
+  LeaveF' :: LeaveF' '[Leave] a
+
+-- instance LeaveF' i :<: VoiceTwimlF i where
+--   inj = VoiceTwimlF . inj
+--   prj = prj . getVoiceTwimlF
+
+deriving instance Data a => Data (LeaveF' '[Leave] a)
+
+deriving instance Eq (LeaveF' i a)
+
+deriving instance Functor (LeaveF' i)
+
+instance IxFunctor LeaveF' where
+  imap = fmap
+
+instance NFData (LeaveF' i a) where
+  rnf LeaveF' = ()
+
+deriving instance Ord (LeaveF' i a)
+
+deriving instance Read (LeaveF' '[Leave] a)
+
+deriving instance Show (LeaveF' i a)
+
+instance ToXML (LeaveF' i a) where
+  toXML LeaveF' = [makeElement "Leave" () []]
+
+hangup :: (IxFunctor f, HangupF' '[Hangup] :<: f '[Hangup]) => IxFree f '[Hangup] a
+hangup = iliftF . inj $ HangupF'
+
+data Hangup
+
+data HangupF' i a where
+  HangupF' :: HangupF' '[Hangup] a
+
+-- instance HangupF' i :<: VoiceTwimlF i where
+--   inj = VoiceTwimlF . inj
+--   prj = prj . getVoiceTwimlF
+
+deriving instance Data a => Data (HangupF' '[Hangup] a)
+
+deriving instance Eq (HangupF' i a)
+
+deriving instance Functor (HangupF' i)
+
+instance IxFunctor HangupF' where
+  imap = fmap
+
+instance NFData (HangupF' i a) where
+  rnf HangupF' = ()
+
+deriving instance Ord (HangupF' i a)
+
+deriving instance Read (HangupF' '[Hangup] a)
+
+deriving instance Show (HangupF' i a)
+
+instance ToXML (HangupF' i a) where
+  toXML HangupF' = [makeElement "Hangup" () []]
+
+redirect :: (IxFunctor f, RedirectF' '[Redirect] :<: f '[Redirect]) => URL -> RedirectAttributes -> IxFree f '[Redirect] a
+redirect a b = iliftF . inj $ RedirectF' a b
+
+data Redirect
+
+data RedirectF' i a where
+  RedirectF' :: URL -> RedirectAttributes -> RedirectF' '[Redirect] a
+
+-- instance RedirectF' i :<: VoiceTwimlF i where
+--   inj = VoiceTwimlF . inj
+--   prj = prj . getVoiceTwimlF
+
+deriving instance Data a => Data (RedirectF' '[Redirect] a)
+
+deriving instance Eq a => Eq (RedirectF' i a)
+
+deriving instance Functor (RedirectF' i)
+
+instance IxFunctor RedirectF' where
+  imap = fmap
+
+instance NFData (RedirectF' i a) where
+  rnf (RedirectF' a b) = rnf a `seq` rnf b
+
+deriving instance Ord a => Ord (RedirectF' i a)
+
+deriving instance Read a => Read (RedirectF' '[Redirect] a)
+
+deriving instance Show a => Show (RedirectF' i a)
+
+instance ToXML (RedirectF' i a) where
+  toXML (RedirectF' a attrs) = [makeElement "Redirect" (urlToContent a) $ toAttrs attrs]
+
 -- | See <https://www.twilio.com/docs/api/twiml/redirect#attributes>.
 data RedirectAttributes = RedirectAttributes
   { _redirectMethod :: Maybe Method
@@ -661,6 +1037,39 @@ instance ToAttrs RedirectAttributes where
   toAttrs = flip makeAttrs
     [ makeAttr "method" _redirectMethod
     ]
+
+reject :: (IxFunctor f, RejectF' '[Reject] :<: f '[Reject]) => RejectAttributes -> IxFree f '[Reject] a
+reject a = iliftF . inj $ RejectF' a
+
+data Reject
+
+data RejectF' i a where
+  RejectF' :: RejectAttributes -> RejectF' '[Reject] a
+
+-- instance RejectF' i :<: VoiceTwimlF i where
+--   inj = VoiceTwimlF . inj
+--   prj = prj . getVoiceTwimlF
+
+deriving instance Data a => Data (RejectF' '[Reject] a)
+
+deriving instance Eq (RejectF' i a)
+
+deriving instance Functor (RejectF' i)
+
+instance IxFunctor RejectF' where
+  imap = fmap
+
+instance NFData (RejectF' i a) where
+  rnf (RejectF' a) = rnf a
+
+deriving instance Ord (RejectF' i a)
+
+deriving instance Read (RejectF' '[Reject] a)
+
+deriving instance Show (RejectF' i a)
+
+instance ToXML (RejectF' i a) where
+  toXML (RejectF' attrs) = [makeElement "Reject" () $ toAttrs attrs]
 
 -- | See <https://www.twilio.com/docs/api/twiml/reject#attributes>.
 data RejectAttributes = RejectAttributes
@@ -692,6 +1101,39 @@ instance ToAttrValue Reason where
   toAttrValue Rejected = "rejected"
   toAttrValue Busy     = "busy"
 
+pause :: (IxFunctor f, PauseF' '[Pause] :<: f '[Pause]) => PauseAttributes -> IxFree f '[Pause] ()
+pause a = iliftF . inj $ PauseF' a ()
+
+data Pause
+
+data PauseF' i a where
+  PauseF' :: PauseAttributes -> a -> PauseF' '[Pause] a
+
+-- instance PauseF' i :<: VoiceTwimlF i where
+--   inj = VoiceTwimlF . inj
+--   prj = prj . getVoiceTwimlF
+
+deriving instance Data a => Data (PauseF' '[Pause] a)
+
+deriving instance Eq a => Eq (PauseF' i a)
+
+deriving instance Functor (PauseF' i)
+
+instance IxFunctor PauseF' where
+  imap = fmap
+
+instance NFData a => NFData (PauseF' i a) where
+  rnf (PauseF' a b) = rnf a `seq` rnf b
+
+deriving instance Ord a => Ord (PauseF' i a)
+
+deriving instance Read a => Read (PauseF' '[Pause] a)
+
+deriving instance Show a => Show (PauseF' i a)
+
+instance ToXML a => ToXML (PauseF' i a) where
+  toXML (PauseF' attrs a) = makeElement "Pause" () (toAttrs attrs) : toXML a
+
 -- | See <https://www.twilio.com/docs/api/twiml/pause#attributes>.
 data PauseAttributes = PauseAttributes
   { _pauseDuration :: Maybe Natural
@@ -709,6 +1151,109 @@ instance ToAttrs PauseAttributes where
   toAttrs = flip makeAttrs
     [ makeAttr "length" _pauseDuration
     ]
+
+end :: (IxFunctor f, EndF' '[End] :<: f '[End]) => IxFree f '[End] a
+end = iliftF $ inj EndF'
+
+data End
+
+data EndF' i a where
+  EndF' :: EndF' '[End] a
+
+-- instance EndF' i :<: VoiceTwimlF i where
+--   inj = VoiceTwimlF . inj
+--   prj = prj . getVoiceTwimlF
+
+deriving instance Functor (EndF' i)
+
+instance IxFunctor EndF' where
+  imap = fmap
+
+deriving instance Eq (EndF' i a)
+
+instance NFData (EndF' i a) where
+  rnf EndF' = ()
+
+deriving instance Ord (EndF' i a)
+
+deriving instance Read (EndF' '[End] a)
+
+deriving instance Show (EndF' i a)
+
+instance ToXML (EndF' i a) where
+  toXML EndF' = []
+
+data Voice'
+data Messaging
+
+data Twiml a where
+  VoiceTwiml     :: forall i. VoiceTwiml'     i Void -> Twiml Voice'
+  -- MessagingTwiml :: forall i. MessagingTwiml' i Void -> Twiml Messaging
+
+instance ToElement (Twiml a) where
+  toElement (VoiceTwiml twiml) = unode "Response" $ toXML twiml
+
+instance Show (Twiml a) where
+  -- show (VoiceTwiml     twiml) = "VoiceTwiml ("     ++ show twiml ++ ")"
+  -- show (MessagingTwiml twiml) = "MessagingTwiml (" ++ show twiml ++ ")"
+  show = showTwiml
+
+showTwiml :: Twiml a -> String
+showTwiml twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" ++ ppElement (toElement twiml) ++ "\n"
+
+response :: VoiceTwiml' i Void -> VoiceTwiml
+response = VoiceTwiml
+
+instance IxFunctor VoiceTwimlF where
+  imap = fmap
+
+instance IxShow VoiceTwimlF where
+  ishow = show
+
+newtype VoiceTwimlF i a = VoiceTwimlF
+  { getVoiceTwimlF ::
+    (     SayF'      i
+      :+: PlayF'     i
+      :+: GatherF'   i
+      :+: SmsF'      i -- Shared between Voice and Messaging TwiML
+      :+: DialF'     i
+      :+: EnqueueF'  i
+      :+: LeaveF'    i
+      :+: HangupF'   i
+      :+: RecordF'   i
+      :+: RedirectF' i -- Shared between Voice and Messaging TwiML
+      :+: RejectF'   i
+      :+: PauseF'    i
+      :+: EndF'      i -- Shared between Voice and Messaging TwiML
+    ) a
+  } deriving (Functor, Generic, Show, Typeable)
+
+instance (f i :<: (SayF'      i :+:
+                   PlayF'     i :+:
+                   GatherF'   i :+:
+                   SmsF'      i :+:
+                   DialF'     i :+:
+                   EnqueueF'  i :+:
+                   LeaveF'    i :+:
+                   HangupF'   i :+:
+                   RecordF'   i :+:
+                   RedirectF' i :+:
+                   RejectF'   i :+:
+                   PauseF'    i :+:
+                   EndF'      i    )) => f i :<: VoiceTwimlF i where
+  inj = VoiceTwimlF . inj
+  prj = prj . getVoiceTwimlF
+
+instance ToXML a => ToXML (VoiceTwimlF i a) where
+  toXML = toXML . getVoiceTwimlF
+
+type VoiceTwiml = Twiml Voice'
+
+type VoiceTwiml' i a = IxFree VoiceTwimlF i a
+
+instance ToXML (VoiceTwiml' i Void) where
+  toXML (IxFree f) = toXML f
+  toXML _ = error "Impossible"
 
 {- Attribute Lens Classes -}
 
@@ -858,7 +1403,7 @@ rightIdentity :: SList xs -> xs :~: (xs ++ '[])
 rightIdentity Nil = Refl
 rightIdentity (Succ xs) = case rightIdentity xs of Refl -> Refl
 
-{- @elem@ -}
+{- Elem -}
 
 -- $elem 'TwimlF' uses @∉@ in order to enforce nesting rules.
 
@@ -869,9 +1414,44 @@ type family Elem (t :: k) (ts :: [k]) :: Bool where
   Elem t (t ': ts) = 'True
   Elem t (u ': ts) = Elem t ts
 
+{- @(∉)@ -}
+
 -- | @t ∉ ts@ is shorthand for asserting that a type constructor @t@ is not
 -- present in a list of types constructors @ts@.
 type t ∉ ts = Elem t ts ~ 'False
+
+{- @(:+:)@ -}
+
+data (f :+: g) a = InL (f a) | InR (g a)
+  deriving (Eq, Functor, Generic, NFData, Ord, Read, Show)
+
+infixr 7 :+:
+
+deriving instance (Data a, Data (f a), Data (g a), Typeable f, Typeable g) => Data ((f :+: g) a)
+
+{- @(:<:)@ -}
+
+class (Functor sub, Functor sup) => sub :<: sup where
+  inj :: sub a -> sup a
+  prj :: sup a -> Maybe (sub a)
+
+instance Functor f => f :<: f where
+  inj = id
+  prj = Just
+
+instance (Functor f, Functor g) => f :<: (f :+: g) where
+  inj = InL
+  prj (InL f) = Just f
+  prj _ = Nothing
+
+instance (Functor f, Functor g, Functor h, f :<: g) => f :<: (h :+: g) where
+  inj = InR . inj
+  prj (InR g) = prj g
+  prj _ = Nothing
+
+instance (ToXML (f a), ToXML (g a)) => ToXML ((f :+: g) a) where
+  toXML (InL f) = toXML f
+  toXML (InR g) = toXML g
 
 {- Indexed -}
 

@@ -20,14 +20,14 @@ import Prelude
 
 {- Say -}
 
-sayExample1 :: Twiml
+sayExample1 :: VoiceTwiml
 sayExample1 =
   response $ do
     say "Hello World" def
     end
   where Twiml.Syntax{..} = def
 
-sayExample2 :: Twiml
+sayExample2 :: VoiceTwiml
 sayExample2 =
   response $ do
     say "Bom dia." $ def & voice .~ Just (Alice $ Just PtBR)
@@ -35,7 +35,7 @@ sayExample2 =
     end
   where Twiml.Syntax{..} = def
 
-sayExamples :: [(Twiml, FilePath)]
+sayExamples :: [(VoiceTwiml, FilePath)]
 sayExamples =
   [ (sayExample1, "test/xml/sayExample1.xml")
   , (sayExample2, "test/xml/sayExample2.xml")
@@ -43,21 +43,21 @@ sayExamples =
 
 {- Play -}
 
-playExample1 :: Twiml
+playExample1 :: VoiceTwiml
 playExample1 =
   response $ do
     play (fromJust $ parseURL "https://api.twilio.com/cowbell.mp3") def
     end
   where Twiml.Syntax{..} = def
 
-playExample2 :: Twiml
+playExample2 :: VoiceTwiml
 playExample2 =
   response $ do
     play' Nothing $ def & digits .~ Just [W, W, W, W, D3]
     end
   where Twiml.Syntax{..} = def
 
-playExamples :: [(Twiml, FilePath)]
+playExamples :: [(VoiceTwiml, FilePath)]
 playExamples =
   [ (playExample1, "test/xml/playExample1.xml")
   , (playExample2, "test/xml/playExample2.xml")
@@ -65,14 +65,14 @@ playExamples =
 
 {- Gather -}
 
-gatherExample1 :: Twiml
+gatherExample1 :: VoiceTwiml
 gatherExample1 =
   response $ do
     gather with end
     end
   where Twiml.Syntax{..} = def
 
-gatherExample2 :: Twiml
+gatherExample2 :: VoiceTwiml
 gatherExample2 =
   response $ do
     gather (with & action .~ parseURL "/process_gather.php"
@@ -83,7 +83,7 @@ gatherExample2 =
     end
   where Twiml.Syntax{..} = def
 
-gatherExamples :: [(Twiml, FilePath)]
+gatherExamples :: [(VoiceTwiml, FilePath)]
 gatherExamples =
   [ (gatherExample1, "test/xml/gatherExample1.xml")
   , (gatherExample2, "test/xml/gatherExample2.xml")
@@ -91,14 +91,14 @@ gatherExamples =
 
 {- Record -}
 
-recordExample1 :: Twiml
+recordExample1 :: VoiceTwiml
 recordExample1 =
   response $ do
     record with
     end
   where Twiml.Syntax{..} = def
 
-recordExample2 :: Twiml
+recordExample2 :: VoiceTwiml
 recordExample2 =
   response $ do
     say "Please leave a message at the beep. Press the star key when finished." def
@@ -110,7 +110,7 @@ recordExample2 =
     end
   where Twiml.Syntax{..} = def
 
-recordExample3 :: Twiml
+recordExample3 :: VoiceTwiml
 recordExample3 =
   response $ do
     record $ with & transcribe         .~ Just True
@@ -118,7 +118,7 @@ recordExample3 =
     end
   where Twiml.Syntax{..} = def
 
-recordExamples :: [(Twiml, FilePath)]
+recordExamples :: [(VoiceTwiml, FilePath)]
 recordExamples =
   [ (recordExample1, "test/xml/recordExample1.xml")
   , (recordExample2, "test/xml/recordExample2.xml")
@@ -127,7 +127,7 @@ recordExamples =
 
 {- Sms -}
 
-smsExample1 :: Twiml
+smsExample1 :: VoiceTwiml
 smsExample1 =
   response $ do
     say "Our store is located at 123 Easy St." def
@@ -135,7 +135,7 @@ smsExample1 =
     end
   where Twiml.Syntax{..} = def
 
-smsExample2 :: Twiml
+smsExample2 :: VoiceTwiml
 smsExample2 =
   response $ do
     say "Our store is located at 123 Easy St." def
@@ -145,7 +145,7 @@ smsExample2 =
     end
   where Twiml.Syntax{..} = def
 
-smsExample3 :: Twiml
+smsExample3 :: VoiceTwiml
 smsExample3 =
   response $ do
     say "Our store is located at 123 Easy St." def
@@ -154,7 +154,7 @@ smsExample3 =
     end
   where Twiml.Syntax{..} = def
 
-smsExamples :: [(Twiml, FilePath)]
+smsExamples :: [(VoiceTwiml, FilePath)]
 smsExamples =
   [ (smsExample1, "test/xml/smsExample1.xml")
   , (smsExample2, "test/xml/smsExample2.xml")
@@ -163,7 +163,7 @@ smsExamples =
 
 {- Dial -}
 
-dialExample1 :: Twiml
+dialExample1 :: VoiceTwiml
 dialExample1 =
   response $ do
     dial "415-123-4567" def
@@ -171,7 +171,7 @@ dialExample1 =
     end
   where Twiml.Syntax{..} = def
 
-dialExample2 :: Twiml
+dialExample2 :: VoiceTwiml
 dialExample2 =
   response $ do
     dial "415-123-4567" $ def
@@ -181,7 +181,7 @@ dialExample2 =
     end
   where Twiml.Syntax{..} = def
 
-dialExample3 :: Twiml
+dialExample3 :: VoiceTwiml
 dialExample3 =
   response $ do
     dial' (Left $ Number def "+15558675309") $ def
@@ -189,7 +189,7 @@ dialExample3 =
     end
   where Twiml.Syntax{..} = def
 
-dialExamples :: [(Twiml, FilePath)]
+dialExamples :: [(VoiceTwiml, FilePath)]
 dialExamples =
   [ (dialExample1, "test/xml/dialExample1.xml")
   , (dialExample2, "test/xml/dialExample2.xml")
@@ -200,49 +200,49 @@ dialExamples =
 
 {- Enqueue -}
 
-enqueueExample1 :: Twiml
+enqueueExample1 :: VoiceTwiml
 enqueueExample1 =
   response $ do
     enqueue "support" $ def & waitURL .~ parseURL "wait-music.xml"
     end
   where Twiml.Syntax{..} = def
 
-enqueueExamples :: [(Twiml, FilePath)]
+enqueueExamples :: [(VoiceTwiml, FilePath)]
 enqueueExamples =
   [ (enqueueExample1, "test/xml/enqueueExample1.xml")
   ]
 
 {- Leave -}
 
-leaveExample1 :: Twiml
+leaveExample1 :: VoiceTwiml
 leaveExample1 =
   response $ do
     leave
     end
   where Twiml.Syntax{..} = def
 
-leaveExamples :: [(Twiml, FilePath)]
+leaveExamples :: [(VoiceTwiml, FilePath)]
 leaveExamples =
   [ (leaveExample1, "test/xml/leaveExample1.xml")
   ]
 
 {- Hangup -}
 
-hangupExample1 :: Twiml
+hangupExample1 :: VoiceTwiml
 hangupExample1 =
   response $ do
     hangup
     end
   where Twiml.Syntax{..} = def
 
-hangupExamples :: [(Twiml, FilePath)]
+hangupExamples :: [(VoiceTwiml, FilePath)]
 hangupExamples =
   [ (hangupExample1, "test/xml/hangupExample1.xml")
   ]
 
 {- Redirect -}
 
-redirectExample1 :: Twiml
+redirectExample1 :: VoiceTwiml
 redirectExample1 =
   response $ do
     dial "415-123-4567" def
@@ -250,14 +250,14 @@ redirectExample1 =
     end
   where Twiml.Syntax{..} = def
 
-redirectExample2 :: Twiml
+redirectExample2 :: VoiceTwiml
 redirectExample2 =
   response $ do
     redirect (fromJust $ parseURL "../nextInstructions") def
     end
   where Twiml.Syntax{..} = def
 
-redirectExamples :: [(Twiml, FilePath)]
+redirectExamples :: [(VoiceTwiml, FilePath)]
 redirectExamples =
   [ (redirectExample1, "test/xml/redirectExample1.xml")
   , (redirectExample2, "test/xml/redirectExample2.xml")
@@ -265,21 +265,21 @@ redirectExamples =
 
 {- Reject -}
 
-rejectExample1 :: Twiml
+rejectExample1 :: VoiceTwiml
 rejectExample1 =
   response $ do
     reject def
     end
   where Twiml.Syntax{..} = def
 
-rejectExample2 :: Twiml
+rejectExample2 :: VoiceTwiml
 rejectExample2 =
   response $ do
     reject $ with & reason .~ Just Busy
     end
   where Twiml.Syntax{..} = def
 
-rejectExamples :: [(Twiml, FilePath)]
+rejectExamples :: [(VoiceTwiml, FilePath)]
 rejectExamples =
   [ (rejectExample1, "test/xml/rejectExample1.xml")
   , (rejectExample2, "test/xml/rejectExample2.xml")
@@ -287,7 +287,7 @@ rejectExamples =
 
 {- Pause -}
 
-pauseExample1 :: Twiml
+pauseExample1 :: VoiceTwiml
 pauseExample1 =
   response $ do
     say "I will pause 10 seconds starting now!" def
@@ -296,7 +296,7 @@ pauseExample1 =
     end
   where Twiml.Syntax{..} = def
 
-pauseExample2 :: Twiml
+pauseExample2 :: VoiceTwiml
 pauseExample2 =
   response $ do
     pause $ with & duration .~ Just 5
@@ -304,7 +304,7 @@ pauseExample2 =
     end
   where Twiml.Syntax{..} = def
 
-pauseExamples :: [(Twiml, FilePath)]
+pauseExamples :: [(VoiceTwiml, FilePath)]
 pauseExamples =
   [ (pauseExample1, "test/xml/pauseExample1.xml")
   , (pauseExample2, "test/xml/pauseExample2.xml")
@@ -312,7 +312,7 @@ pauseExamples =
 
 {- Main -}
 
-examples :: [(Twiml, FilePath)]
+examples :: [(VoiceTwiml, FilePath)]
 examples = concat
   [ sayExamples
   , playExamples
@@ -334,7 +334,7 @@ ifThenElse b x y | b = x
 tests :: IO [Test]
 tests = return $ map check examples
 
-check :: (Twiml, FilePath) -> Test
+check :: (VoiceTwiml, FilePath) -> Test
 check (twiml, filePath) = Test test
   where test = TestInstance {
     run = do

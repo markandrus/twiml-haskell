@@ -5,5 +5,4 @@
 
 module Text.XML.Twiml (module X) where
 
-import Text.XML.Twiml.Internal as X
 import Text.XML.Twiml.Types as X

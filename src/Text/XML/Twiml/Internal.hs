@@ -1,32 +1,72 @@
 {-#LANGUAGE DataKinds #-}
+{-#LANGUAGE DeriveAnyClass #-}
+{-#LANGUAGE DeriveDataTypeable #-}
+{-#LANGUAGE DeriveFunctor #-}
+{-#LANGUAGE DeriveGeneric #-}
 {-#LANGUAGE EmptyDataDecls #-}
 {-#LANGUAGE FlexibleContexts #-}
 {-#LANGUAGE FlexibleInstances #-}
 {-#LANGUAGE GADTs #-}
 {-#LANGUAGE MultiParamTypeClasses #-}
+{-#LANGUAGE OverlappingInstances #-}
 {-#LANGUAGE RankNTypes #-}
+{-#LANGUAGE ScopedTypeVariables #-}
+{-#LANGUAGE StandaloneDeriving #-}
 {-#LANGUAGE TypeFamilies #-}
 {-#LANGUAGE TypeOperators #-}
 {-#LANGUAGE UndecidableInstances #-}
 
 module Text.XML.Twiml.Internal
-  (
-    response
+  ( (:+:)(..)
+  , (:<:)(..)
+  , response
+  , Voice'
+  , Messaging
+  , VoiceTwimlF(..)
+  , MessagingTwimlF(..)
+  , SayF'(..)
   , say
+  , say'
+  , PlayF'(..)
   , play
   , play'
+  , play''
+  , play'''
+  , GatherF'(..)
   , gather
+  , gather'
+  , RecordF'(..)
   , record
+  , record''
+  , SmsF'(..)
   , sms
+  , sms'
+  , DialF'(..)
   , dial
   , dial'
+  , dial''
+  , dial'''
+  , EnqueueF'(..)
   , enqueue
+  , enqueue'
+  , LeaveF'(..)
   , leave
+  , leave'
+  , HangupF'(..)
   , hangup
+  , hangup'
+  , RedirectF'(..)
   , redirect
+  , redirect'
+  , RejectF'(..)
   , reject
+  , reject'
+  , PauseF'(..)
   , pause
+  , pause'
+  , EndF'(..)
   , end
+  , end'
   , Twiml(..)
   , Twiml'
   , In
@@ -47,11 +87,15 @@ module Text.XML.Twiml.Internal
   , End
   ) where
 
-import Text.XML.Twiml.Types
+import Text.XML.Twiml.Types hiding (say, play, play', gather, record, sms, dial,
+  dial', enqueue, leave, hangup, redirect, reject, pause, end, Twiml, response,
+  showTwiml)
 import Text.XML.Light
 
 import Control.DeepSeq (NFData(..))
+import Data.Data
 import Data.Void
+import GHC.Generics (Generic)
 
 response :: Twiml' i Void -> Twiml
 response = Response
@@ -59,21 +103,40 @@ response = Response
 say :: String -> SayAttributes -> Twiml' '[Say] ()
 say a b = iliftF $ SayF a b ()
 
+say' :: String -> SayAttributes -> VoiceTwiml' '[Say] ()
+say' a b = iliftF . inj $ SayF' a b ()
+
 play :: URL -> PlayAttributes -> Twiml' '[Play] ()
 play a b = iliftF $ PlayF (Just a) b ()
 
 play' :: Maybe URL -> PlayAttributes -> Twiml' '[Play] ()
 play' a b = iliftF $ PlayF a b ()
 
+play'' :: URL -> PlayAttributes -> VoiceTwiml' '[Play] ()
+play'' a b = iliftF . inj $ PlayF' (Just a) b ()
+
+play''' :: Maybe URL -> PlayAttributes -> VoiceTwiml' '[Play] ()
+play''' a b = iliftF . inj $ PlayF' a b ()
+
 gather :: Nest i In Gather
        => GatherAttributes -> Twiml' i Void -> Twiml' '[Gather] ()
 gather a b = iliftF $ GatherF a b ()
 
+gather' :: Nest i In Gather
+        => GatherAttributes -> VoiceTwiml' i Void -> VoiceTwiml' '[Gather] ()
+gather' a b = iliftF . inj $ GatherF' a b ()
+
 record :: RecordAttributes -> Twiml' '[Record] ()
 record a = iliftF $ RecordF a ()
 
+record'' :: RecordAttributes -> VoiceTwiml' '[Record] ()
+record'' a = iliftF . inj $ RecordF' a ()
+
 sms :: String -> SmsAttributes -> Twiml' '[Sms] ()
 sms a b = iliftF $ SmsF a b ()
+
+sms' :: String -> SmsAttributes -> VoiceTwiml' '[Sms] ()
+sms' a b = iliftF . inj $ SmsF' a b ()
 
 dial :: String -> DialAttributes -> Twiml' '[Dial] ()
 dial a b = iliftF $ DialF (Right a) b ()
@@ -81,26 +144,53 @@ dial a b = iliftF $ DialF (Right a) b ()
 dial' :: Either DialNoun String -> DialAttributes -> Twiml' '[Dial] ()
 dial' a b = iliftF $ DialF a b ()
 
+dial'' :: String -> DialAttributes -> VoiceTwiml' '[Dial] ()
+dial'' a b = iliftF . inj $ DialF' (Right a) b ()
+
+dial''' :: Either DialNoun String -> DialAttributes -> VoiceTwiml' '[Dial] ()
+dial''' a b = iliftF . inj $ DialF' a b ()
+
 enqueue :: String -> EnqueueAttributes -> Twiml' '[Enqueue] ()
 enqueue a b = iliftF $ EnqueueF a b ()
+
+enqueue' :: String -> EnqueueAttributes -> VoiceTwiml' '[Enqueue] ()
+enqueue' a b = iliftF . inj $ EnqueueF' a b ()
 
 leave :: Twiml' '[Leave] a
 leave = iliftF LeaveF
 
+leave' :: VoiceTwiml' '[Leave] a
+leave' = iliftF $ inj LeaveF'
+
 hangup :: Twiml' '[Hangup] a
 hangup = iliftF HangupF
+
+hangup' :: VoiceTwiml' '[Hangup] a
+hangup' = iliftF $ inj HangupF'
 
 redirect :: URL -> RedirectAttributes -> Twiml' '[Redirect] a
 redirect a b = iliftF $ RedirectF a b
 
+redirect' :: URL -> RedirectAttributes -> VoiceTwiml' '[Redirect] a
+redirect' a b = iliftF . inj $ RedirectF' a b
+
 reject :: RejectAttributes -> Twiml' '[Reject] a
 reject a = iliftF $ RejectF a
+
+reject' :: RejectAttributes -> VoiceTwiml' '[Reject] a
+reject' a = iliftF . inj $ RejectF' a
 
 pause :: PauseAttributes -> Twiml' '[Pause] ()
 pause a = iliftF $ PauseF a ()
 
+pause' :: PauseAttributes -> VoiceTwiml' '[Pause] ()
+pause' a = iliftF . inj $ PauseF' a ()
+
 end :: Twiml' '[] a
 end = iliftF EndF
+
+end' :: VoiceTwiml' '[End] Void
+end' = iliftF $ inj EndF'
 
 data Twiml = forall i. Response (Twiml' (i :: [*]) Void)
 
@@ -111,21 +201,6 @@ instance Show Twiml where
   show = showTwiml -- show (Response a) = "Response (" ++ show a ++ ")"
 
 type Twiml' = IxFree TwimlF
-
-data In
-
-type family Nest a i b where
-  Nest i In Gather =
-    ( Record   ∉ i
-    , Gather   ∉ i
-    , Sms      ∉ i
-    , Dial     ∉ i
-    , Enqueue  ∉ i
-    , Leave    ∉ i
-    , Hangup   ∉ i
-    , Redirect ∉ i
-    , Reject   ∉ i
-    )
 
 data TwimlF i a where
   SayF      :: String
@@ -167,6 +242,18 @@ data TwimlF i a where
             -> a
             -> TwimlF '[Pause] a
   EndF      :: TwimlF '[] a
+
+newtype MessagingTwimlF i a = MessagingTwimlF
+  { getMessagingTwimlF ::
+    (     SmsF'      i
+      :+: RedirectF' i
+    ) a
+  } deriving (Eq, Functor, Generic, Show)
+
+instance IxShow MessagingTwimlF where
+  ishow = show
+
+type MessagingTwiml' i a = IxFree MessagingTwimlF i a
 
 instance Functor (TwimlF i) where
   fmap f (SayF      a b c) = SayF      a b $ f c
@@ -222,20 +309,6 @@ instance IxNFData TwimlF where
 instance NFData a => NFData (TwimlF i a) where
   rnf = irnf
 
-data Say
-data Play
-data Gather
-data Record
-data Sms
-data Dial
-data Enqueue
-data Leave
-data Hangup
-data Redirect
-data Reject
-data Pause
-data End
-
 showTwiml :: Twiml -> String
 showTwiml twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" ++ ppElement (toElement twiml) ++ "\n"
 
@@ -262,3 +335,5 @@ instance ToXML (TwimlF i (Twiml' j Void)) where
   toXML (RejectF             attrs)   = [makeElement "Reject"   ()               $ toAttrs attrs]
   toXML (PauseF              attrs a) =  makeElement "Pause"    ()                (toAttrs attrs) : toXML a
   toXML  EndF                         = []
+
+-- instance ToXML (VoiceTwiml' i Void) where

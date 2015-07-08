@@ -46,7 +46,6 @@ source-repository head
 library
   exposed-modules:     Text.XML.Twiml,
                        Text.XML.Twiml.Types,
-                       Text.XML.Twiml.Internal
                        Text.XML.Twiml.Syntax
   hs-source-dirs:      src
   -- other-modules:       

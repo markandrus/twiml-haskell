@@ -9,7 +9,7 @@ module Text.XML.Twiml.Syntax where
 
 import Data.Default
 import Prelude (const)
-import Text.XML.Twiml.Types
+import Text.XML.Twiml.Internal
 
 data Syntax (m :: [k] -> * -> *) (i :: [k]) (j :: [k]) (a :: *) (b :: *) = Syntax {
     (>>=)  :: m i a -> (a -> m j b) -> m (i <> j) b

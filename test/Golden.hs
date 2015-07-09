@@ -68,14 +68,14 @@ playExamples =
 gatherExample1 :: VoiceTwiml
 gatherExample1 =
   response $ do
-    gather with end
+    gather def end
     end
   where Twiml.Syntax{..} = def
 
 gatherExample2 :: VoiceTwiml
 gatherExample2 =
   response $ do
-    gather (with & action .~ parseURL "/process_gather.php"
+    gather (def & action .~ parseURL "/process_gather.php"
                  & method .~ Just GET) $ do
       say "Please enter your account number, followed by the pound sign" def
       end
@@ -94,7 +94,7 @@ gatherExamples =
 recordExample1 :: VoiceTwiml
 recordExample1 =
   response $ do
-    record with
+    record def
     end
   where Twiml.Syntax{..} = def
 
@@ -102,7 +102,7 @@ recordExample2 :: VoiceTwiml
 recordExample2 =
   response $ do
     say "Please leave a message at the beep. Press the star key when finished." def
-    record $ with & action      .~ parseURL "http://foo.edu/handleRecording.php"
+    record $ def & action      .~ parseURL "http://foo.edu/handleRecording.php"
                   & method      .~ Just GET
                   & maxLength   .~ Just 20
                   & finishOnKey .~ Just KStar
@@ -113,7 +113,7 @@ recordExample2 =
 recordExample3 :: VoiceTwiml
 recordExample3 =
   response $ do
-    record $ with & transcribe         .~ Just True
+    record $ def & transcribe         .~ Just True
                   & transcribeCallback .~ parseURL "/handle_transcribe.php"
     end
   where Twiml.Syntax{..} = def
@@ -275,7 +275,7 @@ rejectExample1 =
 rejectExample2 :: VoiceTwiml
 rejectExample2 =
   response $ do
-    reject $ with & reason .~ Just Busy
+    reject $ def & reason .~ Just Busy
     end
   where Twiml.Syntax{..} = def
 
@@ -291,7 +291,7 @@ pauseExample1 :: VoiceTwiml
 pauseExample1 =
   response $ do
     say "I will pause 10 seconds starting now!" def
-    pause $ with & duration .~ Just 10
+    pause $ def & duration .~ Just 10
     say "I just paused 10 seconds" def
     end
   where Twiml.Syntax{..} = def
@@ -299,7 +299,7 @@ pauseExample1 =
 pauseExample2 :: VoiceTwiml
 pauseExample2 =
   response $ do
-    pause $ with & duration .~ Just 5
+    pause $ def & duration .~ Just 5
     say "Hi there." def
     end
   where Twiml.Syntax{..} = def

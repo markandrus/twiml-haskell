@@ -28,7 +28,7 @@ import Data.Void
 import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Types as X
  
-response :: VoiceTwiml' i Void -> VoiceTwiml
+response :: IxFree VoiceTwimlF i Void -> VoiceTwiml
 response = VoiceTwiml
 
 say :: (Functor1 f, SayF '[Say] :<: f '[Say]) => String -> SayAttributes -> IxFree f '[Say] ()
@@ -40,7 +40,7 @@ play a b = iliftF . inj $ PlayF (pure a) b ()
 play' :: (Functor1 f, PlayF '[Play] :<: f '[Play]) => Maybe URL -> PlayAttributes -> IxFree f '[Play] ()
 play' a b = iliftF . inj $ PlayF a b ()
 
-gather :: (Functor1 f, Nest i In Gather, GatherF '[Gather] :<: f '[Gather]) => GatherAttributes -> VoiceTwiml' i Void -> IxFree f '[Gather] ()
+gather :: (Functor1 f, Nest i In Gather, GatherF '[Gather] :<: f '[Gather]) => GatherAttributes -> IxFree VoiceTwimlF i Void -> IxFree f '[Gather] ()
 gather a b = iliftF . inj $ GatherF a b ()
 
 record :: (Functor1 f, RecordF '[Record] :<: f '[Record]) => RecordAttributes -> IxFree f '[Record] ()

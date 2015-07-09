@@ -24,145 +24,128 @@
 {-#LANGUAGE TypeOperators #-}
 {-#LANGUAGE UndecidableInstances #-}
 
-module Text.XML.Twiml.Types where
-
-{-
 module Text.XML.Twiml.Types
-  ( Natural
+  ( Digit(..)
+  , Key(..)
+  , Method(..)
+  , Natural
   , URL
   , parseURL
-  , Method(..)
-  , Key(..)
-  , Digit(..)
-    -- * Phantom Types
-  , Say'
-  , Play'
-  , Gather'
-  , Record'
-  , Sms'
-  , Dial'
-  , Enqueue'
-  , Leave'
-  , Hangup'
-  , Redirect'
-  , Reject'
-  , Pause'
-    -- * @\<Say\>@
+    -- * TwiMl
+  , VoiceTwiml(..)
+  , VoiceTwimlF(..)
+    -- ** Verbs
+    -- *** Say
   , Say
   , SayF(..)
   , SayAttributes(..)
-  , defaultSayAttributes
   , Voice(..)
   , Lang(..)
   , LangAlice(..)
-    -- * @\<Play\>@
+    -- *** Play
   , Play
-  , PlayF
+  , PlayF(..)
   , PlayAttributes(..)
-  , defaultPlayAttributes
-    -- * @\<Gather\>@
+    -- *** Gather
   , Gather
-  , GatherF
+  , Nest
+  , In
+  , GatherF(..)
   , GatherAttributes(..)
-  , defaultGatherAttributes
-    -- * @\<Record\>@
+    -- *** Record
   , Record
-  , RecordF
+  , RecordF(..)
   , RecordAttributes(..)
-  , defaultRecordAttributes
-    -- * @\<Sms\>@
+    -- *** Sms
   , Sms
-  , SmsF
+  , SmsF(..)
   , SmsAttributes(..)
-  , defaultSmsAttributes
-    -- * @\<Dial\>@
+    -- *** Dial
   , Dial
-  , DialF
+  , DialF(..)
   , DialAttributes(..)
-  , defaultDialAttributes
   , DialNoun(..)
-    -- ** @\<Number\>@
+    -- **** Number
   , NumberAttributes(..)
-  , defaultNumberAttributes
-    -- ** @\<Sip\>@
+    -- **** Sip
   , SipAttributes(..)
-  , defaultSipAttributes
   , Transport(..)
-    -- ** @\<Client\>@
+    -- **** Client
   , ClientAttributes(..)
-  , defaultClientAttributes
-    -- ** @\<Conference\>@
+    -- *** Conference 
   , ConferenceAttributes(..)
-  , defaultConferenceAttributes
   , ConferenceBeep(..)
-    -- ** @\<Queue\>@
+    -- **** Queue
   , QueueAttributes(..)
-  , defaultQueueAttributes
-    -- * @\<Enqueue\>@
+    -- *** Enqueue
   , Enqueue
-  , EnqueueF
+  , EnqueueF(..)
   , EnqueueAttributes(..)
-  , defaultEnqueueAttributes
-    -- * @\<Redirect\>@
+    -- *** Leave
+  , Leave
+  , LeaveF(..)
+    -- *** Hangup
+  , Hangup
+  , HangupF(..)
+    -- *** Redirect
   , Redirect
-  , RedirectF
+  , RedirectF(..)
   , RedirectAttributes(..)
-  , defaultRedirectAttributes
-    -- * @\<Reject\>@
+    -- *** Reject
   , Reject
-  , RejectF
+  , RejectF(..)
   , RejectAttributes(..)
-  , defaultRejectAttributes
   , Reason(..)
-    -- * @\<Pause\>@
+    -- *** Pause
   , Pause
-  , PauseF
+  , PauseF(..)
   , PauseAttributes(..)
-  , defaultPauseAttributes
-    -- * Lens Classes
+    -- *** End
+  , End
+  , EndF(..)
+    -- * Lenses
   , HasLoop(..)
+  , HasVoice(..)
+  , HasDigits(..)
   , HasAction(..)
-  , HasMethod(..)
-  , HasTimeout(..)
   , HasFinishOnKey(..)
-  -- * Internal
-    -- * Promoted Lists
-    -- ** @(++)@
-    -- $promotedLists
-  , type (++)
-  , SList(..)
-  , WitnessList(..)
-  , associativity
-  , rightIdentity
-    -- ** @elem@
-    -- $elem
-  , Elem
-  , type (∉)
-    -- * Indexed
-    -- ** Functor
-    -- $indexedFunctor
-  , Functor1(..)
-    -- ** Applicative
-    -- $indexedApplicative
-  , IxApplicative(..)
-    -- ** Monad
-    -- $indexedMonad
-  , IxMonad(..)
-    -- ** Free
-  , IxFree(..)
-  , iliftF
-    -- ** Show
-  , Show1(..)
+  , HasMethod(..)
+  , HasNumDigits(..)
+  , HasTimeout(..)
+  , HasMaxLength(..)
+  , HasPlayBeep(..)
+  , HasTranscribe(..)
+  , HasTranscribeCallback(..)
+  , HasFrom(..)
+  , HasStatusCallback(..)
+  , HasTo(..)
+  , HasCallerId(..)
+  , HasHangupOnStar(..)
+  , HasRecord'(..)
+  , HasTimeLimit(..)
+  , HasSendDigits(..)
+  , HasURL(..)
+  , HasHeaders(..)
+  , HasPassword(..)
+  , HasTransport(..)
+  , HasBeep(..)
+  , HasEndOnExit(..)
+  , HasMaxParticipants(..)
+  , HasMuted(..)
+  , HasStartOnEnter(..)
+  , HasWaitMethod(..)
+  , HasWaitURL(..)
+  , HasWaitURLMethod(..)
+  , HasReason(..)
+  , HasDuration(..)
   ) where
--}
 
 import Control.DeepSeq (NFData(..))
-import Control.Lens hiding (Identity, fmap1, to)
+import Control.Lens hiding (Identity, to)
 import Control.Monad
 import Data.Data
 import Data.Default
 import Data.Maybe
-import Data.Text hiding (concatMap, map)
 import Data.Void
 import GHC.Generics (Generic)
 import Network.URI (URI(..), parseURIReference)
@@ -170,7 +153,159 @@ import Text.XML.Light
 
 import Text.XML.Twiml.Internal
 
-{- Attributes -}
+-- | The ‘digits’ attribute lets you play DTMF tones during a call. See
+-- <https://www.twilio.com/docs/api/twiml/play#attributes-digits>.
+data Digit
+  = D0 -- ^ 0
+  | D1 -- ^ 1
+  | D2 -- ^ 2
+  | D3 -- ^ 3
+  | D4 -- ^ 4
+  | D5 -- ^ 5
+  | D6 -- ^ 6
+  | D7 -- ^ 7
+  | D8 -- ^ 8
+  | D9 -- ^ 9
+  | W  -- ^ w
+  deriving (Bounded, Data, Enum, Eq, Generic, NFData, Ord, Read, Show, Typeable)
+
+instance ToAttrValue Digit where
+  toAttrValue D0 = "0"
+  toAttrValue D1 = "1"
+  toAttrValue D2 = "2"
+  toAttrValue D3 = "3"
+  toAttrValue D4 = "4"
+  toAttrValue D5 = "5"
+  toAttrValue D6 = "6"
+  toAttrValue D7 = "7"
+  toAttrValue D8 = "8"
+  toAttrValue D9 = "9"
+  toAttrValue W  = "w"
+
+instance ToAttrValue [Digit] where
+  toAttrValue = concatMap toAttrValue
+
+data Key
+  = K0      -- ^ 0
+  | K1      -- ^ 1
+  | K2      -- ^ 2
+  | K3      -- ^ 3
+  | K4      -- ^ 4
+  | K5      -- ^ 5
+  | K6      -- ^ 6
+  | K7      -- ^ 7
+  | K8      -- ^ 8
+  | K9      -- ^ 9
+  | KStar   -- ^ \*
+  | KPound  -- ^ #
+  deriving (Bounded, Data, Enum, Eq, Generic, NFData, Ord, Read, Show, Typeable)
+
+instance ToAttrValue Key where
+  toAttrValue K0     = "0"
+  toAttrValue K1     = "1"
+  toAttrValue K2     = "2"
+  toAttrValue K3     = "3"
+  toAttrValue K4     = "4"
+  toAttrValue K5     = "5"
+  toAttrValue K6     = "6"
+  toAttrValue K7     = "7"
+  toAttrValue K8     = "8"
+  toAttrValue K9     = "9"
+  toAttrValue KStar  = "*"
+  toAttrValue KPound = "#"
+
+type Natural = Int
+
+instance ToAttrValue Natural where
+  toAttrValue = show
+
+data Method = GET | POST
+  deriving (Bounded, Data, Enum, Eq, Generic, NFData, Ord, Read, Show, Typeable)
+
+instance ToAttrValue Method where
+  toAttrValue = show
+
+newtype URL = URL { getURL :: String }
+  deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
+
+instance ToAttrValue URL where
+  toAttrValue = getURL
+
+-- | Checks whether a @URI@'s scheme, if any, is one of @"http:"@ or @"https:"@.
+isHttp :: URI -> Bool
+isHttp uri = case uriScheme uri of
+  ""       -> True
+  "http:"  -> True
+  "https:" -> True
+  _        -> False
+
+parseURL :: String -> Maybe URL
+parseURL url = parseURIReference url
+           >>= (\uri -> if isHttp uri then Just (URL url) else Nothing)
+
+{- TwiML -}
+
+data VoiceTwiml = forall i. VoiceTwiml (IxFree VoiceTwimlF i Void)
+
+instance ToElement VoiceTwiml where
+  toElement (VoiceTwiml twiml) = unode "Response" $ toXML twiml
+
+instance Show VoiceTwiml where
+  show = showTwiml
+
+showTwiml :: VoiceTwiml -> String
+showTwiml twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" ++ ppElement (toElement twiml) ++ "\n"
+
+newtype VoiceTwimlF i a = VoiceTwimlF
+  { getVoiceTwimlF ::
+    ( SayF      i :+:
+      PlayF     i :+:
+      GatherF   i :+:
+      SmsF      i :+: -- Shared between Voice and Messaging TwiML
+      DialF     i :+:
+      EnqueueF  i :+:
+      LeaveF    i :+:
+      HangupF   i :+:
+      RecordF   i :+:
+      RedirectF i :+: -- Shared between Voice and Messaging TwiML
+      RejectF   i :+:
+      PauseF    i :+:
+      EndF      i ) a -- Shared between Voice and Messaging TwiML
+  } deriving (Functor, Generic, Show, Typeable)
+
+instance (f i :<: ( SayF      i :+:
+                    PlayF     i :+:
+                    GatherF   i :+:
+                    SmsF      i :+:
+                    DialF     i :+:
+                    EnqueueF  i :+:
+                    LeaveF    i :+:
+                    HangupF   i :+:
+                    RecordF   i :+:
+                    RedirectF i :+:
+                    RejectF   i :+:
+                    PauseF    i :+:
+                    EndF      i )
+         ) => f i :<: VoiceTwimlF i where
+  inj = VoiceTwimlF . inj
+  prj = prj . getVoiceTwimlF
+
+instance Functor1 VoiceTwimlF where
+  fmap1 = fmap
+
+instance Show1 VoiceTwimlF where
+  show1 = show
+
+instance ToXML a => ToXML (VoiceTwimlF i a) where
+  toXML = toXML . getVoiceTwimlF
+
+instance ToXML (IxFree VoiceTwimlF i Void) where
+  toXML (IxFree f) = toXML f
+  toXML _ = error "Impossible"
+
+{- Verbs -}
+
+{- Say -}
 
 data Say
 
@@ -313,6 +448,8 @@ instance ToAttrValue LangAlice where
   toAttrValue ZhHK = "zh-HK"
   toAttrValue ZhTW = "zh-TW"
 
+{- Play -}
+
 data Play
 
 data PlayF i a where
@@ -358,6 +495,8 @@ instance ToAttrs PlayAttributes where
     , makeAttr "digits" _playDigits
     ]
 
+{- Gather -}
+
 data Gather
 
 data In
@@ -378,22 +517,14 @@ type family Nest a i b where
 data GatherF i a where
   GatherF :: Nest i In Gather
            => GatherAttributes
-           -> VoiceTwiml' i Void
+           -> IxFree VoiceTwimlF i Void
            -> a
            -> GatherF '[Gather] a
-
--- deriving instance Data a => Data (GatherF '[Gather] a)
-
--- deriving instance Eq a => Eq (GatherF i a)
 
 deriving instance Functor (GatherF i)
 
 instance Functor1 GatherF where
   fmap1 = fmap
-
--- deriving instance Read a => Read (GatherF '[Gather] a)
-
--- deriving instance Ord a => Ord (GatherF i a)
 
 deriving instance Show a => Show (GatherF i a)
 
@@ -426,6 +557,8 @@ instance ToAttrs GatherAttributes where
     , makeAttr "finishOnKey" _gatherFinishOnKey
     , makeAttr "numDigits"   _gatherNumDigits
     ]
+
+{- Record -}
 
 data Record
 
@@ -489,6 +622,8 @@ instance ToAttrs RecordAttributes where
     , makeAttr "playBeep"           _recordPlayBeep
     ]
 
+{- Sms -}
+
 data Sms
 
 data SmsF i a where
@@ -541,6 +676,8 @@ instance ToAttrs SmsAttributes where
     , makeAttr "method"         _smsMethod
     , makeAttr "statusCallback" _smsStatusCallback
     ]
+
+{- Dial -}
 
 data Dial
 
@@ -602,6 +739,8 @@ instance ToAttrs DialAttributes where
     , makeAttr "record"       _dialRecord'
     ]
 
+{- Number -}
+
 -- | See <https://www.twilio.com/docs/api/twiml/number#attributes>.
 data NumberAttributes = NumberAttributes
   { _numberSendDigits :: Maybe [Digit]
@@ -622,6 +761,8 @@ instance ToAttrs NumberAttributes where
     , makeAttr "url"        _numberURL
     , makeAttr "method"     _numberMethod
     ]
+
+{- Sip -}
 
 -- | See <https://www.twilio.com/docs/api/twiml/sip#attributes>.
 data SipAttributes = SipAttributes
@@ -661,6 +802,8 @@ instance ToAttrValue Transport where
   toAttrValue TCP = "tcp"
   toAttrValue UDP = "udp"
 
+{- Client -}
+
 -- | See <https://www.twilio.com/docs/api/twiml/client#attributes>.
 data ClientAttributes = ClientAttributes
   { _clientURL    :: Maybe URL
@@ -678,6 +821,8 @@ instance ToAttrs ClientAttributes where
     [ makeAttr "url"    _clientURL
     , makeAttr "method" _clientMethod
     ]
+
+{- Conference -}
 
 -- | See <https://www.twilio.com/docs/api/twiml/conference#attributes>.
 data ConferenceAttributes = ConferenceAttributes
@@ -726,6 +871,8 @@ instance ToAttrValue ConferenceBeep where
   toAttrValue OnExit  = "on-exit"
   toAttrValue OnEnter = "on-enter"
 
+{- Queue -}
+
 -- | See <https://www.twilio.com/docs/api/twiml/queue#attributes>.
 data QueueAttributes = QueueAttributes
   { _queueURL    :: Maybe URL
@@ -756,9 +903,6 @@ data DialNoun
 strToContent :: String -> Content
 strToContent str = Text $ CData CDataText str Nothing
 
-txtToContent :: Text -> Content
-txtToContent = strToContent . unpack
-
 urlToContent :: URL -> Content
 urlToContent (URL url) = strToContent url
 
@@ -780,6 +924,8 @@ instance ToElement DialNoun where
   toElement (Client     attrs str) = makeElement "Client"     (strToContent str) $ toAttrs attrs
   toElement (Conference attrs str) = makeElement "Conference" (strToContent str) $ toAttrs attrs
   toElement (Queue      attrs str) = makeElement "Queue"      (strToContent str) $ toAttrs attrs
+
+{- Enqueue -}
 
 data Enqueue
 
@@ -831,6 +977,8 @@ instance ToAttrs EnqueueAttributes where
     , makeAttr "waitUrlMethod" _enqueueWaitURLMethod
     ]
 
+{- Leave -}
+
 data Leave
 
 data LeaveF i a where
@@ -857,6 +1005,8 @@ deriving instance Show (LeaveF i a)
 instance ToXML (LeaveF i a) where
   toXML LeaveF = [makeElement "Leave" () []]
 
+{- Hangup -}
+
 data Hangup
 
 data HangupF i a where
@@ -882,6 +1032,8 @@ deriving instance Show (HangupF i a)
 
 instance ToXML (HangupF i a) where
   toXML HangupF = [makeElement "Hangup" () []]
+
+{- Redirect -}
 
 data Redirect
 
@@ -923,6 +1075,8 @@ instance ToAttrs RedirectAttributes where
   toAttrs = flip makeAttrs
     [ makeAttr "method" _redirectMethod
     ]
+
+{- Reject -}
 
 data Reject
 
@@ -977,6 +1131,8 @@ instance ToAttrValue Reason where
   toAttrValue Rejected = "rejected"
   toAttrValue Busy     = "busy"
 
+{- Pause -}
+
 data Pause
 
 data PauseF i a where
@@ -1018,6 +1174,8 @@ instance ToAttrs PauseAttributes where
     [ makeAttr "length" _pauseDuration
     ]
 
+{- End -}
+
 data End
 
 data EndF i a where
@@ -1041,173 +1199,6 @@ deriving instance Show (EndF i a)
 
 instance ToXML (EndF i a) where
   toXML EndF = []
-
-data Voice'
-data Messaging
-
-data Twiml a where
-  VoiceTwiml     :: forall i. VoiceTwiml'     i Void -> Twiml Voice'
-  -- MessagingTwiml :: forall i. MessagingTwiml' i Void -> Twiml Messaging
-
-instance ToElement (Twiml a) where
-  toElement (VoiceTwiml twiml) = unode "Response" $ toXML twiml
-
-instance Show (Twiml a) where
-  -- show (VoiceTwiml     twiml) = "VoiceTwiml ("     ++ show twiml ++ ")"
-  -- show (MessagingTwiml twiml) = "MessagingTwiml (" ++ show twiml ++ ")"
-  show = showTwiml
-
-showTwiml :: Twiml a -> String
-showTwiml twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" ++ ppElement (toElement twiml) ++ "\n"
-
-instance Functor1 VoiceTwimlF where
-  fmap1 = fmap
-
-instance Show1 VoiceTwimlF where
-  show1 = show
-
-newtype VoiceTwimlF i a = VoiceTwimlF
-  { getVoiceTwimlF ::
-    (     SayF      i
-      :+: PlayF     i
-      :+: GatherF   i
-      :+: SmsF      i -- Shared between Voice and Messaging TwiML
-      :+: DialF     i
-      :+: EnqueueF  i
-      :+: LeaveF    i
-      :+: HangupF   i
-      :+: RecordF   i
-      :+: RedirectF i -- Shared between Voice and Messaging TwiML
-      :+: RejectF   i
-      :+: PauseF    i
-      :+: EndF      i -- Shared between Voice and Messaging TwiML
-    ) a
-  } deriving (Functor, Generic, Show, Typeable)
-
-instance (f i :<: (SayF      i :+:
-                   PlayF     i :+:
-                   GatherF   i :+:
-                   SmsF      i :+:
-                   DialF     i :+:
-                   EnqueueF  i :+:
-                   LeaveF    i :+:
-                   HangupF   i :+:
-                   RecordF   i :+:
-                   RedirectF i :+:
-                   RejectF   i :+:
-                   PauseF    i :+:
-                   EndF      i    )) => f i :<: VoiceTwimlF i where
-  inj = VoiceTwimlF . inj
-  prj = prj . getVoiceTwimlF
-
-instance ToXML a => ToXML (VoiceTwimlF i a) where
-  toXML = toXML . getVoiceTwimlF
-
-type VoiceTwiml = Twiml Voice'
-
-type VoiceTwiml' i a = IxFree VoiceTwimlF i a
-
-instance ToXML (VoiceTwiml' i Void) where
-  toXML (IxFree f) = toXML f
-  toXML _ = error "Impossible"
-
-{- Attribute Lens Classes -}
-
-{- URL, Method & Transport -}
-
-newtype URL = URL { getURL :: String }
-  deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance ToAttrValue URL where
-  toAttrValue = getURL
-
--- | Checks whether a @URI@'s scheme, if any, is one of @"http:"@ or @"https:"@.
-isHttp :: URI -> Bool
-isHttp uri = case uriScheme uri of
-  ""       -> True
-  "http:"  -> True
-  "https:" -> True
-  _        -> False
-
-parseURL :: String -> Maybe URL
-parseURL url = parseURIReference url
-           >>= (\uri -> if isHttp uri then Just (URL url) else Nothing)
-
-data Method = GET | POST
-  deriving (Bounded, Data, Enum, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance ToAttrValue Method where
-  toAttrValue = show
-
-type Natural = Int
-
-instance ToAttrValue Natural where
-  toAttrValue = show
-
-{- Twiml Datatypes -}
-
-data Key
-  = K0      -- ^ 0
-  | K1      -- ^ 1
-  | K2      -- ^ 2
-  | K3      -- ^ 3
-  | K4      -- ^ 4
-  | K5      -- ^ 5
-  | K6      -- ^ 6
-  | K7      -- ^ 7
-  | K8      -- ^ 8
-  | K9      -- ^ 9
-  | KStar   -- ^ \*
-  | KPound  -- ^ #
-  deriving (Bounded, Data, Enum, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance ToAttrValue Key where
-  toAttrValue K0     = "0"
-  toAttrValue K1     = "1"
-  toAttrValue K2     = "2"
-  toAttrValue K3     = "3"
-  toAttrValue K4     = "4"
-  toAttrValue K5     = "5"
-  toAttrValue K6     = "6"
-  toAttrValue K7     = "7"
-  toAttrValue K8     = "8"
-  toAttrValue K9     = "9"
-  toAttrValue KStar  = "*"
-  toAttrValue KPound = "#"
-
-{- Voices & Languages -}
-
--- | The ‘digits’ attribute lets you play DTMF tones during a call. See
--- <https://www.twilio.com/docs/api/twiml/play#attributes-digits>.
-data Digit
-  = D0 -- ^ 0
-  | D1 -- ^ 1
-  | D2 -- ^ 2
-  | D3 -- ^ 3
-  | D4 -- ^ 4
-  | D5 -- ^ 5
-  | D6 -- ^ 6
-  | D7 -- ^ 7
-  | D8 -- ^ 8
-  | D9 -- ^ 9
-  | W  -- ^ w
-  deriving (Bounded, Data, Enum, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance ToAttrValue Digit where
-  toAttrValue D0 = "0"
-  toAttrValue D1 = "1"
-  toAttrValue D2 = "2"
-  toAttrValue D3 = "3"
-  toAttrValue D4 = "4"
-  toAttrValue D5 = "5"
-  toAttrValue D6 = "6"
-  toAttrValue D7 = "7"
-  toAttrValue D8 = "8"
-  toAttrValue D9 = "9"
-  toAttrValue W  = "w"
-
-instance ToAttrValue [Digit] where
-  toAttrValue = concatMap toAttrValue
 
 {- Elem -}
 

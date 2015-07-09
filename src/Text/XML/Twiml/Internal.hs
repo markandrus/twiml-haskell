@@ -276,6 +276,8 @@ class ToElement a where
 class ToAttrs a where
   toAttrs :: a -> [Attr]
 
+-- | 'toAttrValue' transforms a data type into a @String@ that can be set as the
+-- value of an attribute.
 class ToAttrValue a where
   toAttrValue :: a -> String
 

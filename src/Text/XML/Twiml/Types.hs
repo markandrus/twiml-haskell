@@ -104,40 +104,39 @@ module Text.XML.Twiml.Types
   , End
   , EndF(..)
     -- * Lenses
-  , HasLoop(..)
-  , HasVoice(..)
-  , HasDigits(..)
   , HasAction(..)
+  , HasBeep(..)
+  , HasCallerId(..)
+  , HasDigits(..)
+  , HasDuration(..)
+  , HasEndOnExit(..)
   , HasFinishOnKey(..)
-  , HasMethod(..)
-  , HasNumDigits(..)
-  , HasTimeout(..)
+  , HasFrom(..)
+  , HasHangupOnStar(..)
+  , HasHeaders(..)
+  , HasLoop(..)
   , HasMaxLength(..)
+  , HasMaxParticipants(..)
+  , HasMethod(..)
+  , HasMuted(..)
+  , HasNumDigits(..)
+  , HasPassword(..)
   , HasPlayBeep(..)
+  , HasReason(..)
+  , HasRecord'(..)
+  , HasSendDigits(..)
+  , HasStartOnEnter(..)
+  , HasStatusCallback(..)
+  , HasTimeout(..)
+  , HasTimeLimit(..)
+  , HasTo(..)
   , HasTranscribe(..)
   , HasTranscribeCallback(..)
-  , HasFrom(..)
-  , HasStatusCallback(..)
-  , HasTo(..)
-  , HasCallerId(..)
-  , HasHangupOnStar(..)
-  , HasRecord'(..)
-  , HasTimeLimit(..)
-  , HasSendDigits(..)
-  , HasURL(..)
-  , HasHeaders(..)
-  , HasPassword(..)
   , HasTransport(..)
-  , HasBeep(..)
-  , HasEndOnExit(..)
-  , HasMaxParticipants(..)
-  , HasMuted(..)
-  , HasStartOnEnter(..)
+  , HasURL(..)
+  , HasVoice(..)
   , HasWaitMethod(..)
   , HasWaitURL(..)
-  , HasWaitURLMethod(..)
-  , HasReason(..)
-  , HasDuration(..)
   ) where
 
 import Control.DeepSeq (NFData(..))
@@ -955,18 +954,18 @@ instance ToXML a => ToXML (EnqueueF i a) where
 
 -- | See <https://www.twilio.com/docs/api/twiml/enqueue#attributes>.
 data EnqueueAttributes = EnqueueAttributes
-  { _enqueueAction        :: Maybe URL
-  , _enqueueMethod        :: Maybe Method
-  , _enqueueWaitURL       :: Maybe URL
-  , _enqueueWaitURLMethod :: Maybe Method
+  { _enqueueAction     :: Maybe URL
+  , _enqueueMethod     :: Maybe Method
+  , _enqueueWaitURL    :: Maybe URL
+  , _enqueueWaitMethod :: Maybe Method
   } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
 
 instance Default EnqueueAttributes where
   def = EnqueueAttributes
-    { _enqueueAction        = def
-    , _enqueueMethod        = def
-    , _enqueueWaitURL       = def
-    , _enqueueWaitURLMethod = def
+    { _enqueueAction     = def
+    , _enqueueMethod     = def
+    , _enqueueWaitURL    = def
+    , _enqueueWaitMethod = def
     }
 
 instance ToAttrs EnqueueAttributes where
@@ -974,7 +973,7 @@ instance ToAttrs EnqueueAttributes where
     [ makeAttr "action"        _enqueueAction
     , makeAttr "method"        _enqueueMethod
     , makeAttr "waitUrl"       _enqueueWaitURL
-    , makeAttr "waitUrlMethod" _enqueueWaitURLMethod
+    , makeAttr "waitUrlMethod" _enqueueWaitMethod
     ]
 
 {- Leave -}

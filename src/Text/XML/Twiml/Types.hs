@@ -151,6 +151,7 @@ import Network.URI (URI(..), parseURIReference)
 import Text.XML.Light
 
 import Text.XML.Twiml.Internal
+import Text.XML.Twiml.Internal.TH
 
 -- | The ‘digits’ attribute lets you play DTMF tones during a call. See
 -- <https://www.twilio.com/docs/api/twiml/play#attributes-digits>.
@@ -242,115 +243,6 @@ parseURL :: String -> Maybe URL
 parseURL url = parseURIReference url
            >>= (\uri -> if isHttp uri then Just (URL url) else Nothing)
 
-{- TwiML -}
-
-data VoiceTwiml = forall i. VoiceTwiml (IxFree VoiceTwimlF i Void)
-
-instance ToElement VoiceTwiml where
-  toElement (VoiceTwiml twiml) = unode "Response" $ toXML twiml
-
-instance Show VoiceTwiml where
-  show = showTwiml
-
-showTwiml :: VoiceTwiml -> String
-showTwiml twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" ++ ppElement (toElement twiml) ++ "\n"
-
-newtype VoiceTwimlF i a = VoiceTwimlF
-  { getVoiceTwimlF ::
-    ( SayF      i :+:
-      PlayF     i :+:
-      GatherF   i :+:
-      SmsF      i :+: -- Shared between Voice and Messaging TwiML
-      DialF     i :+:
-      EnqueueF  i :+:
-      LeaveF    i :+:
-      HangupF   i :+:
-      RecordF   i :+:
-      RedirectF i :+: -- Shared between Voice and Messaging TwiML
-      RejectF   i :+:
-      PauseF    i :+:
-      EndF      i ) a -- Shared between Voice and Messaging TwiML
-  } deriving (Functor, Generic, Show, Typeable)
-
-instance (f i :<: ( SayF      i :+:
-                    PlayF     i :+:
-                    GatherF   i :+:
-                    SmsF      i :+:
-                    DialF     i :+:
-                    EnqueueF  i :+:
-                    LeaveF    i :+:
-                    HangupF   i :+:
-                    RecordF   i :+:
-                    RedirectF i :+:
-                    RejectF   i :+:
-                    PauseF    i :+:
-                    EndF      i )
-         ) => f i :<: VoiceTwimlF i where
-  inj = VoiceTwimlF . inj
-  prj = prj . getVoiceTwimlF
-
-instance Functor1 VoiceTwimlF where
-  fmap1 = fmap
-
-instance Show1 VoiceTwimlF where
-  show1 = show
-
-instance ToXML a => ToXML (VoiceTwimlF i a) where
-  toXML = toXML . getVoiceTwimlF
-
-instance ToXML (IxFree VoiceTwimlF i Void) where
-  toXML (IxFree f) = toXML f
-  toXML _ = error "Impossible"
-
-{- Verbs -}
-
-{- Say -}
-
-data Say
-
-data SayF i a where
-  SayF :: String -> SayAttributes -> a -> SayF '[Say] a
-
-deriving instance Data a => Data (SayF '[Say] a)
-
-deriving instance Eq a => Eq (SayF i a)
-
-deriving instance Functor (SayF i)
-
-instance Functor1 SayF where
-  fmap1 = fmap
-
-instance NFData a => NFData (SayF i a) where
-  rnf (SayF a b c) = rnf a `seq` rnf b `seq` rnf c
-
-deriving instance Ord a => Ord (SayF i a)
-
-deriving instance Read a => Read (SayF '[Say] a)
-
-deriving instance Show a => Show (SayF i a)
-
-instance ToXML a => ToXML (SayF i a) where
-  toXML (SayF a attrs b) = makeElement "Say" (strToContent a) (toAttrs attrs) : toXML b
-
--- | See <https://www.twilio.com/docs/api/twiml/say#attributes>.
-data SayAttributes = SayAttributes
-  { _sayVoice :: Maybe Voice
-  , _sayLoop  :: Maybe Natural
-  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance Default SayAttributes where
-  def = SayAttributes
-    { _sayVoice = def
-    , _sayLoop  = def
-    }
-
-instance ToAttrs SayAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr  "voice"      _sayVoice
-    , makeAttr  "loop"       _sayLoop
-    , makeAttr' "language"  (_sayVoice >=> lang) (either toAttrValue toAttrValue)
-    ]
-
 -- | Voices supported by @\<Say\>@. See
 -- <https://www.twilio.com/docs/api/twiml/say#attributes-voice>.
 data Voice
@@ -358,16 +250,6 @@ data Voice
   | Woman (Maybe Lang)
   | Alice (Maybe LangAlice)
   deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance ToAttrValue Voice where
-  toAttrValue (Man   _) = "man"
-  toAttrValue (Woman _) = "woman"
-  toAttrValue (Alice _) = "alice"
-
-lang :: Voice -> Maybe (Either Lang LangAlice)
-lang (Man   l) = Left  <$> l
-lang (Woman l) = Left  <$> l
-lang (Alice r) = Right <$> r
 
 -- | Languages spoken by voices 'Man' and 'Woman'. See
 -- <https://www.twilio.com/docs/api/twiml/say#attributes-manwoman>.
@@ -447,296 +329,47 @@ instance ToAttrValue LangAlice where
   toAttrValue ZhHK = "zh-HK"
   toAttrValue ZhTW = "zh-TW"
 
-{- Play -}
-
-data Play
-
-data PlayF i a where
-  PlayF :: Maybe URL -> PlayAttributes -> a -> PlayF '[Play] a
-
-deriving instance Data a => Data (PlayF '[Play] a)
-
-deriving instance Eq a => Eq (PlayF i a)
-
-deriving instance Functor (PlayF i)
-
-instance Functor1 PlayF where
-  fmap1 = fmap
-
-instance NFData a => NFData (PlayF i a) where
-  rnf (PlayF a b c) = rnf a `seq` rnf b `seq` rnf c
-
-deriving instance Ord a => Ord (PlayF i a)
-
-deriving instance Read a => Read (PlayF '[Play] a)
-
-deriving instance Show a => Show (PlayF i a)
-
-instance ToXML a => ToXML (PlayF i a) where
-  toXML (PlayF (Just a) attrs b) = makeElement "Play" (urlToContent a) (toAttrs attrs) : toXML b
-  toXML (PlayF _        attrs b) = makeElement "Play" ()               (toAttrs attrs) : toXML b
-
--- | See <https://www.twilio.com/docs/api/twiml/play#attributes>.
-data PlayAttributes = PlayAttributes
-  { _playLoop   :: Maybe Natural
-  , _playDigits :: Maybe [Digit]
-  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance Default PlayAttributes where
-  def = PlayAttributes
-    { _playLoop   = def
-    , _playDigits = def
-    }
-
-instance ToAttrs PlayAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "loop"   _playLoop
-    , makeAttr "digits" _playDigits
-    ]
-
-{- Gather -}
-
-data Gather
-
-data In
-
-type family Nest a i b where
-  Nest i In Gather =
-    ( Record   ∉ i
-    , Gather   ∉ i
-    , Sms      ∉ i
-    , Dial     ∉ i
-    , Enqueue  ∉ i
-    , Leave    ∉ i
-    , Hangup   ∉ i
-    , Redirect ∉ i
-    , Reject   ∉ i
-    )
-
-data GatherF i a where
-  GatherF :: Nest i In Gather
-           => GatherAttributes
-           -> IxFree VoiceTwimlF i Void
-           -> a
-           -> GatherF '[Gather] a
-
-deriving instance Functor (GatherF i)
-
-instance Functor1 GatherF where
-  fmap1 = fmap
-
-deriving instance Show a => Show (GatherF i a)
-
-instance ToXML a => ToXML (GatherF i a) where
-  toXML (GatherF attrs a b) = makeElement "Gather" (toXML a) (toAttrs attrs) : toXML b
-
--- | See <https://www.twilio.com/docs/api/twiml/gather#attributes>.
-data GatherAttributes = GatherAttributes
-  { _gatherAction      :: Maybe URL
-  , _gatherMethod      :: Maybe Method
-  , _gatherTimeout     :: Maybe Natural
-  , _gatherFinishOnKey :: Maybe Key
-  , _gatherNumDigits   :: Maybe Natural
-  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance Default GatherAttributes where
-  def = GatherAttributes
-    { _gatherAction      = def
-    , _gatherMethod      = def
-    , _gatherTimeout     = def
-    , _gatherFinishOnKey = def
-    , _gatherNumDigits   = def
-    }
-
-instance ToAttrs GatherAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "action"      _gatherAction
-    , makeAttr "method"      _gatherMethod
-    , makeAttr "timeout"     _gatherTimeout
-    , makeAttr "finishOnKey" _gatherFinishOnKey
-    , makeAttr "numDigits"   _gatherNumDigits
-    ]
-
-{- Record -}
-
-data Record
-
-data RecordF i a where
-  RecordF :: RecordAttributes -> a -> RecordF '[Record] a
-
-deriving instance Data a => Data (RecordF '[Record] a)
-
-deriving instance Eq a => Eq (RecordF i a)
-
-deriving instance Functor (RecordF i)
-
-instance Functor1 RecordF where
-  fmap1 = fmap
-
-instance NFData a => NFData (RecordF i a) where
-  rnf (RecordF a b) = rnf a `seq` rnf b
-
-deriving instance Ord a => Ord (RecordF i a)
-
-deriving instance Read a => Read (RecordF '[Record] a)
-
-deriving instance Show a => Show (RecordF i a)
-
-instance ToXML a => ToXML (RecordF i a) where
-  toXML (RecordF attrs a) = makeElement "Record" () (toAttrs attrs) : toXML a
-
--- | See <https://www.twilio.com/docs/api/twiml/record#attributes>.
-data RecordAttributes = RecordAttributes
-  { _recordAction             :: Maybe URL
-  , _recordMethod             :: Maybe Method
-  , _recordTimeout            :: Maybe Natural
-  , _recordFinishOnKey        :: Maybe Key
-  , _recordMaxLength          :: Maybe Natural
-  , _recordTranscribe         :: Maybe Bool
-  , _recordTranscribeCallback :: Maybe URL
-  , _recordPlayBeep           :: Maybe Bool
-  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance Default RecordAttributes where
-  def = RecordAttributes
-    { _recordAction             = def
-    , _recordMethod             = def
-    , _recordTimeout            = def
-    , _recordFinishOnKey        = def
-    , _recordMaxLength          = def
-    , _recordTranscribe         = def
-    , _recordTranscribeCallback = def
-    , _recordPlayBeep           = def
-    }
-
-instance ToAttrs RecordAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "action"             _recordAction
-    , makeAttr "method"             _recordMethod
-    , makeAttr "timeout"            _recordTimeout
-    , makeAttr "finishOnKey"        _recordFinishOnKey
-    , makeAttr "maxLength"          _recordMaxLength
-    , makeAttr "transcribe"         _recordTranscribe
-    , makeAttr "transcribeCallback" _recordTranscribeCallback
-    , makeAttr "playBeep"           _recordPlayBeep
-    ]
-
-{- Sms -}
-
-data Sms
-
-data SmsF i a where
-  SmsF :: String -> SmsAttributes -> a -> SmsF '[Sms] a
-
-deriving instance Data a => Data (SmsF '[Sms] a)
-
-deriving instance Eq a => Eq (SmsF i a)
-
-deriving instance Functor (SmsF i)
-
-instance Functor1 SmsF where
-  fmap1 = fmap
-
-instance NFData a => NFData (SmsF i a) where
-  rnf (SmsF a b c) = rnf a `seq` rnf b `seq` rnf c
-
-deriving instance Ord a => Ord (SmsF i a)
-
-deriving instance Read a => Read (SmsF '[Sms] a)
-
-deriving instance Show a => Show (SmsF i a)
-
-instance ToXML a => ToXML (SmsF i a) where
-  toXML (SmsF a attrs b) = makeElement "Sms" (strToContent a) (toAttrs attrs) : toXML b
-
--- | See <https://www.twilio.com/docs/api/twiml/sms#attributes>.
-data SmsAttributes = SmsAttributes
-  { _smsTo             :: Maybe String
-  , _smsFrom           :: Maybe String
-  , _smsAction         :: Maybe URL
-  , _smsMethod         :: Maybe Method
-  , _smsStatusCallback :: Maybe URL
-  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance Default SmsAttributes where
-  def = SmsAttributes
-    { _smsTo             = def
-    , _smsFrom           = def
-    , _smsAction         = def
-    , _smsMethod         = def
-    , _smsStatusCallback = def
-    }
-
-instance ToAttrs SmsAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "to"             _smsTo
-    , makeAttr "from"           _smsFrom
-    , makeAttr "action"         _smsAction
-    , makeAttr "method"         _smsMethod
-    , makeAttr "statusCallback" _smsStatusCallback
-    ]
-
-{- Dial -}
-
-data Dial
-
-data DialF i a where
-  DialF :: Either DialNoun String -> DialAttributes -> a -> DialF '[Dial] a
-
-deriving instance Data a => Data (DialF '[Dial] a)
-
-deriving instance Eq a => Eq (DialF i a)
-
-deriving instance Functor (DialF i)
-
-instance Functor1 DialF where
-  fmap1 = fmap
-
-instance NFData a => NFData (DialF i a) where
-  rnf (DialF a b c) = rnf a `seq` rnf b `seq` rnf c
-
-deriving instance Ord a => Ord (DialF i a)
-
-deriving instance Read a => Read (DialF '[Dial] a)
-
-deriving instance Show a => Show (DialF i a)
-
-instance ToXML a => ToXML (DialF i a) where
-  toXML (DialF (Left  a) attrs b) = makeElement "Dial" (toElement    a) (toAttrs attrs) : toXML b
-  toXML (DialF (Right a) attrs b) = makeElement "Dial" (strToContent a) (toAttrs attrs) : toXML b
-
--- | See <https://www.twilio.com/docs/api/twiml/dial#attributes>.
-data DialAttributes = DialAttributes
-  { _dialAction       :: Maybe URL
-  , _dialMethod       :: Maybe Method
-  , _dialTimeout      :: Maybe Natural
-  , _dialHangupOnStar :: Maybe Bool
-  , _dialTimeLimit    :: Maybe Natural
-  , _dialCallerId     :: Maybe String
-  , _dialRecord'      :: Maybe Bool
-  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance Default DialAttributes where
-  def = DialAttributes
-    { _dialAction       = def
-    , _dialMethod       = def
-    , _dialTimeout      = def
-    , _dialHangupOnStar = def
-    , _dialTimeLimit    = def
-    , _dialCallerId     = def
-    , _dialRecord'      = def
-    }
-
-instance ToAttrs DialAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "action"       _dialAction
-    , makeAttr "method"       _dialMethod
-    , makeAttr "timeout"      _dialTimeout
-    , makeAttr "hangupOnStar" _dialHangupOnStar
-    , makeAttr "timeLimit"    _dialTimeLimit
-    , makeAttr "callerId"     _dialCallerId
-    , makeAttr "record"       _dialRecord'
-    ]
+type MURL = Maybe URL
+type Digits = [Digit]
+
+twimlSpecStringToData "Say\n\
+\  required\n\
+\    String\n\
+\  attributes\n\
+\    voice, Voice\n\
+\    loop, Natural\n\
+\  recursive\n"
+
+twimlSpecStringToData "Play\n\
+\  required\n\
+\    MURL\n\
+\  attributes\n\
+\    loop, Natural\n\
+\    digits, Digits\n\
+\  recursive\n"
+
+twimlSpecStringToData "Record\n\
+\  attributes\n\
+\    action, URL\n\
+\    method, Method\n\
+\    timeout, Natural\n\
+\    finishOnKey, Key\n\
+\    maxLength, Natural\n\
+\    transcribe, Bool\n\
+\    transcribeCallback, URL\n\
+\    playBeep, Bool\n\
+\  recursive\n"
+
+twimlSpecStringToData "Sms\n\
+\  required\n\
+\    String\n\
+\  attributes\n\
+\    to, String\n\
+\    from, String\n\
+\    action, URL\n\
+\    method, Method\n\
+\    statusCallback, URL\n\
+\  recursive\n"
 
 {- Number -}
 
@@ -890,20 +523,29 @@ instance ToAttrs QueueAttributes where
     , makeAttr "method" _queueMethod
     ]
 
--- | See <https://www.twilio.com/docs/api/twiml/dial#nouns>.
-data DialNoun
-  = Number     NumberAttributes     String
-  | Sip        SipAttributes        URL    -- NOTE: URL must be under 255 characters.
-  | Client     ClientAttributes     String
-  | Conference ConferenceAttributes String
-  | Queue      QueueAttributes      String
-  deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
+data SomeNode = forall n. Node n => SomeNode n
 
-strToContent :: String -> Content
-strToContent str = Text $ CData CDataText str Nothing
+class ToSomeNode a where
+  toSomeNode :: a -> SomeNode
 
-urlToContent :: URL -> Content
-urlToContent (URL url) = strToContent url
+instance ToSomeNode a => ToSomeNode (Maybe a) where
+  toSomeNode (Just a) = toSomeNode a
+  toSomeNode _ = SomeNode ()
+
+instance Node SomeNode where
+  node qName (SomeNode n) = node qName n
+
+instance ToSomeNode n => Node n where
+  node qName n = node qName (toSomeNode n)
+
+instance ToSomeNode String where
+  toSomeNode str = SomeNode . Text $ CData CDataText str Nothing
+
+instance ToSomeNode URL where
+  toSomeNode = toSomeNode . getURL
+
+instance ToSomeNode () where
+  toSomeNode = SomeNode
 
 makeAttr' :: String -> (a -> Maybe b) -> (b -> String) -> a -> Maybe Attr
 makeAttr' str f g a = Attr (unqual str) . g <$> f a
@@ -918,205 +560,64 @@ makeElement :: Node t => String -> t -> [Attr] -> Element
 makeElement str c attrs = unode str c & add_attrs attrs
 
 instance ToElement DialNoun where
-  toElement (Number     attrs str) = makeElement "Number"     (strToContent str) $ toAttrs attrs
-  toElement (Sip        attrs url) = makeElement "Sip"        (urlToContent url) $ toAttrs attrs
-  toElement (Client     attrs str) = makeElement "Client"     (strToContent str) $ toAttrs attrs
-  toElement (Conference attrs str) = makeElement "Conference" (strToContent str) $ toAttrs attrs
-  toElement (Queue      attrs str) = makeElement "Queue"      (strToContent str) $ toAttrs attrs
-
-{- Enqueue -}
-
-data Enqueue
-
-data EnqueueF i a where
-  EnqueueF :: String -> EnqueueAttributes -> a -> EnqueueF '[Enqueue] a
-
-deriving instance Data a => Data (EnqueueF '[Enqueue] a)
-
-deriving instance Eq a => Eq (EnqueueF i a)
-
-deriving instance Functor (EnqueueF i)
-
-instance Functor1 EnqueueF where
-  fmap1 = fmap
-
-instance NFData a => NFData (EnqueueF i a) where
-  rnf (EnqueueF a b c) = rnf a `seq` rnf b `seq` rnf c
-
-deriving instance Ord a => Ord (EnqueueF i a)
-
-deriving instance Read a => Read (EnqueueF '[Enqueue] a)
-
-deriving instance Show a => Show (EnqueueF i a)
-
-instance ToXML a => ToXML (EnqueueF i a) where
-  toXML (EnqueueF a attrs b) = makeElement "Enqueue" (strToContent a) (toAttrs attrs) : toXML b
-
--- | See <https://www.twilio.com/docs/api/twiml/enqueue#attributes>.
-data EnqueueAttributes = EnqueueAttributes
-  { _enqueueAction     :: Maybe URL
-  , _enqueueMethod     :: Maybe Method
-  , _enqueueWaitURL    :: Maybe URL
-  , _enqueueWaitMethod :: Maybe Method
-  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance Default EnqueueAttributes where
-  def = EnqueueAttributes
-    { _enqueueAction     = def
-    , _enqueueMethod     = def
-    , _enqueueWaitURL    = def
-    , _enqueueWaitMethod = def
-    }
-
-instance ToAttrs EnqueueAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "action"        _enqueueAction
-    , makeAttr "method"        _enqueueMethod
-    , makeAttr "waitUrl"       _enqueueWaitURL
-    , makeAttr "waitUrlMethod" _enqueueWaitMethod
-    ]
-
-{- Leave -}
-
-data Leave
-
-data LeaveF i a where
-  LeaveF :: LeaveF '[Leave] a
-
-deriving instance Data a => Data (LeaveF '[Leave] a)
-
-deriving instance Eq (LeaveF i a)
-
-deriving instance Functor (LeaveF i)
-
-instance Functor1 LeaveF where
-  fmap1 = fmap
-
-instance NFData (LeaveF i a) where
-  rnf LeaveF = ()
-
-deriving instance Ord (LeaveF i a)
-
-deriving instance Read (LeaveF '[Leave] a)
-
-deriving instance Show (LeaveF i a)
-
-instance ToXML (LeaveF i a) where
-  toXML LeaveF = [makeElement "Leave" () []]
-
-{- Hangup -}
-
-data Hangup
-
-data HangupF i a where
-  HangupF :: HangupF '[Hangup] a
-
-deriving instance Data a => Data (HangupF '[Hangup] a)
-
-deriving instance Eq (HangupF i a)
-
-deriving instance Functor (HangupF i)
-
-instance Functor1 HangupF where
-  fmap1 = fmap
-
-instance NFData (HangupF i a) where
-  rnf HangupF = ()
-
-deriving instance Ord (HangupF i a)
-
-deriving instance Read (HangupF '[Hangup] a)
-
-deriving instance Show (HangupF i a)
-
-instance ToXML (HangupF i a) where
-  toXML HangupF = [makeElement "Hangup" () []]
-
-{- Redirect -}
-
-data Redirect
-
-data RedirectF i a where
-  RedirectF :: URL -> RedirectAttributes -> RedirectF '[Redirect] a
-
-deriving instance Data a => Data (RedirectF '[Redirect] a)
-
-deriving instance Eq a => Eq (RedirectF i a)
-
-deriving instance Functor (RedirectF i)
-
-instance Functor1 RedirectF where
-  fmap1 = fmap
-
-instance NFData (RedirectF i a) where
-  rnf (RedirectF a b) = rnf a `seq` rnf b
-
-deriving instance Ord a => Ord (RedirectF i a)
-
-deriving instance Read a => Read (RedirectF '[Redirect] a)
-
-deriving instance Show a => Show (RedirectF i a)
-
-instance ToXML (RedirectF i a) where
-  toXML (RedirectF a attrs) = [makeElement "Redirect" (urlToContent a) $ toAttrs attrs]
-
--- | See <https://www.twilio.com/docs/api/twiml/redirect#attributes>.
-data RedirectAttributes = RedirectAttributes
-  { _redirectMethod :: Maybe Method
-  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance Default RedirectAttributes where
-  def = RedirectAttributes
-    { _redirectMethod = def
-    }
-
-instance ToAttrs RedirectAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "method" _redirectMethod
-    ]
-
-{- Reject -}
-
-data Reject
-
-data RejectF i a where
-  RejectF :: RejectAttributes -> RejectF '[Reject] a
-
-deriving instance Data a => Data (RejectF '[Reject] a)
-
-deriving instance Eq (RejectF i a)
-
-deriving instance Functor (RejectF i)
-
-instance Functor1 RejectF where
-  fmap1 = fmap
-
-instance NFData (RejectF i a) where
-  rnf (RejectF a) = rnf a
-
-deriving instance Ord (RejectF i a)
-
-deriving instance Read (RejectF '[Reject] a)
-
-deriving instance Show (RejectF i a)
-
-instance ToXML (RejectF i a) where
-  toXML (RejectF attrs) = [makeElement "Reject" () $ toAttrs attrs]
-
--- | See <https://www.twilio.com/docs/api/twiml/reject#attributes>.
-data RejectAttributes = RejectAttributes
-  { _rejectReason :: Maybe Reason
-  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance Default RejectAttributes where
-  def = RejectAttributes
-    { _rejectReason = def
-    }
-
-instance ToAttrs RejectAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "reason" _rejectReason
-    ]
+  toElement (Number     attrs str) = makeElement "Number"     (toSomeNode str) $ toAttrs attrs
+  toElement (Sip        attrs url) = makeElement "Sip"        (toSomeNode url) $ toAttrs attrs
+  toElement (Client     attrs str) = makeElement "Client"     (toSomeNode str) $ toAttrs attrs
+  toElement (Conference attrs str) = makeElement "Conference" (toSomeNode str) $ toAttrs attrs
+  toElement (Queue      attrs str) = makeElement "Queue"      (toSomeNode str) $ toAttrs attrs
+
+
+-- | See <https://www.twilio.com/docs/api/twiml/dial#nouns>.
+data DialNoun
+  = Number     NumberAttributes     String
+  | Sip        SipAttributes        URL    -- NOTE: URL must be under 255 characters.
+  | Client     ClientAttributes     String
+  | Conference ConferenceAttributes String
+  | Queue      QueueAttributes      String
+  deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
+
+-- FIXME(mroberts):
+type EDS = Either DialNoun String
+
+instance Default EDS where
+  def = Right def
+
+twimlSpecStringToData "Dial\n\
+\  required\n\
+\    EDS\n\
+\  attributes\n\
+\    action, URL\n\
+\    method, Method\n\
+\    timeout, Natural\n\
+\    hangupOnStar, Bool\n\
+\    timeLimit, Natural\n\
+\    callerId, String\n\
+\    record', Bool, record\n\
+\  recursive\n"
+
+twimlSpecStringToData "Enqueue\n\
+\  required\n\
+\    String\n\
+\  attributes\n\
+\    action, URL\n\
+\    method, Method\n\
+\    waitURL, URL, waitUrl\n\
+\    waitMethod, Method, waitUrlMethod\n\
+\  recursive\n"
+
+twimlSpecStringToData "Leave\n"
+
+twimlSpecStringToData "Hangup\n"
+
+twimlSpecStringToData "Redirect\n\
+\  required\n\
+\    URL\n\
+\  attributes\n\
+\    method, Method\n"
+
+twimlSpecStringToData "Reject\n\
+\  attributes\n\
+\    reason, Reason\n"
 
 -- | The reason attribute takes the values \"rejected\" and \"busy.\" This tells
 -- Twilio what message to play when rejecting a call. Selecting \"busy\" will
@@ -1130,43 +631,269 @@ instance ToAttrValue Reason where
   toAttrValue Rejected = "rejected"
   toAttrValue Busy     = "busy"
 
-{- Pause -}
+twimlSpecStringToData "Pause\n\
+\  attributes\n\
+\    duration, Natural, length\n\
+\  recursive\n"
 
-data Pause
+twimlSpecStringToData "End\n"
 
-data PauseF i a where
-  PauseF :: PauseAttributes -> a -> PauseF '[Pause] a
+{- TwiML -}
 
-deriving instance Data a => Data (PauseF '[Pause] a)
+data VoiceTwiml = forall i. VoiceTwiml (IxFree VoiceTwimlF i Void)
 
-deriving instance Eq a => Eq (PauseF i a)
+instance ToElement VoiceTwiml where
+  toElement (VoiceTwiml twiml) = unode "Response" $ toXML twiml
 
-deriving instance Functor (PauseF i)
+instance Show VoiceTwiml where
+  show = showTwiml
 
-instance Functor1 PauseF where
+showTwiml :: VoiceTwiml -> String
+showTwiml twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" ++ ppElement (toElement twiml) ++ "\n"
+
+newtype VoiceTwimlF i a = VoiceTwimlF
+  { getVoiceTwimlF ::
+    ( SayF      i :+:
+      PlayF     i :+:
+      GatherF   i :+:
+      SmsF      i :+: -- Shared between Voice and Messaging TwiML
+      DialF     i :+:
+      EnqueueF  i :+:
+      LeaveF    i :+:
+      HangupF   i :+:
+      RecordF   i :+:
+      RedirectF i :+: -- Shared between Voice and Messaging TwiML
+      RejectF   i :+:
+      PauseF    i :+:
+      EndF      i ) a -- Shared between Voice and Messaging TwiML
+  } deriving (Functor, Generic, Show, Typeable)
+
+instance (f i :<: ( SayF      i :+:
+                    PlayF     i :+:
+                    GatherF   i :+:
+                    SmsF      i :+:
+                    DialF     i :+:
+                    EnqueueF  i :+:
+                    LeaveF    i :+:
+                    HangupF   i :+:
+                    RecordF   i :+:
+                    RedirectF i :+:
+                    RejectF   i :+:
+                    PauseF    i :+:
+                    EndF      i )
+         ) => f i :<: VoiceTwimlF i where
+  inj = VoiceTwimlF . inj
+  prj = prj . getVoiceTwimlF
+
+instance Functor1 VoiceTwimlF where
   fmap1 = fmap
 
-instance NFData a => NFData (PauseF i a) where
-  rnf (PauseF a b) = rnf a `seq` rnf b
+instance Show1 VoiceTwimlF where
+  show1 = show
 
-deriving instance Ord a => Ord (PauseF i a)
+instance ToXML a => ToXML (VoiceTwimlF i a) where
+  toXML = toXML . getVoiceTwimlF
 
-deriving instance Read a => Read (PauseF '[Pause] a)
+instance ToXML (IxFree VoiceTwimlF i Void) where
+  toXML (IxFree f) = toXML f
+  toXML _ = error "Impossible"
 
-deriving instance Show a => Show (PauseF i a)
+{- Verbs -}
+
+{- Say -}
+
+instance ToXML a => ToXML (SayF i a) where
+  toXML (SayF a attrs b) = makeElement "Say" (toSomeNode a) (toAttrs attrs) : toXML b
+
+instance ToAttrs SayAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr  "voice"      _sayVoice
+    , makeAttr  "loop"       _sayLoop
+    , makeAttr' "language"  (_sayVoice >=> lang) (either toAttrValue toAttrValue)
+    ]
+
+instance ToAttrValue Voice where
+  toAttrValue (Man   _) = "man"
+  toAttrValue (Woman _) = "woman"
+  toAttrValue (Alice _) = "alice"
+
+lang :: Voice -> Maybe (Either Lang LangAlice)
+lang (Man   l) = Left  <$> l
+lang (Woman l) = Left  <$> l
+lang (Alice r) = Right <$> r
+
+{- Play -}
+
+instance ToXML a => ToXML (PlayF i a) where
+  toXML (PlayF a attrs b) = makeElement "Play" (toSomeNode a) (toAttrs attrs) : toXML b
+
+instance ToAttrs PlayAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "loop"   _playLoop
+    , makeAttr "digits" _playDigits
+    ]
+
+{- Gather -}
+
+data Gather
+
+data In
+
+type family Nest a i b where
+  Nest i In Gather =
+    ( Record   ∉ i
+    , Gather   ∉ i
+    , Sms      ∉ i
+    , Dial     ∉ i
+    , Enqueue  ∉ i
+    , Leave    ∉ i
+    , Hangup   ∉ i
+    , Redirect ∉ i
+    , Reject   ∉ i
+    )
+
+data GatherF i a where
+  GatherF :: Nest i In Gather
+           => GatherAttributes
+           -> IxFree VoiceTwimlF i Void
+           -> a
+           -> GatherF '[Gather] a
+
+deriving instance Functor (GatherF i)
+
+instance Functor1 GatherF where
+  fmap1 = fmap
+
+deriving instance Show a => Show (GatherF i a)
+
+instance ToXML a => ToXML (GatherF i a) where
+  toXML (GatherF attrs a b) = makeElement "Gather" (toXML a) (toAttrs attrs) : toXML b
+
+-- | See <https://www.twilio.com/docs/api/twiml/gather#attributes>.
+data GatherAttributes = GatherAttributes
+  { _gatherAction      :: Maybe URL
+  , _gatherMethod      :: Maybe Method
+  , _gatherTimeout     :: Maybe Natural
+  , _gatherFinishOnKey :: Maybe Key
+  , _gatherNumDigits   :: Maybe Natural
+  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
+
+instance Default GatherAttributes where
+  def = GatherAttributes
+    { _gatherAction      = def
+    , _gatherMethod      = def
+    , _gatherTimeout     = def
+    , _gatherFinishOnKey = def
+    , _gatherNumDigits   = def
+    }
+
+instance ToAttrs GatherAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "action"      _gatherAction
+    , makeAttr "method"      _gatherMethod
+    , makeAttr "timeout"     _gatherTimeout
+    , makeAttr "finishOnKey" _gatherFinishOnKey
+    , makeAttr "numDigits"   _gatherNumDigits
+    ]
+
+{- Record -}
+
+instance ToXML a => ToXML (RecordF i a) where
+  toXML (RecordF attrs a) = makeElement "Record" () (toAttrs attrs) : toXML a
+
+instance ToAttrs RecordAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "action"             _recordAction
+    , makeAttr "method"             _recordMethod
+    , makeAttr "timeout"            _recordTimeout
+    , makeAttr "finishOnKey"        _recordFinishOnKey
+    , makeAttr "maxLength"          _recordMaxLength
+    , makeAttr "transcribe"         _recordTranscribe
+    , makeAttr "transcribeCallback" _recordTranscribeCallback
+    , makeAttr "playBeep"           _recordPlayBeep
+    ]
+
+{- Sms -}
+
+instance ToXML a => ToXML (SmsF i a) where
+  toXML (SmsF a attrs b) = makeElement "Sms" (toSomeNode a) (toAttrs attrs) : toXML b
+
+instance ToAttrs SmsAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "to"             _smsTo
+    , makeAttr "from"           _smsFrom
+    , makeAttr "action"         _smsAction
+    , makeAttr "method"         _smsMethod
+    , makeAttr "statusCallback" _smsStatusCallback
+    ]
+
+{- Dial -}
+
+instance ToSomeNode (Either DialNoun String) where
+  toSomeNode (Left  a) = SomeNode $ toElement a
+  toSomeNode (Right a) = toSomeNode a
+
+instance ToXML a => ToXML (DialF i a) where
+  toXML (DialF a attrs b) = makeElement "Dial" (toSomeNode a) (toAttrs attrs) : toXML b
+
+instance ToAttrs DialAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "action"       _dialAction
+    , makeAttr "method"       _dialMethod
+    , makeAttr "timeout"      _dialTimeout
+    , makeAttr "hangupOnStar" _dialHangupOnStar
+    , makeAttr "timeLimit"    _dialTimeLimit
+    , makeAttr "callerId"     _dialCallerId
+    , makeAttr "record"       _dialRecord'
+    ]
+
+{- Enqueue -}
+
+instance ToXML a => ToXML (EnqueueF i a) where
+  toXML (EnqueueF a attrs b) = makeElement "Enqueue" (toSomeNode a) (toAttrs attrs) : toXML b
+
+instance ToAttrs EnqueueAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "action"        _enqueueAction
+    , makeAttr "method"        _enqueueMethod
+    , makeAttr "waitUrl"       _enqueueWaitURL
+    , makeAttr "waitUrlMethod" _enqueueWaitMethod
+    ]
+
+{- Leave -}
+
+instance ToXML (LeaveF i a) where
+  toXML LeaveF = [makeElement "Leave" () []]
+
+{- Hangup -}
+
+instance ToXML (HangupF i a) where
+  toXML HangupF = [makeElement "Hangup" () []]
+
+{- Redirect -}
+
+instance ToXML (RedirectF i a) where
+  toXML (RedirectF a attrs) = [makeElement "Redirect" (toSomeNode a) $ toAttrs attrs]
+
+instance ToAttrs RedirectAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "method" _redirectMethod
+    ]
+
+{- Reject -}
+
+instance ToXML (RejectF i a) where
+  toXML (RejectF attrs) = [makeElement "Reject" () $ toAttrs attrs]
+
+instance ToAttrs RejectAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "reason" _rejectReason
+    ]
+
+{- Pause -}
 
 instance ToXML a => ToXML (PauseF i a) where
   toXML (PauseF attrs a) = makeElement "Pause" () (toAttrs attrs) : toXML a
-
--- | See <https://www.twilio.com/docs/api/twiml/pause#attributes>.
-data PauseAttributes = PauseAttributes
-  { _pauseDuration :: Maybe Natural
-  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance Default PauseAttributes where
-  def = PauseAttributes
-    { _pauseDuration = def
-    }
 
 instance ToAttrs PauseAttributes where
   toAttrs = flip makeAttrs
@@ -1174,27 +901,6 @@ instance ToAttrs PauseAttributes where
     ]
 
 {- End -}
-
-data End
-
-data EndF i a where
-  EndF :: EndF '[End] a
-
-deriving instance Functor (EndF i)
-
-instance Functor1 EndF where
-  fmap1 = fmap
-
-deriving instance Eq (EndF i a)
-
-instance NFData (EndF i a) where
-  rnf EndF = ()
-
-deriving instance Ord (EndF i a)
-
-deriving instance Read (EndF '[End] a)
-
-deriving instance Show (EndF i a)
 
 instance ToXML (EndF i a) where
   toXML EndF = []

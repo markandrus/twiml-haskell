@@ -34,6 +34,8 @@ module Text.XML.Twiml.Types
     -- * TwiMl
   , VoiceTwiml(..)
   , VoiceTwimlF(..)
+  , MessagingTwiml(..)
+  , MessagingTwimlF(..)
     -- ** Verbs
     -- *** Say
   , Say
@@ -358,6 +360,17 @@ twimlSpecStringToData "Record\n\
 \    transcribe, Bool\n\
 \    transcribeCallback, URL\n\
 \    playBeep, Bool\n\
+\  recursive\n"
+
+twimlSpecStringToData "Message\n\
+\  required\n\
+\    String\n\
+\  attributes\n\
+\    to, String\n\
+\    from, String\n\
+\    action, URL\n\
+\    method, Method\n\
+\    statusCallback, URL\n\
 \  recursive\n"
 
 twimlSpecStringToData "Sms\n\
@@ -698,6 +711,46 @@ instance ToXML (IxFree VoiceTwimlF i Void) where
   toXML (IxFree f) = toXML f
   toXML _ = error "Impossible"
 
+data MessagingTwiml = forall i. MessagingTwiml (IxFree MessagingTwimlF i Void)
+
+instance ToElement MessagingTwiml where
+  toElement (MessagingTwiml twiml) = unode "Response" $ toXML twiml
+
+instance Show MessagingTwiml where
+  show = showMessagingTwiml
+
+showMessagingTwiml :: MessagingTwiml -> String
+showMessagingTwiml twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" ++ ppElement (toElement twiml) ++ "\n"
+
+newtype MessagingTwimlF i a = MessagingTwimlF
+  { getMessagingTwimlF ::
+    ( MessageF  i :+:
+      RedirectF i :+: -- Shared between Voice and Messaging TwiML
+      SmsF      i :+: -- Shared between Voice and Messaging TwiML
+      EndF      i ) a -- Shared between Voice and Messaging TwiML
+  } deriving (Functor, Generic, Show, Typeable)
+
+instance (f i :<: ( MessageF  i :+:
+                    RedirectF i :+:
+                    SmsF      i :+:
+                    EndF      i )
+         ) => f i :<: MessagingTwimlF i where
+  inj = MessagingTwimlF . inj
+  prj = prj . getMessagingTwimlF
+
+instance Functor1 MessagingTwimlF where
+  fmap1 = fmap
+
+instance Show1 MessagingTwimlF where
+  show1 = show
+
+instance ToXML a => ToXML (MessagingTwimlF i a) where
+  toXML = toXML . getMessagingTwimlF
+
+instance ToXML (IxFree MessagingTwimlF i Void) where
+  toXML (IxFree f) = toXML f
+  toXML _ = error "Impossible"
+
 {- Verbs -}
 
 {- Say -}
@@ -814,6 +867,18 @@ instance ToAttrs RecordAttributes where
     ]
 
 {- Sms -}
+
+instance ToXML a => ToXML (MessageF i a) where
+  toXML (MessageF a attrs b) = makeElement "Message" (toSomeNode a) (toAttrs attrs) : toXML b
+
+instance ToAttrs MessageAttributes where
+  toAttrs = flip makeAttrs
+    [ makeAttr "to"             _messageTo
+    , makeAttr "from"           _messageFrom
+    , makeAttr "action"         _messageAction
+    , makeAttr "method"         _messageMethod
+    , makeAttr "statusCallback" _messageStatusCallback
+    ]
 
 instance ToXML a => ToXML (SmsF i a) where
   toXML (SmsF a attrs b) = makeElement "Sms" (toSomeNode a) (toAttrs attrs) : toXML b

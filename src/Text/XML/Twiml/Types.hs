@@ -146,7 +146,6 @@ import Control.Lens hiding (Identity, to)
 import Control.Monad
 import Data.Data
 import Data.Default
-import Data.Maybe
 import Data.Void
 import GHC.Generics (Generic)
 import Network.URI (URI(..), parseURIReference)
@@ -229,6 +228,9 @@ instance ToAttrValue Method where
 
 newtype URL = URL { getURL :: String }
   deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
+
+instance ToSomeNode URL where
+  toSomeNode = toSomeNode . getURL
 
 instance ToAttrValue URL where
   toAttrValue = getURL
@@ -340,7 +342,8 @@ twimlSpecStringToData "Say\n\
 \  attributes\n\
 \    voice, Voice\n\
 \    loop, Natural\n\
-\  recursive\n"
+\  recursive\n\
+\  toXMLForGADT\n"
 
 twimlSpecStringToData "Play\n\
 \  required\n\
@@ -348,7 +351,9 @@ twimlSpecStringToData "Play\n\
 \  attributes\n\
 \    loop, Natural\n\
 \    digits, Digits\n\
-\  recursive\n"
+\  recursive\n\
+\  toXMLForGADT\n\
+\  toAttrsForAttributes\n"
 
 twimlSpecStringToData "Record\n\
 \  attributes\n\
@@ -360,7 +365,9 @@ twimlSpecStringToData "Record\n\
 \    transcribe, Bool\n\
 \    transcribeCallback, URL\n\
 \    playBeep, Bool\n\
-\  recursive\n"
+\  recursive\n\
+\  toXMLForGADT\n\
+\  toAttrsForAttributes\n"
 
 twimlSpecStringToData "Message\n\
 \  required\n\
@@ -371,7 +378,9 @@ twimlSpecStringToData "Message\n\
 \    action, URL\n\
 \    method, Method\n\
 \    statusCallback, URL\n\
-\  recursive\n"
+\  recursive\n\
+\  toXMLForGADT\n\
+\  toAttrsForAttributes\n"
 
 twimlSpecStringToData "Sms\n\
 \  required\n\
@@ -382,7 +391,9 @@ twimlSpecStringToData "Sms\n\
 \    action, URL\n\
 \    method, Method\n\
 \    statusCallback, URL\n\
-\  recursive\n"
+\  recursive\n\
+\  toXMLForGADT\n\
+\  toAttrsForAttributes\n"
 
 {- Number -}
 
@@ -536,42 +547,6 @@ instance ToAttrs QueueAttributes where
     , makeAttr "method" _queueMethod
     ]
 
-data SomeNode = forall n. Node n => SomeNode n
-
-class ToSomeNode a where
-  toSomeNode :: a -> SomeNode
-
-instance ToSomeNode a => ToSomeNode (Maybe a) where
-  toSomeNode (Just a) = toSomeNode a
-  toSomeNode _ = SomeNode ()
-
-instance Node SomeNode where
-  node qName (SomeNode n) = node qName n
-
-instance ToSomeNode n => Node n where
-  node qName n = node qName (toSomeNode n)
-
-instance ToSomeNode String where
-  toSomeNode str = SomeNode . Text $ CData CDataText str Nothing
-
-instance ToSomeNode URL where
-  toSomeNode = toSomeNode . getURL
-
-instance ToSomeNode () where
-  toSomeNode = SomeNode
-
-makeAttr' :: String -> (a -> Maybe b) -> (b -> String) -> a -> Maybe Attr
-makeAttr' str f g a = Attr (unqual str) . g <$> f a
-
-makeAttr :: ToAttrValue b => String -> (a -> Maybe b) -> a -> Maybe Attr
-makeAttr str f a = Attr (unqual str) . toAttrValue <$> f a
-
-makeAttrs :: a -> [a -> Maybe Attr] -> [Attr]
-makeAttrs a = mapMaybe ($ a)
-
-makeElement :: Node t => String -> t -> [Attr] -> Element
-makeElement str c attrs = unode str c & add_attrs attrs
-
 instance ToElement DialNoun where
   toElement (Number     attrs str) = makeElement "Number"     (toSomeNode str) $ toAttrs attrs
   toElement (Sip        attrs url) = makeElement "Sip"        (toSomeNode url) $ toAttrs attrs
@@ -606,7 +581,9 @@ twimlSpecStringToData "Dial\n\
 \    timeLimit, Natural\n\
 \    callerId, String\n\
 \    record', Bool, record\n\
-\  recursive\n"
+\  recursive\n\
+\  toXMLForGADT\n\
+\  toAttrsForAttributes\n"
 
 twimlSpecStringToData "Enqueue\n\
 \  required\n\
@@ -616,21 +593,29 @@ twimlSpecStringToData "Enqueue\n\
 \    method, Method\n\
 \    waitURL, URL, waitUrl\n\
 \    waitMethod, Method, waitUrlMethod\n\
-\  recursive\n"
+\  recursive\n\
+\  toXMLForGADT\n\
+\  toAttrsForAttributes\n"
 
-twimlSpecStringToData "Leave\n"
+twimlSpecStringToData "Leave\n\
+\  toXMLForGADT\n"
 
-twimlSpecStringToData "Hangup\n"
+twimlSpecStringToData "Hangup\n\
+\  toXMLForGADT\n"
 
 twimlSpecStringToData "Redirect\n\
 \  required\n\
 \    URL\n\
 \  attributes\n\
-\    method, Method\n"
+\    method, Method\n\
+\  toXMLForGADT\n\
+\  toAttrsForAttributes\n"
 
 twimlSpecStringToData "Reject\n\
 \  attributes\n\
-\    reason, Reason\n"
+\    reason, Reason\n\
+\  toXMLForGADT\n\
+\  toAttrsForAttributes\n"
 
 -- | The reason attribute takes the values \"rejected\" and \"busy.\" This tells
 -- Twilio what message to play when rejecting a call. Selecting \"busy\" will
@@ -647,7 +632,9 @@ instance ToAttrValue Reason where
 twimlSpecStringToData "Pause\n\
 \  attributes\n\
 \    duration, Natural, length\n\
-\  recursive\n"
+\  recursive\n\
+\  toXMLForGADT\n\
+\  toAttrsForAttributes\n"
 
 twimlSpecStringToData "End\n"
 
@@ -755,9 +742,6 @@ instance ToXML (IxFree MessagingTwimlF i Void) where
 
 {- Say -}
 
-instance ToXML a => ToXML (SayF i a) where
-  toXML (SayF a attrs b) = makeElement "Say" (toSomeNode a) (toAttrs attrs) : toXML b
-
 instance ToAttrs SayAttributes where
   toAttrs = flip makeAttrs
     [ makeAttr  "voice"      _sayVoice
@@ -776,15 +760,6 @@ lang (Woman l) = Left  <$> l
 lang (Alice r) = Right <$> r
 
 {- Play -}
-
-instance ToXML a => ToXML (PlayF i a) where
-  toXML (PlayF a attrs b) = makeElement "Play" (toSomeNode a) (toAttrs attrs) : toXML b
-
-instance ToAttrs PlayAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "loop"   _playLoop
-    , makeAttr "digits" _playDigits
-    ]
 
 {- Gather -}
 
@@ -849,121 +824,11 @@ instance ToAttrs GatherAttributes where
     , makeAttr "numDigits"   _gatherNumDigits
     ]
 
-{- Record -}
-
-instance ToXML a => ToXML (RecordF i a) where
-  toXML (RecordF attrs a) = makeElement "Record" () (toAttrs attrs) : toXML a
-
-instance ToAttrs RecordAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "action"             _recordAction
-    , makeAttr "method"             _recordMethod
-    , makeAttr "timeout"            _recordTimeout
-    , makeAttr "finishOnKey"        _recordFinishOnKey
-    , makeAttr "maxLength"          _recordMaxLength
-    , makeAttr "transcribe"         _recordTranscribe
-    , makeAttr "transcribeCallback" _recordTranscribeCallback
-    , makeAttr "playBeep"           _recordPlayBeep
-    ]
-
-{- Sms -}
-
-instance ToXML a => ToXML (MessageF i a) where
-  toXML (MessageF a attrs b) = makeElement "Message" (toSomeNode a) (toAttrs attrs) : toXML b
-
-instance ToAttrs MessageAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "to"             _messageTo
-    , makeAttr "from"           _messageFrom
-    , makeAttr "action"         _messageAction
-    , makeAttr "method"         _messageMethod
-    , makeAttr "statusCallback" _messageStatusCallback
-    ]
-
-instance ToXML a => ToXML (SmsF i a) where
-  toXML (SmsF a attrs b) = makeElement "Sms" (toSomeNode a) (toAttrs attrs) : toXML b
-
-instance ToAttrs SmsAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "to"             _smsTo
-    , makeAttr "from"           _smsFrom
-    , makeAttr "action"         _smsAction
-    , makeAttr "method"         _smsMethod
-    , makeAttr "statusCallback" _smsStatusCallback
-    ]
-
 {- Dial -}
 
 instance ToSomeNode (Either DialNoun String) where
   toSomeNode (Left  a) = SomeNode $ toElement a
   toSomeNode (Right a) = toSomeNode a
-
-instance ToXML a => ToXML (DialF i a) where
-  toXML (DialF a attrs b) = makeElement "Dial" (toSomeNode a) (toAttrs attrs) : toXML b
-
-instance ToAttrs DialAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "action"       _dialAction
-    , makeAttr "method"       _dialMethod
-    , makeAttr "timeout"      _dialTimeout
-    , makeAttr "hangupOnStar" _dialHangupOnStar
-    , makeAttr "timeLimit"    _dialTimeLimit
-    , makeAttr "callerId"     _dialCallerId
-    , makeAttr "record"       _dialRecord'
-    ]
-
-{- Enqueue -}
-
-instance ToXML a => ToXML (EnqueueF i a) where
-  toXML (EnqueueF a attrs b) = makeElement "Enqueue" (toSomeNode a) (toAttrs attrs) : toXML b
-
-instance ToAttrs EnqueueAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "action"        _enqueueAction
-    , makeAttr "method"        _enqueueMethod
-    , makeAttr "waitUrl"       _enqueueWaitURL
-    , makeAttr "waitUrlMethod" _enqueueWaitMethod
-    ]
-
-{- Leave -}
-
-instance ToXML (LeaveF i a) where
-  toXML LeaveF = [makeElement "Leave" () []]
-
-{- Hangup -}
-
-instance ToXML (HangupF i a) where
-  toXML HangupF = [makeElement "Hangup" () []]
-
-{- Redirect -}
-
-instance ToXML (RedirectF i a) where
-  toXML (RedirectF a attrs) = [makeElement "Redirect" (toSomeNode a) $ toAttrs attrs]
-
-instance ToAttrs RedirectAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "method" _redirectMethod
-    ]
-
-{- Reject -}
-
-instance ToXML (RejectF i a) where
-  toXML (RejectF attrs) = [makeElement "Reject" () $ toAttrs attrs]
-
-instance ToAttrs RejectAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "reason" _rejectReason
-    ]
-
-{- Pause -}
-
-instance ToXML a => ToXML (PauseF i a) where
-  toXML (PauseF attrs a) = makeElement "Pause" () (toAttrs attrs) : toXML a
-
-instance ToAttrs PauseAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "length" _pauseDuration
-    ]
 
 {- End -}
 

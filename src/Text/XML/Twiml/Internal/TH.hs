@@ -38,10 +38,12 @@ data TwimlSpec = TwimlSpec
   { twimlName  :: String
   , parameters :: [Parameters]
   , recursive  :: Bool
+  , toXMLForGADT :: Bool
+  , toAttrsForAttributes :: Bool
   } deriving Show
 
 instance Default TwimlSpec where
-  def = TwimlSpec def def False
+  def = TwimlSpec def def False False False
 
 data Parameters
   = Required { getRequiredTypes :: [String] }
@@ -99,11 +101,44 @@ specToAttributesName :: TwimlSpec -> Name
 specToAttributesName TwimlSpec{..} = mkName $ twimlName ++ "Attributes"
 
 specToGADTArity :: TwimlSpec -> Int
-specToGADTArity twimlSpec@(TwimlSpec{..}) = length (getAllRequired parameters) + (if hasAttributes twimlSpec then 1 else 0) + (if recursive then 1 else 0)
+specToGADTArity spec@(TwimlSpec{..}) = length (getAllRequired parameters) + (if hasAttributes spec then 1 else 0) + (if recursive then 1 else 0)
+
+specToGADTNames :: TwimlSpec -> [Name]
+specToGADTNames spec@(TwimlSpec{..}) =
+  take (specToGADTArity spec) $ map (mkName . return) ['a'..'z']
+
+specToGADTAttributesName :: TwimlSpec -> Maybe Name
+specToGADTAttributesName spec@(TwimlSpec{..}) = go $ zip parameters $ specToGADTNames spec where
+  go [] = Nothing
+  go ((Required _, _):rest) = go rest
+  go ((Attributes _, name):_) = Just name
+
+specToGADTChildName :: TwimlSpec -> Maybe Name
+specToGADTChildName spec@(TwimlSpec{..}) = go $ zip parameters $ specToGADTNames spec where
+  go [] = Nothing
+  go ((Required _, name):_) = Just name
+  go ((Attributes _, name):rest) = go rest
 
 specToGADTPat :: TwimlSpec -> Pat
-specToGADTPat twimlSpec@(TwimlSpec{..}) = ConP (specToGADTName twimlSpec) varPs where
-  varPs = take (specToGADTArity twimlSpec) $ map (VarP . mkName . return) ['a'..'z']
+specToGADTPat spec@(TwimlSpec{..}) = ConP (specToGADTName spec) varPs where
+  varPs = map VarP $ specToGADTNames spec
+
+specToAttributesListE :: TwimlSpec -> Exp
+specToAttributesListE spec@(TwimlSpec{..}) = ListE . map go $ getAllAttributes parameters where
+  go (Attribute{..}) =
+    let name = LitE . StringL $ maybe attributeName id overrideName
+    in  AppE (AppE (VarE $ mkName "makeAttr") name) (VarE . mkName $ makeAttr attributeName)
+  attrPrefix = '_' : map toLower twimlName
+  makeAttr (a:ttrName) = attrPrefix ++ (toUpper a):ttrName
+  makeAttr _ = error "Unsupported"
+
+specToToXML :: TwimlSpec -> Exp
+specToToXML spec@(TwimlSpec{..}) = UInfixE (AppE (AppE (AppE (VarE $ mkName "makeElement") (LitE $ StringL twimlName)) (AppE (VarE $ mkName "toSomeNode") child)) attributesE) (ConE $ mkName ":") next where
+  child = maybe (TupE []) VarE $ specToGADTChildName spec
+  attributesE = maybe (ListE []) (AppE (VarE $ mkName "toAttrs") . VarE) $ specToGADTAttributesName spec
+  next = if recursive
+    then AppE (VarE $ mkName "toXML") (VarE . last $ specToGADTNames spec)
+    else ListE []
 
 specToStrictTypes :: TwimlSpec -> [StrictType]
 specToStrictTypes spec@(TwimlSpec{..}) = go parameters ++ (if recursive then [(NotStrict, VarT $ mkName "a")] else []) where
@@ -133,9 +168,11 @@ parseTwimlSpec :: Parsec String () TwimlSpec
 parseTwimlSpec = do
   twimlName  <- parseTwimlName
   parameters <- parseParameters
-  recursive  <- option False parseRecursive
+  recursive  <- option False $ try parseRecursive
+  toXMLForGADT <- option False parseToXMLForGADT
+  toAttrsForAttributes <- option False parseToAttrsForAttributes
   eof
-  return $ TwimlSpec twimlName parameters recursive
+  return $ TwimlSpec twimlName parameters recursive toXMLForGADT toAttrsForAttributes
 
 parseTwimlName :: Parsec String () String
 parseTwimlName = many1 letter <* newline
@@ -170,6 +207,14 @@ parseRecursive :: Parsec String () Bool
 parseRecursive =
   const True <$> string "  recursive" <* newline
 
+parseToXMLForGADT :: Parsec String () Bool
+parseToXMLForGADT =
+  const True <$> string "  toXMLForGADT" <* newline
+
+parseToAttrsForAttributes :: Parsec String () Bool
+parseToAttrsForAttributes =
+  const True <$> string "  toAttrsForAttributes" <* newline
+
 runTwimlSpecParser :: String -> Either ParseError TwimlSpec
 runTwimlSpecParser = runParser parseTwimlSpec () ""
 
@@ -200,7 +245,7 @@ twimlSpecStringToData str = case runTwimlSpecParser str of
 --   FooF :: a -> FooF '[Foo] a
 -- @@
 twimlSpecToData :: TwimlSpec -> DecsQ
-twimlSpecToData spec@(TwimlSpec{..}) = pure
+twimlSpecToData spec@(TwimlSpec{..}) = pure $
     [ emptyDataDecl
     , gadt
     , deriveDataForGADT
@@ -216,6 +261,8 @@ twimlSpecToData spec@(TwimlSpec{..}) = pure
     , attributes
     , instanceDefaultForAttributes
     ]
+    ++ (if toXMLForGADT then [instanceToXMLForGADT] else [])
+    ++ (if toAttrsForAttributes then [instanceToAttrsForAttributes] else [])
   where
     conName = mkName twimlName
 
@@ -322,7 +369,8 @@ twimlSpecToData spec@(TwimlSpec{..}) = pure
     deriveShowForGADT = StandaloneDerivD [AppT showC a] $ AppT showC (AppT (AppT (ConT conNameF) i) a)
 
     -- | @instance ToXML a => ToXML (FooF i a) where toXML (FooF a ...) = makeElement "Foo" a ...@
-    instanceToXMLForGADT = InstanceD [AppT toXMLC a] (AppT toXMLC (AppT (AppT (ConT conNameF) i) a)) [FunD (mkName "toXML") [Clause [specToGADTPat spec] (NormalB . rnfI $ specToGADTArity spec) []]]
+    instanceToXMLForGADT = InstanceD (if recursive then [AppT toXMLC a] else []) (AppT toXMLC (AppT (AppT (ConT conNameF) i) a))
+      [FunD (mkName "toXML") [Clause [specToGADTPat spec] (NormalB $ specToToXML spec) []]]
 
     attrPrefix = '_' : map toLower twimlName
     makeAttr (a:ttrName) = attrPrefix ++ (toUpper a):ttrName
@@ -336,3 +384,5 @@ twimlSpecToData spec@(TwimlSpec{..}) = pure
 
     -- | @instance Default FooAttributes where def = FooAttributes def ...@
     instanceDefaultForAttributes = InstanceD [] (AppT defaultC $ ConT attributesName) [ValD (VarP $ mkName "def") (NormalB $ attributesToDefExp (ConE attributesName) parameters) []]
+
+    instanceToAttrsForAttributes = InstanceD [] (AppT toAttrsC $ ConT attributesName) [ValD (VarP $ mkName "toAttrs") (NormalB (AppE (AppE (VarE $ mkName "flip") (VarE $ mkName "makeAttrs")) (specToAttributesListE spec))) []]

@@ -36,14 +36,21 @@ module Text.XML.Twiml.Internal
   , type (++)
     -- * XML
     -- $xml
+  , SomeNode(..)
+  , ToSomeNode(..)
   , ToXML(..)
   , ToElement(..)
   , ToAttrs(..)
   , ToAttrValue(..)
+  , makeAttr
+  , makeAttr'
+  , makeAttrs
+  , makeElement
   ) where
 
 import Control.DeepSeq (NFData(..))
 import Data.Data
+import Data.Maybe (mapMaybe)
 import GHC.Generics (Generic)
 import Text.XML.Light
 
@@ -263,6 +270,27 @@ rightIdentity (Succ xs) = case rightIdentity xs of Refl -> Refl
 -- $xml The classes here simplify working with the
 -- <https://hackage.haskell.org/package/xml xml> package.
 
+data SomeNode = forall n. Node n => SomeNode n
+
+class ToSomeNode a where
+  toSomeNode :: a -> SomeNode
+
+instance ToSomeNode a => ToSomeNode (Maybe a) where
+  toSomeNode (Just a) = toSomeNode a
+  toSomeNode _ = SomeNode ()
+
+instance Node SomeNode where
+  node qName (SomeNode n) = node qName n
+
+instance ToSomeNode String where
+  toSomeNode str = SomeNode . Text $ CData CDataText str Nothing
+
+instance ToSomeNode () where
+  toSomeNode = SomeNode
+
+instance ToSomeNode n => Node n where
+  node qName n = node qName (toSomeNode n)
+
 class ToXML a where
   toXML :: a -> [Element]
 
@@ -287,3 +315,15 @@ instance ToAttrValue Bool where
 
 instance ToAttrValue String where
   toAttrValue = id
+
+makeAttr :: ToAttrValue b => String -> (a -> Maybe b) -> a -> Maybe Attr
+makeAttr str f a = Attr (unqual str) . toAttrValue <$> f a
+
+makeAttr' :: String -> (a -> Maybe b) -> (b -> String) -> a -> Maybe Attr
+makeAttr' str f g a = Attr (unqual str) . g <$> f a
+
+makeAttrs :: a -> [a -> Maybe Attr] -> [Attr]
+makeAttrs a = mapMaybe ($ a)
+
+makeElement :: Node t => String -> t -> [Attr] -> Element
+makeElement str c attrs = add_attrs attrs $ unode str c

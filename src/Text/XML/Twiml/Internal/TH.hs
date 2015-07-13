@@ -225,8 +225,8 @@ trim :: String -> String
 trim = trimTail . dropWhile isSpace
 
 trimTail :: String -> String
-trimTail "" = ""
-trimTail s = take (lastNonBlank s) s
+trimTail "" = "\n"
+trimTail s = take (lastNonBlank s) s ++ "\n"
   where lastNonBlank = (+1) . fst . foldl acc (0, 0)
         acc (l, n) c | isSpace c = (l, n + 1)
                      | otherwise = (n, n + 1)

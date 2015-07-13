@@ -16,6 +16,7 @@
 {-#LANGUAGE OverloadedStrings #-}
 {-#LANGUAGE OverlappingInstances #-}
 {-#LANGUAGE PolyKinds #-}
+{-#LANGUAGE QuasiQuotes #-}
 {-#LANGUAGE RankNTypes #-}
 {-#LANGUAGE ScopedTypeVariables #-}
 {-#LANGUAGE StandaloneDeriving #-}
@@ -336,64 +337,74 @@ instance ToAttrValue LangAlice where
 type MURL = Maybe URL
 type Digits = [Digit]
 
-twimlSpecStringToData "Say\n\
-\  required\n\
-\    String\n\
-\  attributes\n\
-\    voice, Voice\n\
-\    loop, Natural\n\
-\  recursive\n\
-\  toXMLForGADT\n"
+twimlSpecStringToData [s|
+Say
+  required
+    String
+  attributes
+    voice, Voice
+    loop, Natural
+  recursive
+  toXMLForGADT
+|]
 
-twimlSpecStringToData "Play\n\
-\  required\n\
-\    MURL\n\
-\  attributes\n\
-\    loop, Natural\n\
-\    digits, Digits\n\
-\  recursive\n\
-\  toXMLForGADT\n\
-\  toAttrsForAttributes\n"
+twimlSpecStringToData [s|
+Play
+  required
+    MURL
+  attributes
+    loop, Natural
+    digits, Digits
+  recursive
+  toXMLForGADT
+  toAttrsForAttributes
+|]
 
-twimlSpecStringToData "Record\n\
-\  attributes\n\
-\    action, URL\n\
-\    method, Method\n\
-\    timeout, Natural\n\
-\    finishOnKey, Key\n\
-\    maxLength, Natural\n\
-\    transcribe, Bool\n\
-\    transcribeCallback, URL\n\
-\    playBeep, Bool\n\
-\  recursive\n\
-\  toXMLForGADT\n\
-\  toAttrsForAttributes\n"
+twimlSpecStringToData [s|
+Record
+  attributes
+    action, URL
+    method, Method
+    timeout, Natural
+    finishOnKey, Key
+    maxLength, Natural
+    transcribe, Bool
+    transcribeCallback, URL
+    playBeep, Bool
+  recursive
+  toXMLForGADT
+  toAttrsForAttributes
+|]
 
-twimlSpecStringToData "Message\n\
-\  required\n\
-\    String\n\
-\  attributes\n\
-\    to, String\n\
-\    from, String\n\
-\    action, URL\n\
-\    method, Method\n\
-\    statusCallback, URL\n\
-\  recursive\n\
-\  toXMLForGADT\n\
-\  toAttrsForAttributes\n"
+twimlSpecStringToData [s|
+Message
+  required
+    String
+  attributes
+    to, String
+    from, String
+    action, URL
+    method, Method
+    statusCallback, URL
+  recursive
+  toXMLForGADT
+  toAttrsForAttributes
+|]
 
-twimlSpecStringToData "Sms\n\
-\  required\n\
-\    String\n\
-\  attributes\n\
-\    to, String\n\
-\    from, String\n\
-\    action, URL\n\
-\    method, Method\n\
-\    statusCallback, URL\n\
-\  recursive\n\
-\  toXMLForGADT\n\
-\  toAttrsForAttributes\n"
+twimlSpecStringToData [s|
+Sms
+  required
+    String
+  attributes
+    to, String
+    from, String
+    action, URL
+    method, Method
+    statusCallback, URL
+  recursive
+  toXMLForGADT
+  toAttrsForAttributes
+|]
 
 {- Number -}
 
@@ -570,52 +581,64 @@ type EDS = Either DialNoun String
 instance Default EDS where
   def = Right def
 
-twimlSpecStringToData "Dial\n\
-\  required\n\
-\    EDS\n\
-\  attributes\n\
-\    action, URL\n\
-\    method, Method\n\
-\    timeout, Natural\n\
-\    hangupOnStar, Bool\n\
-\    timeLimit, Natural\n\
-\    callerId, String\n\
-\    record', Bool, record\n\
-\  recursive\n\
-\  toXMLForGADT\n\
-\  toAttrsForAttributes\n"
+twimlSpecStringToData [s|
+Dial
+  required
+    EDS
+  attributes
+    action, URL
+    method, Method
+    timeout, Natural
+    hangupOnStar, Bool
+    timeLimit, Natural
+    callerId, String
+    record', Bool, record
+  recursive
+  toXMLForGADT
+  toAttrsForAttributes
+|]
 
-twimlSpecStringToData "Enqueue\n\
-\  required\n\
-\    String\n\
-\  attributes\n\
-\    action, URL\n\
-\    method, Method\n\
-\    waitURL, URL, waitUrl\n\
-\    waitMethod, Method, waitUrlMethod\n\
-\  recursive\n\
-\  toXMLForGADT\n\
-\  toAttrsForAttributes\n"
+twimlSpecStringToData [s|
+Enqueue
+  required
+    String
+  attributes
+    action, URL
+    method, Method
+    waitURL, URL, waitUrl
+    waitMethod, Method, waitUrlMethod
+  recursive
+  toXMLForGADT
+  toAttrsForAttributes
+|]
 
-twimlSpecStringToData "Leave\n\
-\  toXMLForGADT\n"
+twimlSpecStringToData [s|
+Leave
+  toXMLForGADT
+|]
 
-twimlSpecStringToData "Hangup\n\
-\  toXMLForGADT\n"
+twimlSpecStringToData [s|
+Hangup
+  toXMLForGADT
+|]
 
-twimlSpecStringToData "Redirect\n\
-\  required\n\
-\    URL\n\
-\  attributes\n\
-\    method, Method\n\
-\  toXMLForGADT\n\
-\  toAttrsForAttributes\n"
+twimlSpecStringToData [s|
+Redirect
+  required
+    URL
+  attributes
+    method, Method
+  toXMLForGADT
+  toAttrsForAttributes
+|]
 
-twimlSpecStringToData "Reject\n\
-\  attributes\n\
-\    reason, Reason\n\
-\  toXMLForGADT\n\
-\  toAttrsForAttributes\n"
+twimlSpecStringToData [s|
+Reject
+  attributes
+    reason, Reason
+  toXMLForGADT
+  toAttrsForAttributes
+|]
 
 -- | The reason attribute takes the values \"rejected\" and \"busy.\" This tells
 -- Twilio what message to play when rejecting a call. Selecting \"busy\" will
@@ -629,14 +652,18 @@ instance ToAttrValue Reason where
   toAttrValue Rejected = "rejected"
   toAttrValue Busy     = "busy"
 
-twimlSpecStringToData "Pause\n\
-\  attributes\n\
-\    duration, Natural, length\n\
-\  recursive\n\
-\  toXMLForGADT\n\
-\  toAttrsForAttributes\n"
+twimlSpecStringToData [s|
+Pause
+  attributes
+    duration, Natural, length
+  recursive
+  toXMLForGADT
+  toAttrsForAttributes
+|]
 
-twimlSpecStringToData "End\n"
+twimlSpecStringToData [s|
+End
+|]
 
 {- TwiML -}
 

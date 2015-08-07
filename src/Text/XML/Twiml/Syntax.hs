@@ -4,7 +4,36 @@
 {-#LANGUAGE PolyKinds #-}
 {-#LANGUAGE RankNTypes #-}
 {-#LANGUAGE TypeOperators #-}
-
+-------------------------------------------------------------------------------
+-- |
+-- Module      :  Text.XML.Twiml.Syntax
+-- Copyright   :  (C) 2014-15 Mark Andrus Roberts
+-- License     :  BSD-style (see the file LICENSE)
+-- Maintainer  :  Mark Andrus Roberts <markandrusroberts@gmail.com>
+-- Stability   :  provisional
+--
+-- This module, in combination with the @RebindableSyntax@ and @RecordWilCards@
+-- extensions, allows you to write TwiML using do-notation. For example,
+--
+-- @
+-- {-\# LANGUAGE RebindableSyntax \#-}
+-- {-\# LANGUAGE RecordWildCards \#-}
+--
+-- import Prelude
+-- import Text.XML.Twiml
+-- import qualified Text.XML.Twiml.Syntax as Twiml
+--
+-- example :: 'VoiceTwiml'
+-- example =
+--   'response' $ do
+--     'say' "Hello World" def
+--     'end'
+--   where Twiml.'Syntax'{..} = def
+-- @
+--
+-- This pattern is due to a
+-- <https://mail.haskell.org/pipermail/haskell-cafe/2015-June/120222.html suggestion from Adam Bergmark on Haskell-Cafe>.
+-------------------------------------------------------------------------------
 module Text.XML.Twiml.Syntax where
 
 import Data.Default

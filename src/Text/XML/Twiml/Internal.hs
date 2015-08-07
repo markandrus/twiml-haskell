@@ -1,26 +1,37 @@
-{-#LANGUAGE DataKinds #-}
-{-#LANGUAGE DeriveAnyClass #-}
-{-#LANGUAGE DeriveDataTypeable #-}
-{-#LANGUAGE DeriveFunctor #-}
-{-#LANGUAGE DeriveGeneric #-}
-{-#LANGUAGE FlexibleInstances #-}
-{-#LANGUAGE GADTs #-}
-{-#LANGUAGE KindSignatures #-}
-{-#LANGUAGE MultiParamTypeClasses #-}
-{-#LANGUAGE OverlappingInstances #-}
-{-#LANGUAGE PolyKinds #-}
-{-#LANGUAGE RankNTypes #-}
-{-#LANGUAGE ScopedTypeVariables #-}
-{-#LANGUAGE StandaloneDeriving #-}
-{-#LANGUAGE TypeFamilies #-}
-{-#LANGUAGE TypeOperators #-}
-{-#LANGUAGE UndecidableInstances #-}
-
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverlappingInstances #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
+-------------------------------------------------------------------------------
+-- |
+-- Module      :  Text.XML.Twiml.Internal
+-- Copyright   :  (C) 2014-15 Mark Andrus Roberts
+-- License     :  BSD-style (see the file LICENSE)
+-- Maintainer  :  Mark Andrus Roberts <markandrusroberts@gmail.com>
+-- Stability   :  provisional
+-------------------------------------------------------------------------------
 module Text.XML.Twiml.Internal
-  ( -- * Datatypes à la carte
+  ( -- * Data types à la carte
     -- $datatypes
     (:+:)(..)
   , (:<:)(..)
+    -- * Elem (∉)
+  , Elem
+  , type (∉)
     -- * Indexed
     -- $indexed
   , Functor1(..)
@@ -54,7 +65,7 @@ import Data.Maybe (mapMaybe)
 import GHC.Generics (Generic)
 import Text.XML.Light
 
-{- Datatypes à la carte -}
+{- Data types à la carte -}
 
 -- $datatypes The @(':+:')@ data type and @(':<:')@ type class come from
 -- Swierstra's
@@ -84,6 +95,23 @@ instance (Functor f, Functor g, Functor h, f :<: g) => f :<: (h :+: g) where
   inj = InR . inj
   prj (InR g) = prj g
   prj _ = Nothing
+
+{- Elem -}
+
+-- $elem 'TwimlF uses @∉@ in order to enforce nesting rules.
+
+-- | 'Elem' is like a promoted @elem@: it allows us to check whether a type
+-- constructor @t@ is present in a list of type constructors @ts@.
+type family Elem (t :: k) (ts :: [k]) :: Bool where
+  Elem t '[] = 'False
+  Elem t (t ': ts) = 'True
+  Elem t (u ': ts) = Elem t ts
+
+{- @(∉)@ -}
+
+-- | @t ∉ ts@ is shorthand for asserting that a type constructor @t@ is not
+-- present in a list of types constructors @ts@.
+type t ∉ ts = Elem t ts ~ 'False
 
 {- Indexed -}
 

@@ -1,30 +1,30 @@
-{-#LANGUAGE ConstraintKinds #-}
-{-#LANGUAGE DataKinds #-}
-{-#LANGUAGE DeriveAnyClass #-}
-{-#LANGUAGE DeriveDataTypeable #-}
-{-#LANGUAGE DeriveFunctor #-}
-{-#LANGUAGE DeriveGeneric #-}
-{-#LANGUAGE EmptyDataDecls #-}
-{-#LANGUAGE FlexibleContexts #-}
-{-#LANGUAGE FlexibleInstances #-}
-{-#LANGUAGE FunctionalDependencies #-}
-{-#LANGUAGE GADTs #-}
-{-#LANGUAGE KindSignatures #-}
-{-#LANGUAGE LambdaCase #-}
-{-#LANGUAGE MultiParamTypeClasses #-}
-{-#LANGUAGE NamedFieldPuns #-}
-{-#LANGUAGE OverloadedStrings #-}
-{-#LANGUAGE OverlappingInstances #-}
-{-#LANGUAGE PolyKinds #-}
-{-#LANGUAGE QuasiQuotes #-}
-{-#LANGUAGE RankNTypes #-}
-{-#LANGUAGE ScopedTypeVariables #-}
-{-#LANGUAGE StandaloneDeriving #-}
-{-#LANGUAGE TemplateHaskell #-}
-{-#LANGUAGE TypeFamilies #-}
-{-#LANGUAGE TypeOperators #-}
-{-#LANGUAGE UndecidableInstances #-}
-
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverlappingInstances #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
+-------------------------------------------------------------------------------
+-- |
+-- Module      :  Text.XML.Twiml.Types
+-- Copyright   :  (C) 2014-15 Mark Andrus Roberts
+-- License     :  BSD-style (see the file LICENSE)
+-- Maintainer  :  Mark Andrus Roberts <markandrusroberts@gmail.com>
+-- Stability   :  provisional
+-------------------------------------------------------------------------------
 module Text.XML.Twiml.Types
   ( Digit(..)
   , Key(..)
@@ -32,41 +32,9 @@ module Text.XML.Twiml.Types
   , Natural
   , URL
   , parseURL
-    -- * TwiMl
-  , VoiceTwiml(..)
-  , VoiceTwimlF(..)
-  , MessagingTwiml(..)
-  , MessagingTwimlF(..)
-    -- ** Verbs
-    -- *** Say
-  , Say
-  , SayF(..)
-  , SayAttributes(..)
   , Voice(..)
   , Lang(..)
   , LangAlice(..)
-    -- *** Play
-  , Play
-  , PlayF(..)
-  , PlayAttributes(..)
-    -- *** Gather
-  , Gather
-  , Nest
-  , In
-  , GatherF(..)
-  , GatherAttributes(..)
-    -- *** Record
-  , Record
-  , RecordF(..)
-  , RecordAttributes(..)
-    -- *** Sms
-  , Sms
-  , SmsF(..)
-  , SmsAttributes(..)
-    -- *** Dial
-  , Dial
-  , DialF(..)
-  , DialAttributes(..)
   , DialNoun(..)
     -- **** Number
   , NumberAttributes(..)
@@ -75,85 +43,21 @@ module Text.XML.Twiml.Types
   , Transport(..)
     -- **** Client
   , ClientAttributes(..)
-    -- *** Conference 
+    -- **** Conference 
   , ConferenceAttributes(..)
   , ConferenceBeep(..)
     -- **** Queue
   , QueueAttributes(..)
-    -- *** Enqueue
-  , Enqueue
-  , EnqueueF(..)
-  , EnqueueAttributes(..)
-    -- *** Leave
-  , Leave
-  , LeaveF(..)
-    -- *** Hangup
-  , Hangup
-  , HangupF(..)
-    -- *** Redirect
-  , Redirect
-  , RedirectF(..)
-  , RedirectAttributes(..)
-    -- *** Reject
-  , Reject
-  , RejectF(..)
-  , RejectAttributes(..)
   , Reason(..)
-    -- *** Pause
-  , Pause
-  , PauseF(..)
-  , PauseAttributes(..)
-    -- *** End
-  , End
-  , EndF(..)
-    -- * Lenses
-  , HasAction(..)
-  , HasBeep(..)
-  , HasCallerId(..)
-  , HasDigits(..)
-  , HasDuration(..)
-  , HasEndOnExit(..)
-  , HasFinishOnKey(..)
-  , HasFrom(..)
-  , HasHangupOnStar(..)
-  , HasHeaders(..)
-  , HasLoop(..)
-  , HasMaxLength(..)
-  , HasMaxParticipants(..)
-  , HasMethod(..)
-  , HasMuted(..)
-  , HasNumDigits(..)
-  , HasPassword(..)
-  , HasPlayBeep(..)
-  , HasReason(..)
-  , HasRecord'(..)
-  , HasSendDigits(..)
-  , HasStartOnEnter(..)
-  , HasStatusCallback(..)
-  , HasTimeout(..)
-  , HasTimeLimit(..)
-  , HasTo(..)
-  , HasTranscribe(..)
-  , HasTranscribeCallback(..)
-  , HasTransport(..)
-  , HasURL(..)
-  , HasVoice(..)
-  , HasWaitMethod(..)
-  , HasWaitURL(..)
   ) where
 
 import Control.DeepSeq (NFData(..))
-import Control.Lens hiding (Identity, to)
-import Control.Monad
 import Data.Data
 import Data.Default
-import Data.Void
 import GHC.Generics (Generic)
 import Network.URI (URI(..), parseURIReference)
-import Text.XML.Light
 
 import Text.XML.Twiml.Internal
-import Text.XML.Twiml.Internal.TH
 
 -- | The ‘digits’ attribute lets you play DTMF tones during a call. See
 -- <https://www.twilio.com/docs/api/twiml/play#attributes-digits>.
@@ -334,78 +238,6 @@ instance ToAttrValue LangAlice where
   toAttrValue ZhHK = "zh-HK"
   toAttrValue ZhTW = "zh-TW"
 
-type MURL = Maybe URL
-type Digits = [Digit]
-
-twimlSpecStringToData [s|
-Say
-  required
-    String
-  attributes
-    voice, Voice
-    loop, Natural
-  recursive
-  toXMLForGADT
-|]
-
-twimlSpecStringToData [s|
-Play
-  required
-    MURL
-  attributes
-    loop, Natural
-    digits, Digits
-  recursive
-  toXMLForGADT
-  toAttrsForAttributes
-|]
-
-twimlSpecStringToData [s|
-Record
-  attributes
-    action, URL
-    method, Method
-    timeout, Natural
-    finishOnKey, Key
-    maxLength, Natural
-    transcribe, Bool
-    transcribeCallback, URL
-    playBeep, Bool
-  recursive
-  toXMLForGADT
-  toAttrsForAttributes
-|]
-
-twimlSpecStringToData [s|
-Message
-  required
-    String
-  attributes
-    to, String
-    from, String
-    action, URL
-    method, Method
-    statusCallback, URL
-  recursive
-  toXMLForGADT
-  toAttrsForAttributes
-|]
-
-twimlSpecStringToData [s|
-Sms
-  required
-    String
-  attributes
-    to, String
-    from, String
-    action, URL
-    method, Method
-    statusCallback, URL
-  recursive
-  toXMLForGADT
-  toAttrsForAttributes
-|]
-
 {- Number -}
 
 -- | See <https://www.twilio.com/docs/api/twiml/number#attributes>.
@@ -581,65 +413,6 @@ type EDS = Either DialNoun String
 instance Default EDS where
   def = Right def
 
-twimlSpecStringToData [s|
-Dial
-  required
-    EDS
-  attributes
-    action, URL
-    method, Method
-    timeout, Natural
-    hangupOnStar, Bool
-    timeLimit, Natural
-    callerId, String
-    record', Bool, record
-  recursive
-  toXMLForGADT
-  toAttrsForAttributes
-|]
-
-twimlSpecStringToData [s|
-Enqueue
-  required
-    String
-  attributes
-    action, URL
-    method, Method
-    waitURL, URL, waitUrl
-    waitMethod, Method, waitUrlMethod
-  recursive
-  toXMLForGADT
-  toAttrsForAttributes
-|]
-
-twimlSpecStringToData [s|
-Leave
-  toXMLForGADT
-|]
-
-twimlSpecStringToData [s|
-Hangup
-  toXMLForGADT
-|]
-
-twimlSpecStringToData [s|
-Redirect
-  required
-    URL
-  attributes
-    method, Method
-  toXMLForGADT
-  toAttrsForAttributes
-|]
-
-twimlSpecStringToData [s|
-Reject
-  attributes
-    reason, Reason
-  toXMLForGADT
-  toAttrsForAttributes
-|]
-
 -- | The reason attribute takes the values \"rejected\" and \"busy.\" This tells
 -- Twilio what message to play when rejecting a call. Selecting \"busy\" will
 -- play a busy signal to the caller, while selecting \"rejected\" will play a
@@ -652,248 +425,39 @@ instance ToAttrValue Reason where
   toAttrValue Rejected = "rejected"
   toAttrValue Busy     = "busy"
 
-twimlSpecStringToData [s|
-Pause
-  attributes
-    duration, Natural, length
-  recursive
-  toXMLForGADT
-  toAttrsForAttributes
-|]
-
-twimlSpecStringToData [s|
-End
-|]
-
 {- TwiML -}
-
-data VoiceTwiml = forall i. VoiceTwiml (IxFree VoiceTwimlF i Void)
-
-instance ToElement VoiceTwiml where
-  toElement (VoiceTwiml twiml) = unode "Response" $ toXML twiml
-
-instance Show VoiceTwiml where
-  show = showTwiml
-
-showTwiml :: VoiceTwiml -> String
-showTwiml twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" ++ ppElement (toElement twiml) ++ "\n"
-
-newtype VoiceTwimlF i a = VoiceTwimlF
-  { getVoiceTwimlF ::
-    ( SayF      i :+:
-      PlayF     i :+:
-      GatherF   i :+:
-      SmsF      i :+: -- Shared between Voice and Messaging TwiML
-      DialF     i :+:
-      EnqueueF  i :+:
-      LeaveF    i :+:
-      HangupF   i :+:
-      RecordF   i :+:
-      RedirectF i :+: -- Shared between Voice and Messaging TwiML
-      RejectF   i :+:
-      PauseF    i :+:
-      EndF      i ) a -- Shared between Voice and Messaging TwiML
-  } deriving (Functor, Generic, Show, Typeable)
-
-instance (f i :<: ( SayF      i :+:
-                    PlayF     i :+:
-                    GatherF   i :+:
-                    SmsF      i :+:
-                    DialF     i :+:
-                    EnqueueF  i :+:
-                    LeaveF    i :+:
-                    HangupF   i :+:
-                    RecordF   i :+:
-                    RedirectF i :+:
-                    RejectF   i :+:
-                    PauseF    i :+:
-                    EndF      i )
-         ) => f i :<: VoiceTwimlF i where
-  inj = VoiceTwimlF . inj
-  prj = prj . getVoiceTwimlF
-
-instance Functor1 VoiceTwimlF where
-  fmap1 = fmap
-
-instance Show1 VoiceTwimlF where
-  show1 = show
-
-instance ToXML a => ToXML (VoiceTwimlF i a) where
-  toXML = toXML . getVoiceTwimlF
-
-instance ToXML (IxFree VoiceTwimlF i Void) where
-  toXML (IxFree f) = toXML f
-  toXML _ = error "Impossible"
-
-data MessagingTwiml = forall i. MessagingTwiml (IxFree MessagingTwimlF i Void)
-
-instance ToElement MessagingTwiml where
-  toElement (MessagingTwiml twiml) = unode "Response" $ toXML twiml
-
-instance Show MessagingTwiml where
-  show = showMessagingTwiml
-
-showMessagingTwiml :: MessagingTwiml -> String
-showMessagingTwiml twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" ++ ppElement (toElement twiml) ++ "\n"
-
-newtype MessagingTwimlF i a = MessagingTwimlF
-  { getMessagingTwimlF ::
-    ( MessageF  i :+:
-      RedirectF i :+: -- Shared between Voice and Messaging TwiML
-      SmsF      i :+: -- Shared between Voice and Messaging TwiML
-      EndF      i ) a -- Shared between Voice and Messaging TwiML
-  } deriving (Functor, Generic, Show, Typeable)
-
-instance (f i :<: ( MessageF  i :+:
-                    RedirectF i :+:
-                    SmsF      i :+:
-                    EndF      i )
-         ) => f i :<: MessagingTwimlF i where
-  inj = MessagingTwimlF . inj
-  prj = prj . getMessagingTwimlF
-
-instance Functor1 MessagingTwimlF where
-  fmap1 = fmap
-
-instance Show1 MessagingTwimlF where
-  show1 = show
-
-instance ToXML a => ToXML (MessagingTwimlF i a) where
-  toXML = toXML . getMessagingTwimlF
-
-instance ToXML (IxFree MessagingTwimlF i Void) where
-  toXML (IxFree f) = toXML f
-  toXML _ = error "Impossible"
 
 {- Verbs -}
 
 {- Say -}
 
+{-
 instance ToAttrs SayAttributes where
   toAttrs = flip makeAttrs
     [ makeAttr  "voice"      _sayVoice
     , makeAttr  "loop"       _sayLoop
     , makeAttr' "language"  (_sayVoice >=> lang) (either toAttrValue toAttrValue)
     ]
+-}
 
 instance ToAttrValue Voice where
   toAttrValue (Man   _) = "man"
   toAttrValue (Woman _) = "woman"
   toAttrValue (Alice _) = "alice"
 
+{-
 lang :: Voice -> Maybe (Either Lang LangAlice)
 lang (Man   l) = Left  <$> l
 lang (Woman l) = Left  <$> l
 lang (Alice r) = Right <$> r
+-}
 
 {- Play -}
 
 {- Gather -}
-
-data Gather
-
-data In
-
-type family Nest a i b where
-  Nest i In Gather =
-    ( Record   ∉ i
-    , Gather   ∉ i
-    , Sms      ∉ i
-    , Dial     ∉ i
-    , Enqueue  ∉ i
-    , Leave    ∉ i
-    , Hangup   ∉ i
-    , Redirect ∉ i
-    , Reject   ∉ i
-    )
-
-data GatherF i a where
-  GatherF :: Nest i In Gather
-           => GatherAttributes
-           -> IxFree VoiceTwimlF i Void
-           -> a
-           -> GatherF '[Gather] a
-
-deriving instance Functor (GatherF i)
-
-instance Functor1 GatherF where
-  fmap1 = fmap
-
-deriving instance Show a => Show (GatherF i a)
-
-instance ToXML a => ToXML (GatherF i a) where
-  toXML (GatherF attrs a b) = makeElement "Gather" (toXML a) (toAttrs attrs) : toXML b
-
--- | See <https://www.twilio.com/docs/api/twiml/gather#attributes>.
-data GatherAttributes = GatherAttributes
-  { _gatherAction      :: Maybe URL
-  , _gatherMethod      :: Maybe Method
-  , _gatherTimeout     :: Maybe Natural
-  , _gatherFinishOnKey :: Maybe Key
-  , _gatherNumDigits   :: Maybe Natural
-  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance Default GatherAttributes where
-  def = GatherAttributes
-    { _gatherAction      = def
-    , _gatherMethod      = def
-    , _gatherTimeout     = def
-    , _gatherFinishOnKey = def
-    , _gatherNumDigits   = def
-    }
-
-instance ToAttrs GatherAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "action"      _gatherAction
-    , makeAttr "method"      _gatherMethod
-    , makeAttr "timeout"     _gatherTimeout
-    , makeAttr "finishOnKey" _gatherFinishOnKey
-    , makeAttr "numDigits"   _gatherNumDigits
-    ]
 
 {- Dial -}
 
 instance ToSomeNode (Either DialNoun String) where
   toSomeNode (Left  a) = SomeNode $ toElement a
   toSomeNode (Right a) = toSomeNode a
-
-{- End -}
-
-instance ToXML (EndF i a) where
-  toXML EndF = []
-
-{- Elem -}
-
--- $elem 'TwimlF uses @∉@ in order to enforce nesting rules.
-
--- | 'Elem' is like a promoted @elem@: it allows us to check whether a type
--- constructor @t@ is present in a list of type constructors @ts@.
-type family Elem (t :: k) (ts :: [k]) :: Bool where
-  Elem t '[] = 'False
-  Elem t (t ': ts) = 'True
-  Elem t (u ': ts) = Elem t ts
-
-{- @(∉)@ -}
-
--- | @t ∉ ts@ is shorthand for asserting that a type constructor @t@ is not
--- present in a list of types constructors @ts@.
-type t ∉ ts = Elem t ts ~ 'False
-
-{- Lenses -}
-
-makeLensesWith abbreviatedFields ''SayAttributes
-makeLensesWith abbreviatedFields ''PlayAttributes
-makeLensesWith abbreviatedFields ''GatherAttributes
-makeLensesWith abbreviatedFields ''RecordAttributes
-makeLensesWith abbreviatedFields ''SmsAttributes
-makeLensesWith abbreviatedFields ''DialAttributes
-makeLensesWith abbreviatedFields ''DialNoun
-makeLensesWith abbreviatedFields ''NumberAttributes
-makeLensesWith abbreviatedFields ''SipAttributes
-makeLensesWith abbreviatedFields ''ClientAttributes
-makeLensesWith abbreviatedFields ''ConferenceAttributes
-makeLensesWith abbreviatedFields ''QueueAttributes
-makeLensesWith abbreviatedFields ''EnqueueAttributes
-makeLensesWith abbreviatedFields ''RedirectAttributes
-makeLensesWith abbreviatedFields ''RejectAttributes
-makeLensesWith abbreviatedFields ''PauseAttributes

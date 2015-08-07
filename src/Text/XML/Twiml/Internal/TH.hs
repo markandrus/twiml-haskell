@@ -1,6 +1,29 @@
-{-#LANGUAGE NamedFieldPuns #-}
-{-#LANGUAGE RecordWildCards #-}
-
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
+-------------------------------------------------------------------------------
+-- |
+-- Module      :  Text.XML.Twiml.Internal.TH
+-- Copyright   :  (C) 2014-15 Mark Andrus Roberts
+-- License     :  BSD-style (see the file LICENSE)
+-- Maintainer  :  Mark Andrus Roberts <markandrusroberts@gmail.com>
+-- Stability   :  provisional
+--
+-- The code for defining TwiML verbs is highly-repetitive and follows a pattern.
+-- This module defines a little TwiML definition format and Template Haskell
+-- function for generating this code.
+--
+-- For example, data types 'Pause', 'PauseF', and 'PauseAttributes' can all be
+-- generated from the following definition:
+--
+-- @
+-- Pause
+--   attributes
+--     duration, Natural, length
+--   recursive
+--   toXMLForGADT
+--   toAttrsForAttributes
+-- @
+-------------------------------------------------------------------------------
 module Text.XML.Twiml.Internal.TH
   ( TwimlSpec(..)
   , example
@@ -296,7 +319,6 @@ twimlSpecToData spec@(TwimlSpec{..}) = pure $
 
     conNameF = mkName $ twimlName ++ "F"
     con = ForallC [] cxt'
-        -- $ NormalC conNameF [(NotStrict, ConT $ mkName "String"), (NotStrict, ConT $ attributesName), (NotStrict, a)]
         . NormalC conNameF $ specToStrictTypes spec
 
     -- | @data FooF i a where FooF :: a -> FooF '[Foo] a@

@@ -37,6 +37,7 @@ module Text.XML.Twiml.Internal.TH
 import Control.Monad
 import Data.Char
 import Data.Default
+import Data.Maybe
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
@@ -111,7 +112,7 @@ rnfI i = rnfNames . take i $ map (mkName . return) ['a'..'z']
 
 rnfNames :: [Name] -> Exp
 rnfNames [] = TupE []
-rnfNames (a:[]) = rnfName a
+rnfNames [a] = rnfName a
 rnfNames (a:as) = AppE (AppE (VarE $ mkName "seq") (rnfName a)) (rnfNames as)
 
 rnfName :: Name -> Exp
@@ -149,10 +150,10 @@ specToGADTPat spec@(TwimlSpec{..}) = ConP (specToGADTName spec) varPs where
 specToAttributesListE :: TwimlSpec -> Exp
 specToAttributesListE spec@(TwimlSpec{..}) = ListE . map go $ getAllAttributes parameters where
   go (Attribute{..}) =
-    let name = LitE . StringL $ maybe attributeName id overrideName
+    let name = LitE . StringL $ fromMaybe attributeName overrideName
     in  AppE (AppE (VarE $ mkName "makeAttr") name) (VarE . mkName $ makeAttr attributeName)
   attrPrefix = '_' : map toLower twimlName
-  makeAttr (a:ttrName) = attrPrefix ++ (toUpper a):ttrName
+  makeAttr (a:ttrName) = attrPrefix ++ toUpper a : ttrName
   makeAttr _ = error "Unsupported"
 
 specToToXML :: TwimlSpec -> Exp
@@ -164,14 +165,14 @@ specToToXML spec@(TwimlSpec{..}) = UInfixE (AppE (AppE (AppE (VarE $ mkName "mak
     else ListE []
 
 specToStrictTypes :: TwimlSpec -> [StrictType]
-specToStrictTypes spec@(TwimlSpec{..}) = go parameters ++ (if recursive then [(NotStrict, VarT $ mkName "a")] else []) where
+specToStrictTypes spec@(TwimlSpec{..}) = go parameters ++ [(NotStrict, VarT $ mkName "a") | recursive] where
   go [] = []
-  go ((Required  as):bs) = map stringToStrictType as ++ go bs
-  go ((Attributes _):bs) = (NotStrict, ConT $ specToAttributesName spec) : go bs
+  go (Required   as :bs) = map stringToStrictType as ++ go bs
+  go (Attributes _  :bs) = (NotStrict, ConT $ specToAttributesName spec) : go bs
   stringToStrictType a = (NotStrict, ConT $ mkName a)
 
 gadtToDefExp :: TwimlSpec -> [Parameters] -> Exp
-gadtToDefExp spec@(TwimlSpec{..}) = go (ConE $ specToGADTName spec) . foldr (+) (if recursive then 1 else 0) . map count where
+gadtToDefExp spec@(TwimlSpec{..}) = go (ConE $ specToGADTName spec) . foldr ((+) . count) (if recursive then 1 else 0) where
   go conE 0 = conE
   go conE n = go (AppE conE defE) (n-1)
   defE = VarE $ mkName "def"
@@ -284,8 +285,8 @@ twimlSpecToData spec@(TwimlSpec{..}) = pure $
     , attributes
     , instanceDefaultForAttributes
     ]
-    ++ (if toXMLForGADT then [instanceToXMLForGADT] else [])
-    ++ (if toAttrsForAttributes then [instanceToAttrsForAttributes] else [])
+    ++ [instanceToXMLForGADT | toXMLForGADT]
+    ++ [instanceToAttrsForAttributes | toAttrsForAttributes]
   where
     conName = mkName twimlName
 
@@ -391,11 +392,11 @@ twimlSpecToData spec@(TwimlSpec{..}) = pure $
     deriveShowForGADT = StandaloneDerivD [AppT showC a] $ AppT showC (AppT (AppT (ConT conNameF) i) a)
 
     -- | @instance ToXML a => ToXML (FooF i a) where toXML (FooF a ...) = makeElement "Foo" a ...@
-    instanceToXMLForGADT = InstanceD (if recursive then [AppT toXMLC a] else []) (AppT toXMLC (AppT (AppT (ConT conNameF) i) a))
+    instanceToXMLForGADT = InstanceD [AppT toXMLC a | recursive] (AppT toXMLC (AppT (AppT (ConT conNameF) i) a))
       [FunD (mkName "toXML") [Clause [specToGADTPat spec] (NormalB $ specToToXML spec) []]]
 
     attrPrefix = '_' : map toLower twimlName
-    makeAttr (a:ttrName) = attrPrefix ++ (toUpper a):ttrName
+    makeAttr (a:ttrName) = attrPrefix ++ toUpper a : ttrName
     makeAttr _ = error "Unsupported"
     attributesName = specToAttributesName spec
 

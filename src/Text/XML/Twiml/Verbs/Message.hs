@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.Message
@@ -10,9 +11,20 @@
 -- <https://www.twilio.com/docs/api/twiml/sms/message TwiML Reference for \<Message\>>.
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Message
-  ( Message
+  ( message
+  , Message
   , MessageF(..)
-  , MessageAttributes(..)
+  , MessageAttributes
+  , HasAction(..)
+  , HasMethod(..)
+  , HasFrom(..)
+  , HasStatusCallback(..)
+  , HasTo(..)
   ) where
 
+import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
+import Text.XML.Twiml.Lenses
+
+message :: IsTwimlLike f Message => String -> MessageAttributes -> TwimlLike f Message ()
+message a b = iliftF . inj $ MessageF a b ()

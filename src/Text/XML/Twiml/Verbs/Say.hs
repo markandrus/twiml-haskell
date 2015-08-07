@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.Say
@@ -10,9 +11,17 @@
 -- <https://www.twilio.com/docs/api/twiml/say TwiML Reference for \<Say\>>.
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Say
-  ( Say
+  ( say
+  , Say
   , SayF(..)
-  , SayAttributes(..)
+  , SayAttributes
+  , HasLoop(..)
+  , HasVoice(..)
   ) where
 
+import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
+import Text.XML.Twiml.Lenses
+
+say :: IsTwimlLike f Say => String -> SayAttributes -> TwimlLike f Say ()
+say a b = iliftF . inj $ SayF a b ()

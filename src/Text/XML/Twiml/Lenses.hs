@@ -14,7 +14,7 @@ module Text.XML.Twiml.Lenses where
 
 import Control.Lens hiding (to)
 import Text.XML.Twiml.Types
-import Text.XML.Twiml.Verbs
+import Text.XML.Twiml.Internal.Twiml
 
 makeLensesWith abbreviatedFields ''SayAttributes
 makeLensesWith abbreviatedFields ''PlayAttributes
@@ -32,3 +32,4 @@ makeLensesWith abbreviatedFields ''EnqueueAttributes
 makeLensesWith abbreviatedFields ''RedirectAttributes
 makeLensesWith abbreviatedFields ''RejectAttributes
 makeLensesWith abbreviatedFields ''PauseAttributes
+makeLensesWith abbreviatedFields ''MessageAttributes

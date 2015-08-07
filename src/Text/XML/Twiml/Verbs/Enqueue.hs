@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.Enqueue
@@ -10,9 +11,19 @@
 -- <https://www.twilio.com/docs/api/twiml/enqueue TwiML Reference for \<Enqueue\>>.
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Enqueue
-  ( Enqueue
+  ( enqueue
+  , Enqueue
   , EnqueueF(..)
-  , EnqueueAttributes(..)
+  , EnqueueAttributes
+  , HasAction(..)
+  , HasMethod(..)
+  , HasWaitMethod(..)
+  , HasWaitURL(..)
   ) where
 
+import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
+import Text.XML.Twiml.Lenses
+
+enqueue :: IsTwimlLike f Enqueue => String -> EnqueueAttributes -> TwimlLike f Enqueue ()
+enqueue a b = iliftF . inj $ EnqueueF a b ()

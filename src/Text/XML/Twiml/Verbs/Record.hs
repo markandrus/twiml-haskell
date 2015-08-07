@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.Record
@@ -10,9 +11,23 @@
 -- <https://www.twilio.com/docs/api/twiml/record TwiML Reference for \<Record\>>.
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Record
-  ( Record
+  ( record
+  , Record
   , RecordF(..)
-  , RecordAttributes(..)
+  , RecordAttributes
+  , HasAction(..)
+  , HasFinishOnKey(..)
+  , HasMethod(..)
+  , HasTimeout(..)
+  , HasMaxLength(..)
+  , HasPlayBeep(..)
+  , HasTranscribe(..)
+  , HasTranscribeCallback(..)
   ) where
 
+import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
+import Text.XML.Twiml.Lenses
+
+record :: IsTwimlLike f Record => RecordAttributes -> TwimlLike f Record ()
+record a = iliftF . inj $ RecordF a ()

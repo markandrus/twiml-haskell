@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.Gather
@@ -10,9 +11,21 @@
 -- <https://www.twilio.com/docs/api/twiml/gather TwiML Reference for \<Gather\>>.
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Gather
-  ( Gather
+  ( gather
+  , Gather
   , GatherF(..)
-  , GatherAttributes(..)
+  , GatherAttributes
+  , HasAction(..)
+  , HasFinishOnKey(..)
+  , HasMethod(..)
+  , HasNumDigits(..)
+  , HasTimeout(..)
   ) where
 
+import Data.Void
+import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
+import Text.XML.Twiml.Lenses
+
+gather :: (IsTwimlLike f Gather, Nest i In Gather) => GatherAttributes -> TwimlLike' VoiceTwimlF i Void -> TwimlLike f Gather ()
+gather a b = iliftF . inj $ GatherF a b ()

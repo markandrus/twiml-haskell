@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveDataTypeable #-}
@@ -33,6 +34,11 @@ module Text.XML.Twiml.Internal.Twiml
   , MessagingTwimlF(..)
   , VoiceTwiml(..)
   , VoiceTwimlF(..)
+  , Base
+  , IsTwimlLike
+  , TwimlLike
+  , TwimlLike'
+  , response
     -- ** Verbs
     -- *** Dial
   , Dial
@@ -485,3 +491,30 @@ instance ToXML a => ToXML (MessagingTwimlF i a) where
 instance ToXML (IxFree MessagingTwimlF i Void) where
   toXML (IxFree f) = toXML f
   toXML _ = error "Impossible"
+
+-- | 'Base' maps the empty data declaration for a TwiML verb to its
+-- corresponding base functor.
+type family Base d where
+  Base Dial = DialF
+  Base End = EndF
+  Base Enqueue = EnqueueF
+  Base Gather = GatherF
+  Base Hangup = HangupF
+  Base Leave = LeaveF
+  Base Message = MessageF
+  Base Pause = PauseF
+  Base Play = PlayF
+  Base Record = RecordF
+  Base Redirect = RedirectF
+  Base Reject = RejectF
+  Base Say = SayF
+  Base Sms = SmsF
+
+type IsTwimlLike f i = (Functor1 f, (Base i) '[i] :<: f '[i])
+
+type TwimlLike f i = TwimlLike' f '[i]
+
+type TwimlLike' f = IxFree f
+
+response :: IxFree VoiceTwimlF i Void -> VoiceTwiml
+response = VoiceTwiml

@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.End
@@ -9,8 +10,13 @@
 -- End is not actually a TwiML verb; it is used for terminating TwiML.
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.End
-  ( End
+  ( end
+  , End
   , EndF(..)
   ) where
 
+import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
+
+end :: IsTwimlLike f End => TwimlLike f End a
+end = iliftF $ inj EndF

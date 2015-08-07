@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.Redirect
@@ -10,9 +11,17 @@
 -- <https://www.twilio.com/docs/api/twiml/redirect TwiML Reference for \<Redirect\>>.
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Redirect
-  ( Redirect
+  ( redirect
+  , Redirect
   , RedirectF(..)
-  , RedirectAttributes(..)
+  , RedirectAttributes
+  , HasMethod(..)
   ) where
 
+import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
+import Text.XML.Twiml.Lenses
+import Text.XML.Twiml.Types
+
+redirect :: IsTwimlLike f Redirect => URL -> RedirectAttributes -> TwimlLike f Redirect a
+redirect a b = iliftF . inj $ RedirectF a b

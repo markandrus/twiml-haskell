@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.Reject
@@ -10,9 +11,16 @@
 -- <https://www.twilio.com/docs/api/twiml/reject TwiML Reference for \<Reject\>>.
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Reject
-  ( Reject
+  ( reject
+  , Reject
   , RejectF(..)
-  , RejectAttributes(..)
+  , RejectAttributes
+  , HasReason(..)
   ) where
 
+import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
+import Text.XML.Twiml.Lenses
+
+reject :: IsTwimlLike f Reject => RejectAttributes -> TwimlLike f Reject a
+reject a = iliftF . inj $ RejectF a

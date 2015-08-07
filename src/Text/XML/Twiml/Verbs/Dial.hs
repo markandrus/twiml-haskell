@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.Dial
@@ -10,9 +11,27 @@
 -- <https://www.twilio.com/docs/api/twiml/dial TwiML Reference for \<Dial\>>.
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Dial
-  ( Dial
+  ( dial
+  , dial'
+  , Dial
   , DialF(..)
-  , DialAttributes(..)
+  , DialAttributes
+  , HasAction(..)
+  , HasMethod(..)
+  , HasTimeout(..)
+  , HasCallerId(..)
+  , HasHangupOnStar(..)
+  , HasRecord'(..)
+  , HasTimeLimit(..)
   ) where
 
+import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
+import Text.XML.Twiml.Lenses
+import Text.XML.Twiml.Types
+
+dial :: IsTwimlLike f Dial => String -> DialAttributes -> TwimlLike f Dial ()
+dial a b = iliftF . inj $ DialF (pure a) b ()
+
+dial' :: IsTwimlLike f Dial => Either DialNoun String -> DialAttributes -> TwimlLike f Dial ()
+dial' a b = iliftF . inj $ DialF a b ()

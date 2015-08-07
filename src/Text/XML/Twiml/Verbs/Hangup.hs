@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.Hangup
@@ -10,8 +11,13 @@
 -- <https://www.twilio.com/docs/api/twiml/hangup TwiML Reference for \<Hangup\>>.
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Hangup
-  ( Hangup
+  ( hangup
+  , Hangup
   , HangupF(..)
   ) where
 
+import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
+
+hangup :: IsTwimlLike f Hangup => TwimlLike f Hangup a
+hangup = iliftF . inj $ HangupF

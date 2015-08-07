@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.Pause
@@ -10,9 +11,16 @@
 -- <https://www.twilio.com/docs/api/twiml/pause TwiML Reference for \<Pause\>>.
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Pause
-  ( Pause
+  ( pause
+  , Pause
   , PauseF(..)
-  , PauseAttributes(..)
+  , PauseAttributes
+  , HasDuration(..)
   ) where
 
+import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
+import Text.XML.Twiml.Lenses
+
+pause :: IsTwimlLike f Pause => PauseAttributes -> TwimlLike f Pause ()
+pause a = iliftF . inj $ PauseF a ()

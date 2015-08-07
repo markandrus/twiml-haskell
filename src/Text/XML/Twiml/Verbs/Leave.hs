@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.Leave
@@ -10,8 +11,13 @@
 -- <https://www.twilio.com/docs/api/twiml/leave TwiML Reference for \<Leave\>>.
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Leave
-  ( Leave
+  ( leave
+  , Leave
   , LeaveF(..)
   ) where
 
+import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
+
+leave :: IsTwimlLike f Leave => TwimlLike f Leave a
+leave = iliftF . inj $ LeaveF

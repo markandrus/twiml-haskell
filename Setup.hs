@@ -1,2 +1,10 @@
 import Distribution.Simple
-main = defaultMain
+import System.Process
+
+main
+  = defaultMainWithHooks
+  $ simpleUserHooks {
+      preBuild = \_ _ -> do
+        system "make"
+        return (Nothing, [])
+    }

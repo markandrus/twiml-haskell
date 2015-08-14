@@ -12,7 +12,7 @@ author:              Mark Andrus Roberts
 maintainer:          markandrusroberts@gmail.com
 -- copyright:           
 category:            Text, Web, XML
-build-type:          Simple
+build-type:          Custom
 cabal-version:       >=1.8
 data-files:          test/xml/dialExample1.xml,
                      test/xml/dialExample2.xml,

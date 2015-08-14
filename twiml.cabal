@@ -46,7 +46,6 @@ source-repository head
 library
   exposed-modules:     Text.XML.Twiml,
                        Text.XML.Twiml.Internal,
-                       Text.XML.Twiml.Internal.TH,
                        Text.XML.Twiml.Internal.Twiml,
                        Text.XML.Twiml.Lenses,
                        Text.XML.Twiml.Syntax,

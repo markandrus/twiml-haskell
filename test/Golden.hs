@@ -1,5 +1,6 @@
-{-#LANGUAGE RebindableSyntax #-}
-{-#LANGUAGE RecordWildCards #-}
+{-# OPTIONS_GHC -cpp -optP -P -Itest/examples #-}
+{-# LANGUAGE RebindableSyntax #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Golden where
 
@@ -27,6 +28,7 @@ sayExample1 =
     end
   where Twiml.Syntax{..} = def
 
+{-
 sayExample2 :: VoiceTwiml
 sayExample2 =
   response $ do
@@ -34,6 +36,9 @@ sayExample2 =
                          & loop  .~ Just 2
     end
   where Twiml.Syntax{..} = def
+-}
+
+#include "sayExample2.hs"
 
 sayExamples :: [(VoiceTwiml, FilePath)]
 sayExamples =
@@ -43,19 +48,27 @@ sayExamples =
 
 {- Play -}
 
+{-
 playExample1 :: VoiceTwiml
 playExample1 =
   response $ do
     play (fromJust $ parseURL "https://api.twilio.com/cowbell.mp3") def
     end
   where Twiml.Syntax{..} = def
+-}
 
+#include "playExample1.hs"
+
+{-
 playExample2 :: VoiceTwiml
 playExample2 =
   response $ do
     play' Nothing $ def & digits .~ Just [W, W, W, W, D3]
     end
   where Twiml.Syntax{..} = def
+-}
+
+#include "playExample2.hs"
 
 playExamples :: [(VoiceTwiml, FilePath)]
 playExamples =
@@ -72,6 +85,7 @@ gatherExample1 =
     end
   where Twiml.Syntax{..} = def
 
+{-
 gatherExample2 :: VoiceTwiml
 gatherExample2 =
   response $ do
@@ -82,6 +96,9 @@ gatherExample2 =
     say "We didn't receive any input. Goodbye!" def
     end
   where Twiml.Syntax{..} = def
+-}
+
+#include "gatherExample2.hs"
 
 gatherExamples :: [(VoiceTwiml, FilePath)]
 gatherExamples =
@@ -98,17 +115,21 @@ recordExample1 =
     end
   where Twiml.Syntax{..} = def
 
+{-
 recordExample2 :: VoiceTwiml
 recordExample2 =
   response $ do
     say "Please leave a message at the beep. Press the star key when finished." def
     record $ def & action      .~ parseURL "http://foo.edu/handleRecording.php"
-                  & method      .~ Just GET
-                  & maxLength   .~ Just 20
-                  & finishOnKey .~ Just KStar
+                 & method      .~ Just GET
+                 & maxLength   .~ Just 20
+                 & finishOnKey .~ Just KStar
     say "I did not receive a recording" def
     end
   where Twiml.Syntax{..} = def
+-}
+
+#include "recordExample2.hs"
 
 recordExample3 :: VoiceTwiml
 recordExample3 =
@@ -135,6 +156,7 @@ smsExample1 =
     end
   where Twiml.Syntax{..} = def
 
+{-
 smsExample2 :: VoiceTwiml
 smsExample2 =
   response $ do
@@ -144,6 +166,9 @@ smsExample2 =
             & method .~ Just POST
     end
   where Twiml.Syntax{..} = def
+-}
+
+#include "smsExample2.hs"
 
 smsExample3 :: VoiceTwiml
 smsExample3 =
@@ -163,6 +188,7 @@ smsExamples =
 
 {- Dial -}
 
+{-
 dialExample1 :: VoiceTwiml
 dialExample1 =
   response $ do
@@ -170,6 +196,9 @@ dialExample1 =
     say "Goodbye" def
     end
   where Twiml.Syntax{..} = def
+-}
+
+#include "dialExample1.hs"
 
 dialExample2 :: VoiceTwiml
 dialExample2 =
@@ -181,6 +210,7 @@ dialExample2 =
     end
   where Twiml.Syntax{..} = def
 
+{-
 dialExample3 :: VoiceTwiml
 dialExample3 =
   response $ do
@@ -188,6 +218,9 @@ dialExample3 =
              & callerId .~ Just "+15551112222"
     end
   where Twiml.Syntax{..} = def
+-}
+
+#include "dialExample3.hs"
 
 dialExamples :: [(VoiceTwiml, FilePath)]
 dialExamples =
@@ -200,12 +233,16 @@ dialExamples =
 
 {- Enqueue -}
 
+{-
 enqueueExample1 :: VoiceTwiml
 enqueueExample1 =
   response $ do
     enqueue "support" $ def & waitURL .~ parseURL "wait-music.xml"
     end
   where Twiml.Syntax{..} = def
+-}
+
+#include "enqueueExample1.hs"
 
 enqueueExamples :: [(VoiceTwiml, FilePath)]
 enqueueExamples =
@@ -214,12 +251,16 @@ enqueueExamples =
 
 {- Leave -}
 
+{-
 leaveExample1 :: VoiceTwiml
 leaveExample1 =
   response $ do
     leave
     end
   where Twiml.Syntax{..} = def
+-}
+
+#include "leaveExample1.hs"
 
 leaveExamples :: [(VoiceTwiml, FilePath)]
 leaveExamples =
@@ -228,12 +269,16 @@ leaveExamples =
 
 {- Hangup -}
 
+{-
 hangupExample1 :: VoiceTwiml
 hangupExample1 =
   response $ do
     hangup
     end
   where Twiml.Syntax{..} = def
+-}
+
+#include "hangupExample1.hs"
 
 hangupExamples :: [(VoiceTwiml, FilePath)]
 hangupExamples =
@@ -242,6 +287,7 @@ hangupExamples =
 
 {- Redirect -}
 
+{-
 redirectExample1 :: VoiceTwiml
 redirectExample1 =
   response $ do
@@ -249,6 +295,9 @@ redirectExample1 =
     redirect (fromJust $ parseURL "http://www.foo.com/nextInstructions") def
     end
   where Twiml.Syntax{..} = def
+-}
+
+#include "redirectExample1.hs"
 
 redirectExample2 :: VoiceTwiml
 redirectExample2 =
@@ -272,12 +321,16 @@ rejectExample1 =
     end
   where Twiml.Syntax{..} = def
 
+{-
 rejectExample2 :: VoiceTwiml
 rejectExample2 =
   response $ do
     reject $ def & reason .~ Just Busy
     end
   where Twiml.Syntax{..} = def
+-}
+
+#include "rejectExample2.hs"
 
 rejectExamples :: [(VoiceTwiml, FilePath)]
 rejectExamples =
@@ -287,6 +340,7 @@ rejectExamples =
 
 {- Pause -}
 
+{-
 pauseExample1 :: VoiceTwiml
 pauseExample1 =
   response $ do
@@ -295,6 +349,9 @@ pauseExample1 =
     say "I just paused 10 seconds" def
     end
   where Twiml.Syntax{..} = def
+-}
+
+#include "pauseExample1.hs"
 
 pauseExample2 :: VoiceTwiml
 pauseExample2 =
@@ -339,7 +396,7 @@ check (twiml, filePath) = Test test
   where test = TestInstance {
     run = do
       let a = show twiml
-      b <- readFile filePath
+      b <- (unlines . drop 1 . lines) <$> (readFile $ filePath ++ ".txt")
       let equal = a == b
       unless equal $ do
         putStrLn ""

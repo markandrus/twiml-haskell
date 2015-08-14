@@ -25,8 +25,14 @@
 -- Maintainer  :  Mark Andrus Roberts <markandrusroberts@gmail.com>
 -- Stability   :  provisional
 --
--- This module defines mutually recursive TwiML data types. Verbs should be
--- accessed through the @Text.XML.Twiml.Verbs@ module(s).
+-- This module defines all of the TwiML verbs and nouns in a single place
+-- (mainly due to a few mutually-recursive definitions). This modules also
+-- exposeses the internals of each TwiML's attributes.
+--
+-- Prefer the definitions re-exported by the
+-- <Text-XML-Twiml.html Text.XML.Twiml> and
+-- <Text-XML-Twiml-Verbs.html Text.XML.Twiml.Verbs> modules to those exported
+-- here.
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Internal.Twiml
   ( -- * TwiML

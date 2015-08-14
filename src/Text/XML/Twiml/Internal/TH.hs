@@ -23,6 +23,9 @@
 --   toXMLForGADT
 --   toAttrsForAttributes
 -- @
+--
+-- You should never need to import this module; it is only used during
+-- compilation of the <index.html twiml> library.
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Internal.TH
   ( TwimlSpec(..)

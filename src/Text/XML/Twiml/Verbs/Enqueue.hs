@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -cpp -optP -P -Itest/examples #-}
 {-# LANGUAGE FlexibleContexts #-}
 -------------------------------------------------------------------------------
 -- |
@@ -7,14 +8,28 @@
 -- Maintainer  :  Mark Andrus Roberts <markandrusroberts@gmail.com>
 -- Stability   :  provisional
 --
+-- The example in this file assumes
+--
+-- @
+-- {-\# LANGUAGE RebindableSyntax \#-}
+-- {-\# LANGUAGE RecordWildCards \#-}
+-- 
+-- import Prelude
+-- import Text.XML.Twiml
+-- import qualified Text.XML.Twiml.Syntax as Twiml
+-- @
+--
 -- For more information, refer to Twilio's
 -- <https://www.twilio.com/docs/api/twiml/enqueue TwiML Reference for \<Enqueue\>>.
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Enqueue
   ( enqueue
+    -- * Data Types
   , Enqueue
   , EnqueueF(..)
+    -- ** Attributes
   , EnqueueAttributes
+    -- * Attribute Lenses
   , HasAction(..)
   , HasMethod(..)
   , HasWaitMethod(..)
@@ -25,5 +40,9 @@ import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
 import Text.XML.Twiml.Lenses
 
+{- | Enqueue a caller in a queue. Example:
+
+#include "enqueueExample1.txt"
+-}
 enqueue :: IsTwimlLike f Enqueue => String -> EnqueueAttributes -> TwimlLike f Enqueue ()
 enqueue a b = iliftF . inj $ EnqueueF a b ()

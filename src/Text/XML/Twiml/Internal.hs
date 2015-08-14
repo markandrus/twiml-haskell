@@ -23,6 +23,9 @@
 -- License     :  BSD-style (see the file LICENSE)
 -- Maintainer  :  Mark Andrus Roberts <markandrusroberts@gmail.com>
 -- Stability   :  provisional
+--
+-- This module exports the machinery necessary to define TwiML in an extensible
+-- way.
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Internal
   ( -- * Data types à la carte
@@ -176,6 +179,9 @@ class Functor1 f => IxApplicative (f :: k -> * -> *) where
 -- return :: 'IxApplicative' m => a -> m 'Identity' a
 -- return = 'ipure'
 -- @
+--
+-- This is the technique employed by the
+-- <Text-XML-Twiml-Syntax.html Text.XML.Twiml.Syntax> module.
 class IxApplicative m => IxMonad (m :: k -> * -> *) where
   -- | The indexed equivalent of @(>>=)@
   ibind :: m i a -> (a -> m j b) -> m (i <> j) b

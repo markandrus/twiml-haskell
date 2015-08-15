@@ -1,15 +1,17 @@
+language: c
+
+# explicitly request container-based infrastructure
 sudo: false
 
-env:
-  - CABALVER=1.22 GHCVER=7.10.1
+matrix:
+  include:
+    - env: CABALVER=1.22 GHCVER=7.10.1
+      addons: {apt: {packages: [cabal-install-1.22,ghc-7.10.1],sources: [hvr-ghc]}}
+    - env: CABALVER=head GHCVER=head
+      addons: {apt: {packages: [cabal-install-head,ghc-head],  sources: [hvr-ghc]}}
 
-addons:
-  apt:
-    sources:
-      - hvr-ghc
-    packages:
-      - cabal-install-1.22
-      - ghc-7.10.1
+  allow_failures:
+    - env: CABALVER=head GHCVER=head
 
 before_install:
   - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
@@ -18,16 +20,16 @@ install:
   - cabal --version
   - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
   - travis_retry cabal update
-  - cabal install --dependencies-only --enable-tests
+  - cabal install --only-dependencies --enable-tests --enable-benchmarks
 
 script:
   - if [ -f configure.ac ]; then autoreconf -i; fi
+  - cabal clean
   - cabal configure --enable-tests --enable-benchmarks -v2
   - cabal build
   - cabal test
   - cabal check
   - cabal sdist
-  - SRC_TGZ=$(cabal info . | awk '{print $2;exit}').tar.gz &&
-    (cd dist && cabal install --force-reinstalls "$SRC_TGZ")
+  - cabal install --force-reinstalls dist/*-*.tar.gz
 
 after_success: script/publish_haddock.sh

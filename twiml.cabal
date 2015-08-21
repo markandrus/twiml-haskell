@@ -14,30 +14,7 @@ maintainer:          markandrusroberts@gmail.com
 category:            Text, Web, XML
 build-type:          Custom
 cabal-version:       >=1.8
-data-files:          test/xml/dialExample1.xml,
-                     test/xml/dialExample2.xml,
-                     test/xml/dialExample3.xml,
-                     test/xml/enqueueExample1.xml,
-                     test/xml/gatherExample1.xml,
-                     test/xml/gatherExample2.xml,
-                     test/xml/hangupExample1.xml,
-                     test/xml/leaveExample1.xml,
-                     test/xml/pauseExample1.xml,
-                     test/xml/pauseExample2.xml,
-                     test/xml/playExample1.xml,
-                     test/xml/playExample2.xml,
-                     test/xml/recordExample1.xml,
-                     test/xml/recordExample2.xml,
-                     test/xml/recordExample3.xml,
-                     test/xml/redirectExample1.xml,
-                     test/xml/redirectExample2.xml,
-                     test/xml/rejectExample1.xml,
-                     test/xml/rejectExample2.xml,
-                     test/xml/sayExample1.xml,
-                     test/xml/sayExample2.xml,
-                     test/xml/smsExample1.xml,
-                     test/xml/smsExample2.xml,
-                     test/xml/smsExample3.xml
+data-files:          test/examples/*.txt
 
 source-repository head
   type: git
@@ -65,6 +42,7 @@ library
                        Text.XML.Twiml.Verbs.Reject,
                        Text.XML.Twiml.Verbs.Say,
                        Text.XML.Twiml.Verbs.Sms
+  other-modules:       Text.XML.Twiml.Internal.TH
   hs-source-dirs:      src
   -- other-modules:       
   build-depends:       base ==4.*,

@@ -23,11 +23,8 @@ install:
   - cabal install --only-dependencies --enable-tests --enable-benchmarks
 
 script:
-  - if [ -f configure.ac ]; then autoreconf -i; fi
-  - cabal clean
   - cabal configure --enable-tests --enable-benchmarks -v2
   - cabal build
-  - cabal test
   - cabal check
   - cabal sdist
   - cabal install --force-reinstalls dist/*-*.tar.gz

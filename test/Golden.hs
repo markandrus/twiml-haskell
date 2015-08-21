@@ -396,7 +396,7 @@ check (twiml, filePath) = Test test
   where test = TestInstance {
     run = do
       let a = show twiml
-      b <- (unlines . drop 1 . lines) <$> (readFile $ filePath ++ ".txt")
+      b <- readFile filePath
       let equal = a == b
       unless equal $ do
         putStrLn ""

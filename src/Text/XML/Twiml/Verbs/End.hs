@@ -23,9 +23,8 @@
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.End
   ( end
-    -- * Data Types
   , End
-  , EndF(..)
+  , EndF
   ) where
 
 import Text.XML.Twiml.Internal

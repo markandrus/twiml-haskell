@@ -24,19 +24,13 @@
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Say
   ( say
-    -- * Data Types
   , Say
-  , SayF(..)
-    -- ** Attributes
+  , SayF
   , SayAttributes
-    -- * Attribute Lenses
-  , HasLoop(..)
-  , HasVoice(..)
   ) where
 
 import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
-import Text.XML.Twiml.Lenses
 
 {- | Example:
 

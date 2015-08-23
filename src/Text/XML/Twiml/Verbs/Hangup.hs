@@ -24,9 +24,8 @@
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Hangup
   ( hangup
-    -- * Data Types
   , Hangup
-  , HangupF(..)
+  , HangupF
   ) where
 
 import Text.XML.Twiml.Internal

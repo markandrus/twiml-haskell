@@ -24,18 +24,13 @@
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Pause
   ( pause
-    -- * Data Types
   , Pause
-  , PauseF(..)
-    -- ** Attributes
+  , PauseF
   , PauseAttributes
-    -- * Attribute Lenses
-  , HasDuration(..)
   ) where
 
 import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
-import Text.XML.Twiml.Lenses
 
 {- | Example:
 

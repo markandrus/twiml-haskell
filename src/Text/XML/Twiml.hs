@@ -13,6 +13,7 @@ module Text.XML.Twiml
   , module X
   ) where
 
+import Text.XML.Twiml.Internal.Twiml
+import Text.XML.Twiml.Lenses as X
 import Text.XML.Twiml.Types as X
 import Text.XML.Twiml.Verbs as X
-import Text.XML.Twiml.Internal.Twiml

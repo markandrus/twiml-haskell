@@ -35,19 +35,8 @@ module Text.XML.Twiml.Types
   , Voice(..)
   , Lang(..)
   , LangAlice(..)
-  , DialNoun(..)
-    -- **** Number
-  , NumberAttributes(..)
-    -- **** Sip
-  , SipAttributes(..)
   , Transport(..)
-    -- **** Client
-  , ClientAttributes(..)
-    -- **** Conference 
-  , ConferenceAttributes(..)
   , ConferenceBeep(..)
-    -- **** Queue
-  , QueueAttributes(..)
   , Reason(..)
   ) where
 
@@ -238,61 +227,6 @@ instance ToAttrValue LangAlice where
   toAttrValue ZhHK = "zh-HK"
   toAttrValue ZhTW = "zh-TW"
 
-{- Number -}
-
--- | See <https://www.twilio.com/docs/api/twiml/number#attributes>.
-data NumberAttributes = NumberAttributes
-  { _numberSendDigits :: Maybe [Digit]
-  , _numberURL        :: Maybe URL
-  , _numberMethod     :: Maybe Method
-  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance Default NumberAttributes where
-  def = NumberAttributes
-    { _numberSendDigits = def
-    , _numberURL        = def
-    , _numberMethod     = def
-    }
-
-instance ToAttrs NumberAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "sendDigits" _numberSendDigits
-    , makeAttr "url"        _numberURL
-    , makeAttr "method"     _numberMethod
-    ]
-
-{- Sip -}
-
--- | See <https://www.twilio.com/docs/api/twiml/sip#attributes>.
-data SipAttributes = SipAttributes
-  { _sipUsername  :: Maybe String
-  , _sipPassword  :: Maybe String
-  , _sipTransport :: Maybe Transport
-  , _sipHeaders   :: Maybe String    -- NOTE: Under 1024 characters.
-  , _sipURL       :: Maybe URL
-  , _sipMethod    :: Maybe Method
-  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance Default SipAttributes where
-  def = SipAttributes
-    { _sipUsername  = def
-    , _sipPassword  = def
-    , _sipTransport = def
-    , _sipHeaders   = def
-    , _sipURL       = def
-    , _sipMethod    = def
-    }
-
-instance ToAttrs SipAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "username"  _sipUsername
-    , makeAttr "password"  _sipPassword
-    , makeAttr "transport" _sipTransport
-    , makeAttr "headers"   _sipHeaders
-    , makeAttr "url"       _sipURL
-    , makeAttr "method"    _sipMethod
-    ]
-
 -- | See <https://www.twilio.com/docs/api/twiml/sip#transport>.
 data Transport = TCP | UDP
   deriving (Bounded, Data, Enum, Eq, Generic, NFData, Ord, Read, Show, Typeable)
@@ -300,61 +234,6 @@ data Transport = TCP | UDP
 instance ToAttrValue Transport where
   toAttrValue TCP = "tcp"
   toAttrValue UDP = "udp"
-
-{- Client -}
-
--- | See <https://www.twilio.com/docs/api/twiml/client#attributes>.
-data ClientAttributes = ClientAttributes
-  { _clientURL    :: Maybe URL
-  , _clientMethod :: Maybe Method
-  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance Default ClientAttributes where
-  def = ClientAttributes
-    { _clientURL    = def
-    , _clientMethod = def
-    }
-
-instance ToAttrs ClientAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "url"    _clientURL
-    , makeAttr "method" _clientMethod
-    ]
-
-{- Conference -}
-
--- | See <https://www.twilio.com/docs/api/twiml/conference#attributes>.
-data ConferenceAttributes = ConferenceAttributes
-  { _conferenceMuted           :: Maybe Bool
-  , _conferenceBeep            :: Maybe Bool
-  , _conferenceStartOnEnter    :: Maybe Bool
-  , _conferenceEndOnExit       :: Maybe Bool
-  , _conferenceWaitURL         :: Maybe URL
-  , _conferenceWaitMethod      :: Maybe Method
-  , _conferenceMaxParticipants :: Maybe Natural -- FIXME: Non-zero, less than 40.
-  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance Default ConferenceAttributes where
-  def = ConferenceAttributes
-    { _conferenceMuted           = def
-    , _conferenceBeep            = def
-    , _conferenceStartOnEnter    = def
-    , _conferenceEndOnExit       = def
-    , _conferenceWaitURL         = def
-    , _conferenceWaitMethod      = def
-    , _conferenceMaxParticipants = def
-    }
-
-instance ToAttrs ConferenceAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "muted"                  _conferenceMuted
-    , makeAttr "beep"                   _conferenceBeep
-    , makeAttr "startConferenceOnEnter" _conferenceStartOnEnter
-    , makeAttr "endConferenceOnExit"    _conferenceEndOnExit
-    , makeAttr "waitURL"                _conferenceWaitURL
-    , makeAttr "waitMethod"             _conferenceWaitMethod
-    , makeAttr "maxParticipants"        _conferenceMaxParticipants
-    ]
 
 -- | See <https://www.twilio.com/docs/api/twiml/conference#attributes-beep>.
 data ConferenceBeep
@@ -370,49 +249,6 @@ instance ToAttrValue ConferenceBeep where
   toAttrValue OnExit  = "on-exit"
   toAttrValue OnEnter = "on-enter"
 
-{- Queue -}
-
--- | See <https://www.twilio.com/docs/api/twiml/queue#attributes>.
-data QueueAttributes = QueueAttributes
-  { _queueURL    :: Maybe URL
-  , _queueMethod :: Maybe Method
-  } deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
-instance Default QueueAttributes where
-  def = QueueAttributes
-    { _queueURL    = def
-    , _queueMethod = def
-    }
-
-instance ToAttrs QueueAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr "url"    _queueURL
-    , makeAttr "method" _queueMethod
-    ]
-
-instance ToElement DialNoun where
-  toElement (Number     attrs str) = makeElement "Number"     (toSomeNode str) $ toAttrs attrs
-  toElement (Sip        attrs url) = makeElement "Sip"        (toSomeNode url) $ toAttrs attrs
-  toElement (Client     attrs str) = makeElement "Client"     (toSomeNode str) $ toAttrs attrs
-  toElement (Conference attrs str) = makeElement "Conference" (toSomeNode str) $ toAttrs attrs
-  toElement (Queue      attrs str) = makeElement "Queue"      (toSomeNode str) $ toAttrs attrs
-
-
--- | See <https://www.twilio.com/docs/api/twiml/dial#nouns>.
-data DialNoun
-  = Number     NumberAttributes     String
-  | Sip        SipAttributes        URL    -- NOTE: URL must be under 255 characters.
-  | Client     ClientAttributes     String
-  | Conference ConferenceAttributes String
-  | Queue      QueueAttributes      String
-  deriving (Data, Eq, Generic, NFData, Ord, Read, Show, Typeable)
-
--- FIXME(mroberts):
-type EDS = Either DialNoun String
-
-instance Default EDS where
-  def = Right def
-
 -- | The reason attribute takes the values \"rejected\" and \"busy.\" This tells
 -- Twilio what message to play when rejecting a call. Selecting \"busy\" will
 -- play a busy signal to the caller, while selecting \"rejected\" will play a
@@ -425,39 +261,7 @@ instance ToAttrValue Reason where
   toAttrValue Rejected = "rejected"
   toAttrValue Busy     = "busy"
 
-{- TwiML -}
-
-{- Verbs -}
-
-{- Say -}
-
-{-
-instance ToAttrs SayAttributes where
-  toAttrs = flip makeAttrs
-    [ makeAttr  "voice"      _sayVoice
-    , makeAttr  "loop"       _sayLoop
-    , makeAttr' "language"  (_sayVoice >=> lang) (either toAttrValue toAttrValue)
-    ]
--}
-
 instance ToAttrValue Voice where
   toAttrValue (Man   _) = "man"
   toAttrValue (Woman _) = "woman"
   toAttrValue (Alice _) = "alice"
-
-{-
-lang :: Voice -> Maybe (Either Lang LangAlice)
-lang (Man   l) = Left  <$> l
-lang (Woman l) = Left  <$> l
-lang (Alice r) = Right <$> r
--}
-
-{- Play -}
-
-{- Gather -}
-
-{- Dial -}
-
-instance ToSomeNode (Either DialNoun String) where
-  toSomeNode (Left  a) = SomeNode $ toElement a
-  toSomeNode (Right a) = toSomeNode a

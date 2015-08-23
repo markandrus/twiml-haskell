@@ -24,18 +24,13 @@
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Redirect
   ( redirect
-    -- * Data Types
   , Redirect
-  , RedirectF(..)
-    -- ** Attributes
+  , RedirectF
   , RedirectAttributes
-    -- * Attribute Lenses
-  , HasMethod(..)
   ) where
 
 import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
-import Text.XML.Twiml.Lenses
 import Text.XML.Twiml.Types
 
 {- | Example:

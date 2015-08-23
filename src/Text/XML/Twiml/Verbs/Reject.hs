@@ -24,18 +24,13 @@
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Reject
   ( reject
-    -- * Data Types
   , Reject
-  , RejectF(..)
-    -- ** Attributes
+  , RejectF
   , RejectAttributes
-    -- * Attribute Lenses
-  , HasReason(..)
   ) where
 
 import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
-import Text.XML.Twiml.Lenses
 
 {- | Example:
 

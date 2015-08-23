@@ -24,25 +24,13 @@
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Record
   ( record
-    -- * Data Types
   , Record
-  , RecordF(..)
-    -- ** Attributes
+  , RecordF
   , RecordAttributes
-    -- * Attribute Lenses
-  , HasAction(..)
-  , HasFinishOnKey(..)
-  , HasMethod(..)
-  , HasTimeout(..)
-  , HasMaxLength(..)
-  , HasPlayBeep(..)
-  , HasTranscribe(..)
-  , HasTranscribeCallback(..)
   ) where
 
 import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
-import Text.XML.Twiml.Lenses
 
 {- | Example:
 

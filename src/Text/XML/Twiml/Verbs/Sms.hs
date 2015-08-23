@@ -24,22 +24,13 @@
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Sms
   ( sms
-    -- * Data Types
   , Sms
-  , SmsF(..)
-    -- ** Attributes
+  , SmsF
   , SmsAttributes
-    -- * Attribute Lenses
-  , HasAction(..)
-  , HasMethod(..)
-  , HasFrom(..)
-  , HasStatusCallback(..)
-  , HasTo(..)
   ) where
 
 import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
-import Text.XML.Twiml.Lenses
 
 {- | Example:
 

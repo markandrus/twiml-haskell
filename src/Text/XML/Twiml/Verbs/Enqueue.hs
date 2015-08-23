@@ -24,21 +24,13 @@
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Enqueue
   ( enqueue
-    -- * Data Types
   , Enqueue
-  , EnqueueF(..)
-    -- ** Attributes
+  , EnqueueF
   , EnqueueAttributes
-    -- * Attribute Lenses
-  , HasAction(..)
-  , HasMethod(..)
-  , HasWaitMethod(..)
-  , HasWaitURL(..)
   ) where
 
 import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
-import Text.XML.Twiml.Lenses
 
 {- | Enqueue a caller in a queue. Example:
 

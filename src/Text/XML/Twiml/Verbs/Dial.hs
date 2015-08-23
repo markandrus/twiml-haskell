@@ -25,24 +25,43 @@
 module Text.XML.Twiml.Verbs.Dial
   ( dial
   , dial'
-    -- * Data Types
   , Dial
-  , DialF(..)
-    -- ** Attributes
+  , DialF
   , DialAttributes
-    -- * Attribute Lenses
-  , HasAction(..)
-  , HasMethod(..)
-  , HasTimeout(..)
-  , HasCallerId(..)
-  , HasHangupOnStar(..)
-  , HasRecord'(..)
-  , HasTimeLimit(..)
+    -- * Nouns
+  , dialNoun
+  , DialNoun
+  , DialNounF
+    -- ** Client
+  , client
+  , Client
+  , ClientF
+  , ClientAttributes
+    -- ** Conference
+  , conference
+  , Conference
+  , ConferenceF
+  , ConferenceAttributes
+    -- ** Number
+  , number
+  , Number
+  , NumberF
+  , NumberAttributes
+    -- ** Queue
+  , queue
+  , Queue
+  , QueueF
+  , QueueAttributes
+    -- ** Sip
+  , sip
+  , Sip
+  , SipF
+  , SipAttributes
   ) where
 
+import Data.Void
 import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
-import Text.XML.Twiml.Lenses
 import Text.XML.Twiml.Types
 
 {- | Dial a number. Example:
@@ -58,3 +77,21 @@ dial a b = iliftF . inj $ DialF (pure a) b ()
 -}
 dial' :: IsTwimlLike f Dial => Either DialNoun String -> DialAttributes -> TwimlLike f Dial ()
 dial' a b = iliftF . inj $ DialF a b ()
+
+dialNoun :: TwimlLike DialNounF i Void -> DialNoun
+dialNoun = DialNoun
+
+client :: IsTwimlLike f Client => String -> ClientAttributes -> TwimlLike f Client a
+client a b = iliftF . inj $ ClientF a b
+
+conference :: IsTwimlLike f Conference => String -> ConferenceAttributes -> TwimlLike f Conference a
+conference a b = iliftF . inj $ ConferenceF a b
+
+number :: IsTwimlLike f Number => String -> NumberAttributes -> TwimlLike f Number a
+number a b = iliftF . inj $ NumberF a b
+
+queue :: IsTwimlLike f Queue => String -> QueueAttributes -> TwimlLike f Queue a
+queue a b = iliftF . inj $ QueueF a b
+
+sip :: IsTwimlLike f Sip => URL -> SipAttributes -> TwimlLike f Sip a
+sip a b = iliftF . inj $ SipF a b

@@ -25,19 +25,13 @@
 module Text.XML.Twiml.Verbs.Play
   ( play
   , play'
-    -- * Data Types
   , Play
-  , PlayF(..)
-    -- ** Attributes
+  , PlayF
   , PlayAttributes
-    -- * Attribute Lenses
-  , HasLoop(..)
-  , HasDigits(..)
   ) where
 
 import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
-import Text.XML.Twiml.Lenses
 import Text.XML.Twiml.Types
 
 {- | Example:

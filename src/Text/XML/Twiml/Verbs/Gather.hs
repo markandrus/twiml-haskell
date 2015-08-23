@@ -24,27 +24,18 @@
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Gather
   ( gather
-    -- * Data Types
   , Gather
-  , GatherF(..)
-    -- ** Attributes
+  , GatherF
   , GatherAttributes
-    -- * Attribute Lenses
-  , HasAction(..)
-  , HasFinishOnKey(..)
-  , HasMethod(..)
-  , HasNumDigits(..)
-  , HasTimeout(..)
   ) where
 
 import Data.Void
 import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
-import Text.XML.Twiml.Lenses
 
 {- | Example:
 
 #include "gatherExample2.txt"
 -}
-gather :: (IsTwimlLike f Gather, Nest i In Gather) => GatherAttributes -> TwimlLike' VoiceTwimlF i Void -> TwimlLike f Gather ()
+gather :: (IsTwimlLike f Gather, Nest i In Gather) => GatherAttributes -> TwimlLike' VoiceVerbsF i Void -> TwimlLike f Gather ()
 gather a b = iliftF . inj $ GatherF a b ()

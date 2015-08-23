@@ -275,14 +275,14 @@ twimlSpecToData :: TwimlSpec -> DecsQ
 twimlSpecToData spec@(TwimlSpec{..}) = pure $
     [ emptyDataDecl
     , gadt
-    , deriveDataForGADT
+--    , deriveDataForGADT
     -- , instanceDefaultForGADT
-    , deriveEqForGADT
+--    , deriveEqForGADT
     , deriveFunctorForGADT
     , instanceFunctor1ForGADT
-    , instanceNFDataForGADT
-    , deriveOrdForGADT
-    , deriveReadForGADT
+--    , instanceNFDataForGADT
+--    , deriveOrdForGADT
+--    , deriveReadForGADT
     , deriveShowForGADT
 --    , instanceToXMLForGADT
     , attributes

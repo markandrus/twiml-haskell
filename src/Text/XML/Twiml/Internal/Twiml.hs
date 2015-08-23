@@ -37,14 +37,37 @@
 module Text.XML.Twiml.Internal.Twiml
   ( -- * TwiML
     MessagingTwiml(..)
-  , MessagingTwimlF(..)
+  , MessagingVerbsF(..)
   , VoiceTwiml(..)
-  , VoiceTwimlF(..)
+  , VoiceVerbsF(..)
   , Base
   , IsTwimlLike
   , TwimlLike
   , TwimlLike'
   , response
+    -- ** Nouns
+  , DialNoun(..)
+  , DialNounF(..)
+    -- *** Client
+  , Client
+  , ClientF(..)
+  , ClientAttributes(..)
+    -- *** Conference
+  , Conference
+  , ConferenceF(..)
+  , ConferenceAttributes(..)
+    -- *** Number
+  , Number
+  , NumberF(..)
+  , NumberAttributes(..)
+    -- *** Queue
+  , Queue
+  , QueueF(..)
+  , QueueAttributes(..)
+    -- *** Sip
+  , Sip
+  , SipF(..)
+  , SipAttributes(..)
     -- ** Verbs
     -- *** Dial
   , Dial
@@ -113,6 +136,145 @@ import Text.XML.Light
 import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.TH
 import Text.XML.Twiml.Types
+
+-------------------------------------------------------------------------------
+-- Nouns
+-------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------
+-- Client
+-------------------------------------------------------------------------------
+
+twimlSpecStringToData [s|
+Client
+  required
+    String
+  attributes
+    url, URL
+    method, Method
+  toXMLForGADT
+  toAttrsForAttributes
+|]
+
+-------------------------------------------------------------------------------
+-- Conference
+-------------------------------------------------------------------------------
+
+twimlSpecStringToData [s|
+Conference
+  required
+    String
+  attributes
+    muted, Bool
+    beep, Bool
+    startOnEnter, Bool, startConferenceOnEnter
+    endOnExit, Bool, endConferenceOnExit
+    waitURL, URL
+    waitMethod, Method
+    maxParticipants, Natural
+  toXMLForGADT
+  toAttrsForAttributes
+|]
+
+-------------------------------------------------------------------------------
+-- Number
+-------------------------------------------------------------------------------
+
+type Digits = [Digit]
+
+twimlSpecStringToData [s|
+Number
+  required
+    String
+  attributes
+    sendDigits, Digits
+    url, URL
+    method, Method
+  toXMLForGADT
+  toAttrsForAttributes
+|]
+
+-------------------------------------------------------------------------------
+-- Queue
+-------------------------------------------------------------------------------
+
+twimlSpecStringToData [s|
+Queue
+  required
+    String
+  attributes
+    url, URL
+    method, Method
+  toXMLForGADT
+  toAttrsForAttributes
+|]
+
+-------------------------------------------------------------------------------
+-- Sip
+-------------------------------------------------------------------------------
+
+twimlSpecStringToData [s|
+Sip
+  required
+    URL
+  attributes
+    username, String
+    password, String
+    transport, Transport
+    headers, String
+    url, URL
+    method, Method
+  toXMLForGADT
+  toAttrsForAttributes
+|]
+
+data DialNoun = forall i. DialNoun (IxFree DialNounF i Void)
+
+instance ToSomeNode DialNoun where
+  toSomeNode (DialNoun dialNoun) = SomeNode $ toXML dialNoun
+
+instance ToSomeNode EitherDialNounString where
+  toSomeNode = either toSomeNode toSomeNode
+
+instance ToXML DialNoun where
+  toXML (DialNoun dialNoun) = toXML dialNoun
+
+instance Show DialNoun where
+  show = showDialNoun
+
+showDialNoun :: DialNoun -> String
+showDialNoun = concatMap ppElement . toXML
+
+newtype DialNounF i a = DialNounF
+  { getDialNounF ::
+    ( ClientF     i :+:
+      ConferenceF i :+:
+      NumberF     i :+:
+      QueueF      i :+:
+      SipF        i ) a
+  } deriving (Functor, Generic, Show, Typeable)
+
+instance (f i :<: ( ClientF     i :+:
+                    ConferenceF i :+:
+                    NumberF     i :+:
+                    QueueF      i :+:
+                    SipF        i )
+         ) => f i :<: DialNounF i where
+  inj = DialNounF . inj
+  prj = prj . getDialNounF
+
+instance Functor1 DialNounF where
+  fmap1 = fmap
+
+instance Show1 DialNounF where
+  show1 = show
+
+instance ToXML a => ToXML (DialNounF i a) where
+  toXML = toXML . getDialNounF
+
+instance ToXML (IxFree DialNounF i Void) where
+  toXML (IxFree f) = toXML f
+  toXML _ = error "Impossible"
 
 -------------------------------------------------------------------------------
 -- Verbs
@@ -224,7 +386,6 @@ Pause
 -- Play
 -------------------------------------------------------------------------------
 
-type Digits = [Digit]
 type MaybeURL = Maybe URL
 
 twimlSpecStringToData [s|
@@ -355,7 +516,7 @@ type family Nest a i b where
 data GatherF i a where
   GatherF :: Nest i In Gather
           => GatherAttributes
-          -> IxFree VoiceTwimlF i Void
+          -> IxFree VoiceVerbsF i Void
           -> a
           -> GatherF '[Gather] a
 
@@ -400,7 +561,7 @@ instance ToAttrs GatherAttributes where
 -- TwiML
 -------------------------------------------------------------------------------
 
-data VoiceTwiml = forall i. VoiceTwiml (IxFree VoiceTwimlF i Void)
+data VoiceTwiml = forall i. VoiceTwiml (IxFree VoiceVerbsF i Void)
 
 instance ToElement VoiceTwiml where
   toElement (VoiceTwiml twiml) = unode "Response" $ toXML twiml
@@ -411,8 +572,8 @@ instance Show VoiceTwiml where
 showTwiml :: VoiceTwiml -> String
 showTwiml twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" ++ ppElement (toElement twiml) ++ "\n"
 
-newtype VoiceTwimlF i a = VoiceTwimlF
-  { getVoiceTwimlF ::
+newtype VoiceVerbsF i a = VoiceVerbsF
+  { getVoiceVerbsF ::
     ( SayF      i :+:
       PlayF     i :+:
       GatherF   i :+:
@@ -441,24 +602,24 @@ instance (f i :<: ( SayF      i :+:
                     RejectF   i :+:
                     PauseF    i :+:
                     EndF      i )
-         ) => f i :<: VoiceTwimlF i where
-  inj = VoiceTwimlF . inj
-  prj = prj . getVoiceTwimlF
+         ) => f i :<: VoiceVerbsF i where
+  inj = VoiceVerbsF . inj
+  prj = prj . getVoiceVerbsF
 
-instance Functor1 VoiceTwimlF where
+instance Functor1 VoiceVerbsF where
   fmap1 = fmap
 
-instance Show1 VoiceTwimlF where
+instance Show1 VoiceVerbsF where
   show1 = show
 
-instance ToXML a => ToXML (VoiceTwimlF i a) where
-  toXML = toXML . getVoiceTwimlF
+instance ToXML a => ToXML (VoiceVerbsF i a) where
+  toXML = toXML . getVoiceVerbsF
 
-instance ToXML (IxFree VoiceTwimlF i Void) where
+instance ToXML (IxFree VoiceVerbsF i Void) where
   toXML (IxFree f) = toXML f
   toXML _ = error "Impossible"
 
-data MessagingTwiml = forall i. MessagingTwiml (IxFree MessagingTwimlF i Void)
+data MessagingTwiml = forall i. MessagingTwiml (IxFree MessagingVerbsF i Void)
 
 instance ToElement MessagingTwiml where
   toElement (MessagingTwiml twiml) = unode "Response" $ toXML twiml
@@ -469,8 +630,8 @@ instance Show MessagingTwiml where
 showMessagingTwiml :: MessagingTwiml -> String
 showMessagingTwiml twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" ++ ppElement (toElement twiml) ++ "\n"
 
-newtype MessagingTwimlF i a = MessagingTwimlF
-  { getMessagingTwimlF ::
+newtype MessagingVerbsF i a = MessagingVerbsF
+  { getMessagingVerbsF ::
     ( MessageF  i :+:
       RedirectF i :+: -- Shared between Voice and Messaging TwiML
       SmsF      i :+: -- Shared between Voice and Messaging TwiML
@@ -481,20 +642,20 @@ instance (f i :<: ( MessageF  i :+:
                     RedirectF i :+:
                     SmsF      i :+:
                     EndF      i )
-         ) => f i :<: MessagingTwimlF i where
-  inj = MessagingTwimlF . inj
-  prj = prj . getMessagingTwimlF
+         ) => f i :<: MessagingVerbsF i where
+  inj = MessagingVerbsF . inj
+  prj = prj . getMessagingVerbsF
 
-instance Functor1 MessagingTwimlF where
+instance Functor1 MessagingVerbsF where
   fmap1 = fmap
 
-instance Show1 MessagingTwimlF where
+instance Show1 MessagingVerbsF where
   show1 = show
 
-instance ToXML a => ToXML (MessagingTwimlF i a) where
-  toXML = toXML . getMessagingTwimlF
+instance ToXML a => ToXML (MessagingVerbsF i a) where
+  toXML = toXML . getMessagingVerbsF
 
-instance ToXML (IxFree MessagingTwimlF i Void) where
+instance ToXML (IxFree MessagingVerbsF i Void) where
   toXML (IxFree f) = toXML f
   toXML _ = error "Impossible"
 
@@ -516,11 +677,17 @@ type family Base d where
   Base Say = SayF
   Base Sms = SmsF
 
+  Base Client = ClientF
+  Base Conference = ConferenceF
+  Base Number = NumberF
+  Base Queue = QueueF
+  Base Sip = SipF
+
 type IsTwimlLike f i = (Functor1 f, (Base i) '[i] :<: f '[i])
 
 type TwimlLike f i = TwimlLike' f '[i]
 
 type TwimlLike' f = IxFree f
 
-response :: IxFree VoiceTwimlF i Void -> VoiceTwiml
+response :: IxFree VoiceVerbsF i Void -> VoiceTwiml
 response = VoiceTwiml

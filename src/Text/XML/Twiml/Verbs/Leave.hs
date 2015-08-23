@@ -24,9 +24,8 @@
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Verbs.Leave
   ( leave
-    -- * Data Types
   , Leave
-  , LeaveF(..)
+  , LeaveF
   ) where
 
 import Text.XML.Twiml.Internal

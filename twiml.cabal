@@ -12,7 +12,7 @@ author:              Mark Andrus Roberts
 maintainer:          markandrusroberts@gmail.com
 -- copyright:           
 category:            Text, Web, XML
-build-type:          Custom
+build-type:          Simple
 cabal-version:       >=1.8
 data-files:          test/examples/*.txt
 

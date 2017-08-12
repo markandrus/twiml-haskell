@@ -8,7 +8,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverlappingInstances #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -89,14 +88,14 @@ instance Functor f => f :<: f where
   inj = id
   prj = Just
 
-instance (Functor f, Functor g) => f :<: (f :+: g) where
-  inj = InL
-  prj (InL f) = Just f
-  prj _ = Nothing
-
-instance (Functor f, Functor g, Functor h, f :<: g) => f :<: (h :+: g) where
+instance {-# OVERLAPPABLE #-} (Functor f, Functor g, Functor h, f :<: g) => f :<: (h :+: g) where
   inj = InR . inj
   prj (InR g) = prj g
+  prj _ = Nothing
+
+instance {-# OVERLAPPING #-} (Functor f, Functor g) => f :<: (f :+: g) where
+  inj = InL
+  prj (InL f) = Just f
   prj _ = Nothing
 
 {- Elem -}
@@ -319,10 +318,10 @@ instance Node SomeNode where
 instance ToSomeNode String where
   toSomeNode str = SomeNode . Text $ CData CDataText str Nothing
 
-instance ToSomeNode () where
+instance {-# OVERLAPPING #-} ToSomeNode () where
   toSomeNode = SomeNode
 
-instance ToSomeNode n => Node n where
+instance {-# OVERLAPPABLE #-} ToSomeNode n => Node n where
   node qName n = node qName (toSomeNode n)
 
 class ToXML a where

@@ -254,12 +254,14 @@ newtype DialNounF i a = DialNounF
       SipF        i ) a
   } deriving (Functor, Generic, Show, Typeable)
 
-instance (f i :<: ( ClientF     i :+:
-                    ConferenceF i :+:
-                    NumberF     i :+:
-                    QueueF      i :+:
-                    SipF        i )
-         ) => f i :<: DialNounF i where
+instance
+  ( Functor (f i)
+  , f i :<: ( ClientF     i :+:
+              ConferenceF i :+:
+              NumberF     i :+:
+              QueueF      i :+:
+              SipF        i )
+  ) => f i :<: DialNounF i where
   inj = DialNounF . inj
   prj = prj . getDialNounF
 
@@ -269,7 +271,7 @@ instance Functor1 DialNounF where
 instance Show1 DialNounF where
   show1 = show
 
-instance ToXML a => ToXML (DialNounF i a) where
+instance ToXML (DialNounF i a) where
   toXML = toXML . getDialNounF
 
 instance ToXML (IxFree DialNounF i Void) where
@@ -589,20 +591,22 @@ newtype VoiceVerbsF i a = VoiceVerbsF
       EndF      i ) a -- Shared between Voice and Messaging TwiML
   } deriving (Functor, Generic, Show, Typeable)
 
-instance (f i :<: ( SayF      i :+:
-                    PlayF     i :+:
-                    GatherF   i :+:
-                    SmsF      i :+:
-                    DialF     i :+:
-                    EnqueueF  i :+:
-                    LeaveF    i :+:
-                    HangupF   i :+:
-                    RecordF   i :+:
-                    RedirectF i :+:
-                    RejectF   i :+:
-                    PauseF    i :+:
-                    EndF      i )
-         ) => f i :<: VoiceVerbsF i where
+instance
+  ( Functor (f i)
+  , f i :<: ( SayF      i :+:
+              PlayF     i :+:
+              GatherF   i :+:
+              SmsF      i :+:
+              DialF     i :+:
+              EnqueueF  i :+:
+              LeaveF    i :+:
+              HangupF   i :+:
+              RecordF   i :+:
+              RedirectF i :+:
+              RejectF   i :+:
+              PauseF    i :+:
+              EndF      i )
+  ) => f i :<: VoiceVerbsF i where
   inj = VoiceVerbsF . inj
   prj = prj . getVoiceVerbsF
 
@@ -638,11 +642,13 @@ newtype MessagingVerbsF i a = MessagingVerbsF
       EndF      i ) a -- Shared between Voice and Messaging TwiML
   } deriving (Functor, Generic, Show, Typeable)
 
-instance (f i :<: ( MessageF  i :+:
-                    RedirectF i :+:
-                    SmsF      i :+:
-                    EndF      i )
-         ) => f i :<: MessagingVerbsF i where
+instance
+  ( Functor (f i)
+  , f i :<: ( MessageF  i :+:
+              RedirectF i :+:
+              SmsF      i :+:
+              EndF      i )
+  ) => f i :<: MessagingVerbsF i where
   inj = MessagingVerbsF . inj
   prj = prj . getMessagingVerbsF
 

@@ -16,7 +16,6 @@
 module Text.XML.Twiml.Lenses where
 
 import Control.Lens hiding (to)
-import Text.XML.Twiml.Types hiding (ClientAttributes(..), ConferenceAttributes(..), NumberAttributes(..), QueueAttributes(..), SipAttributes(..), DialNoun(..))
 import Text.XML.Twiml.Internal.Twiml
 
 makeLensesWith abbreviatedFields ''SayAttributes

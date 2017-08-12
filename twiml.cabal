@@ -47,7 +47,7 @@ library
   hs-source-dirs:      src
   -- other-modules:       
   build-depends:       base ==4.*,
-                       data-default ==0.5.*,
+                       data-default >=0.5 && < 0.8,
                        deepseq ==1.4.*,
                        lens ==4.*,
                        network-uri >=2.6,
@@ -62,11 +62,11 @@ test-suite Golden
   hs-source-dirs:      test
   type:                detailed-0.9
   test-module:         Golden
-  build-depends:       base ==4.*,
+  build-depends:       base,
                        Cabal >=1.16.0,
-                       data-default ==0.5.*,
+                       data-default,
                        Diff ==0.3.2,
-                       lens ==4.*,
+                       lens,
                        twiml
   ghc-options:         -Wall -Werror -fno-warn-name-shadowing -fno-warn-orphans -fno-warn-unused-do-bind
 
@@ -74,13 +74,13 @@ test-suite ShouldNotTypecheck
   hs-source-dirs:      test
   type:                detailed-0.9
   test-module:         ShouldNotTypecheck
-  build-depends:       base ==4.*,
+  build-depends:       base,
                        Cabal >=1.16.0,
-                       data-default ==0.5.*,
-                       deepseq ==1.4.*,
-                       HUnit ==1.2.*,
-                       lens ==4.*,
+                       data-default,
+                       deepseq,
+                       HUnit >=1.2 && <1.6,
+                       lens,
                        should-not-typecheck ==2.0.*,
                        twiml,
-                       void ==0.*
+                       void
   ghc-options:         -Wall -Werror -fno-warn-name-shadowing -fno-warn-orphans -fno-warn-unused-do-bind

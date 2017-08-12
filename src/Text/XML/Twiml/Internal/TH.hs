@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 -------------------------------------------------------------------------------
@@ -103,23 +104,27 @@ hasAttributes = not . null . getAllAttributes . parameters
 attributeToVarStrictType :: (String -> String) -> Attribute -> VarStrictType
 attributeToVarStrictType f Attribute{..} =
   ( mkName $ f attributeName
+#if MIN_VERSION_template_haskell(2,11,0)
+  , Bang NoSourceUnpackedness SourceStrict
+#else
   , IsStrict
+#endif
   , AppT (ConT $ mkName "Maybe") (ConT $ mkName attributeType)
   )
 
 parametersToVarStrictTypes :: (String -> String) -> [Parameters] -> [VarStrictType]
 parametersToVarStrictTypes f = map (attributeToVarStrictType f) . getAllAttributes
 
-rnfI :: Int -> Exp
-rnfI i = rnfNames . take i $ map (mkName . return) ['a'..'z']
+-- rnfI :: Int -> Exp
+-- rnfI i = rnfNames . take i $ map (mkName . return) ['a'..'z']
 
-rnfNames :: [Name] -> Exp
-rnfNames [] = TupE []
-rnfNames [a] = rnfName a
-rnfNames (a:as) = AppE (AppE (VarE $ mkName "seq") (rnfName a)) (rnfNames as)
+-- rnfNames :: [Name] -> Exp
+-- rnfNames [] = TupE []
+-- rnfNames [a] = rnfName a
+-- rnfNames (a:as) = AppE (AppE (VarE $ mkName "seq") (rnfName a)) (rnfNames as)
 
-rnfName :: Name -> Exp
-rnfName name = AppE (VarE $ mkName "rnf") (VarE name)
+-- rnfName :: Name -> Exp
+-- rnfName name = AppE (VarE $ mkName "rnf") (VarE name)
 
 specToGADTName :: TwimlSpec -> Name
 specToGADTName TwimlSpec{..} = mkName $ twimlName ++ "F"
@@ -144,14 +149,14 @@ specToGADTChildName :: TwimlSpec -> Maybe Name
 specToGADTChildName spec@(TwimlSpec{..}) = go $ zip parameters $ specToGADTNames spec where
   go [] = Nothing
   go ((Required _, name):_) = Just name
-  go ((Attributes _, name):rest) = go rest
+  go ((Attributes _, _):rest) = go rest
 
 specToGADTPat :: TwimlSpec -> Pat
 specToGADTPat spec@(TwimlSpec{..}) = ConP (specToGADTName spec) varPs where
   varPs = map VarP $ specToGADTNames spec
 
 specToAttributesListE :: TwimlSpec -> Exp
-specToAttributesListE spec@(TwimlSpec{..}) = ListE . map go $ getAllAttributes parameters where
+specToAttributesListE (TwimlSpec{..}) = ListE . map go $ getAllAttributes parameters where
   go (Attribute{..}) =
     let name = LitE . StringL $ fromMaybe attributeName overrideName
     in  AppE (AppE (VarE $ mkName "makeAttr") name) (VarE . mkName $ makeAttr attributeName)
@@ -168,19 +173,31 @@ specToToXML spec@(TwimlSpec{..}) = UInfixE (AppE (AppE (AppE (VarE $ mkName "mak
     else ListE []
 
 specToStrictTypes :: TwimlSpec -> [StrictType]
+#if MIN_VERSION_template_haskell(2,11,0)
+specToStrictTypes spec@(TwimlSpec{..}) = go parameters ++ [(Bang NoSourceUnpackedness NoSourceStrictness, VarT $ mkName "a") | recursive] where
+#else
 specToStrictTypes spec@(TwimlSpec{..}) = go parameters ++ [(NotStrict, VarT $ mkName "a") | recursive] where
+#endif
   go [] = []
   go (Required   as :bs) = map stringToStrictType as ++ go bs
+#if MIN_VERSION_template_haskell(2,11,0)
+  go (Attributes _  :bs) = (Bang NoSourceUnpackedness NoSourceStrictness, ConT $ specToAttributesName spec) : go bs
+#else
   go (Attributes _  :bs) = (NotStrict, ConT $ specToAttributesName spec) : go bs
+#endif
+#if MIN_VERSION_template_haskell(2,11,0)
+  stringToStrictType a = (Bang NoSourceUnpackedness NoSourceStrictness, ConT $ mkName a)
+#else
   stringToStrictType a = (NotStrict, ConT $ mkName a)
+#endif
 
-gadtToDefExp :: TwimlSpec -> [Parameters] -> Exp
-gadtToDefExp spec@(TwimlSpec{..}) = go (ConE $ specToGADTName spec) . foldr ((+) . count) (if recursive then 1 else 0) where
-  go conE 0 = conE
-  go conE n = go (AppE conE defE) (n-1)
-  defE = VarE $ mkName "def"
-  count (Required r) = length r
-  count _ = 1
+-- gadtToDefExp :: TwimlSpec -> [Parameters] -> Exp
+-- gadtToDefExp spec@(TwimlSpec{..}) = go (ConE $ specToGADTName spec) . foldr ((+) . count) (if recursive then 1 else 0) where
+--   go conE 0 = conE
+--   go conE n = go (AppE conE defE) (n-1)
+--   defE = VarE $ mkName "def"
+--   count (Required r) = length r
+--   count _ = 1
 
 attributesToDefExp :: Exp -> [Parameters] -> Exp
 attributesToDefExp conE = go conE . length . getAllAttributes where
@@ -246,7 +263,12 @@ runTwimlSpecParser :: String -> Either ParseError TwimlSpec
 runTwimlSpecParser = runParser parseTwimlSpec () ""
 
 s :: QuasiQuoter
-s = QuasiQuoter {quoteExp = stringE . trim}
+s = QuasiQuoter {
+  quoteExp = stringE . trim
+, quotePat = undefined
+, quoteType = undefined
+, quoteDec = undefined
+}
 
 trim :: String -> String
 trim = trimTail . dropWhile isSpace
@@ -276,7 +298,7 @@ twimlSpecToData spec@(TwimlSpec{..}) = pure $
     [ emptyDataDecl
     , gadt
 --    , deriveDataForGADT
-    -- , instanceDefaultForGADT
+--    , instanceDefaultForGADT
 --    , deriveEqForGADT
     , deriveFunctorForGADT
     , instanceFunctor1ForGADT
@@ -294,7 +316,15 @@ twimlSpecToData spec@(TwimlSpec{..}) = pure $
     conName = mkName twimlName
 
     -- | @data Foo@
+#if MIN_VERSION_template_haskell(2,12,0)
+    emptyDataDecl = DataD [] conName [] Nothing [] $ DerivClause Nothing []
+#else
+#if MIN_VERSION_template_haskell(2,11,0)
+    emptyDataDecl = DataD [] conName [] Nothing [] []
+#else
     emptyDataDecl = DataD [] conName [] [] []
+#endif
+#endif
 
     -- | Type variables @i :: [*]@ and @a@
     i' = mkName "i"
@@ -326,10 +356,18 @@ twimlSpecToData spec@(TwimlSpec{..}) = pure $
         . NormalC conNameF $ specToStrictTypes spec
 
     -- | @data FooF i a where FooF :: a -> FooF '[Foo] a@
+#if MIN_VERSION_template_haskell(2,12,0)
+    gadt = DataD [] conNameF tyVarBndrs Nothing [con] $ DerivClause Nothing []
+#else
+#if MIN_VERSION_template_haskell(2,11,0)
+    gadt = DataD [] conNameF tyVarBndrs Nothing [con] []
+#else
     gadt = DataD [] conNameF tyVarBndrs [con] []
+#endif
+#endif
 
     dataN = mkName "Data"
-    dataC = ConT dataN
+    -- dataC = ConT dataN
 
     defaultN = mkName "Default"
     defaultC = ConT defaultN
@@ -338,7 +376,7 @@ twimlSpecToData spec@(TwimlSpec{..}) = pure $
     -- enumC = ConT enumN
 
     eqN = mkName "Eq"
-    eqC = ConT eqN
+    -- eqC = ConT eqN
 
     functorN = mkName "Functor"
     functorC = ConT functorN
@@ -347,16 +385,16 @@ twimlSpecToData spec@(TwimlSpec{..}) = pure $
     functor1C = ConT functor1N
 
     genericN = mkName "Generic"
-    genericC = ConT genericN
+    -- genericC = ConT genericN
 
     nfdataN = mkName "NFData"
-    nfdataC = ConT nfdataN
+    -- nfdataC = ConT nfdataN
 
     ordN = mkName "Ord"
-    ordC = ConT ordN
+    -- ordC = ConT ordN
 
     readN = mkName "Read"
-    readC = ConT readN
+    -- readC = ConT readN
 
     showN = mkName "Show"
     showC = ConT showN
@@ -368,34 +406,74 @@ twimlSpecToData spec@(TwimlSpec{..}) = pure $
     toXMLC = ConT toXMLN
 
     -- | @instance Default a => Default (FooF i a) where def = FooF def ...@
-    instanceDefaultForGADT = InstanceD [AppT defaultC a] (AppT defaultC (AppT (AppT (ConT conNameF) list) a)) [ValD (VarP $ mkName "def") (NormalB $ gadtToDefExp spec parameters) []]
+#if MIN_VERSION_template_haskell(2,11,0)
+--     instanceDefaultForGADT = InstanceD Nothing [AppT defaultC a] (AppT defaultC (AppT (AppT (ConT conNameF) list) a)) [ValD (VarP $ mkName "def") (NormalB $ gadtToDefExp spec parameters) []]
+#else
+--     instanceDefaultForGADT = InstanceD [AppT defaultC a] (AppT defaultC (AppT (AppT (ConT conNameF) list) a)) [ValD (VarP $ mkName "def") (NormalB $ gadtToDefExp spec parameters) []]
+#endif
 
     -- | @deriving instance Data a => Data (FooF i a)@
-    deriveDataForGADT = StandaloneDerivD [AppT dataC a] $ AppT dataC (AppT (AppT (ConT conNameF) list) a)
+#if MIN_VERSION_template_haskell(2,12,0)
+--     deriveDataForGADT = StandaloneDerivD Nothing [AppT dataC a] $ AppT dataC (AppT (AppT (ConT conNameF) list) a)
+#else
+--     deriveDataForGADT = StandaloneDerivD [AppT dataC a] $ AppT dataC (AppT (AppT (ConT conNameF) list) a)
+#endif
 
     -- | @deriving instance Eq a => Eq (FooF i a)@
-    deriveEqForGADT = StandaloneDerivD [AppT eqC a] $ AppT eqC (AppT (AppT (ConT conNameF) i) a)
+#if MIN_VERSION_template_haskell(2,12,0)
+--     deriveEqForGADT = StandaloneDerivD Nothing [AppT eqC a] $ AppT eqC (AppT (AppT (ConT conNameF) i) a)
+#else
+--     deriveEqForGADT = StandaloneDerivD [AppT eqC a] $ AppT eqC (AppT (AppT (ConT conNameF) i) a)
+#endif
 
     -- | @deriving instance Functor (FooF i)@
+#if MIN_VERSION_template_haskell(2,12,0)
+    deriveFunctorForGADT = StandaloneDerivD Nothing [] $ AppT functorC (AppT (ConT conNameF) i)
+#else
     deriveFunctorForGADT = StandaloneDerivD [] $ AppT functorC (AppT (ConT conNameF) i)
+#endif
 
     -- | @instance Functor1 FooF where fmap1 = fmap@
+#if MIN_VERSION_template_haskell(2,11,0)
+    instanceFunctor1ForGADT = InstanceD Nothing [] (AppT functor1C $ ConT conNameF) [ValD (VarP $ mkName "fmap1") (NormalB . VarE $ mkName "fmap") []]
+#else
     instanceFunctor1ForGADT = InstanceD [] (AppT functor1C $ ConT conNameF) [ValD (VarP $ mkName "fmap1") (NormalB . VarE $ mkName "fmap") []]
+#endif
 
     -- | @instance NFData a => NFData (FooF i a) where rnf (FooF a ...) = rnf a `seq` ...@
-    instanceNFDataForGADT = InstanceD [AppT nfdataC a] (AppT nfdataC (AppT (AppT (ConT conNameF) list) a)) [FunD (mkName "rnf") [Clause [specToGADTPat spec] (NormalB . rnfI $ specToGADTArity spec) []]]
+#if MIN_VERSION_template_haskell(2,11,0)
+--     instanceNFDataForGADT = InstanceD Nothing [AppT nfdataC a] (AppT nfdataC (AppT (AppT (ConT conNameF) list) a)) [FunD (mkName "rnf") [Clause [specToGADTPat spec] (NormalB . rnfI $ specToGADTArity spec) []]]
+#else
+--     instanceNFDataForGADT = InstanceD [AppT nfdataC a] (AppT nfdataC (AppT (AppT (ConT conNameF) list) a)) [FunD (mkName "rnf") [Clause [specToGADTPat spec] (NormalB . rnfI $ specToGADTArity spec) []]]
+#endif
 
     -- | @deriving instance Ord a => Ord (FooF i a)@
-    deriveOrdForGADT = StandaloneDerivD [AppT ordC a] $ AppT ordC (AppT (AppT (ConT conNameF) i) a)
+#if MIN_VERSION_template_haskell(2,12,0)
+--     deriveOrdForGADT = StandaloneDerivD Nothing [AppT ordC a] $ AppT ordC (AppT (AppT (ConT conNameF) i) a)
+#else
+--     deriveOrdForGADT = StandaloneDerivD [AppT ordC a] $ AppT ordC (AppT (AppT (ConT conNameF) i) a)
+#endif
 
     -- | @deriving instance Read a => Read (FooF i a)@
-    deriveReadForGADT = StandaloneDerivD [AppT readC a] $ AppT readC (AppT (AppT (ConT conNameF) list) a)
+#if MIN_VERSION_template_haskell(2,12,0)
+--     deriveReadForGADT = StandaloneDerivD Nothing [AppT readC a] $ AppT readC (AppT (AppT (ConT conNameF) list) a)
+#else
+--     deriveReadForGADT = StandaloneDerivD [AppT readC a] $ AppT readC (AppT (AppT (ConT conNameF) list) a)
+#endif
 
     -- | @deriving instance Show a => Show (FooF i a)@
+#if MIN_VERSION_template_haskell(2,12,0)
+    deriveShowForGADT = StandaloneDerivD Nothing [AppT showC a] $ AppT showC (AppT (AppT (ConT conNameF) i) a)
+#else
     deriveShowForGADT = StandaloneDerivD [AppT showC a] $ AppT showC (AppT (AppT (ConT conNameF) i) a)
+#endif
 
     -- | @instance ToXML a => ToXML (FooF i a) where toXML (FooF a ...) = makeElement "Foo" a ...@
+#if MIN_VERSION_template_haskell(2,11,0)
+    instanceToXMLForGADT = InstanceD Nothing [AppT toXMLC a | recursive] (AppT toXMLC (AppT (AppT (ConT conNameF) i) a))
+#else
     instanceToXMLForGADT = InstanceD [AppT toXMLC a | recursive] (AppT toXMLC (AppT (AppT (ConT conNameF) i) a))
+#endif
       [FunD (mkName "toXML") [Clause [specToGADTPat spec] (NormalB $ specToToXML spec) []]]
 
     attrPrefix = '_' : map toLower twimlName
@@ -406,9 +484,25 @@ twimlSpecToData spec@(TwimlSpec{..}) = pure $
     -- | @data FooAttributes = FooAttributes{..} deriving (Data, Eq, Ord, Read, Show)@
     --
     -- All record fields should be camelCased and prefixed with "_foo".
+#if MIN_VERSION_template_haskell(2,12,0)
+    attributes = DataD [] attributesName [] Nothing [RecC attributesName (parametersToVarStrictTypes makeAttr parameters)] . DerivClause Nothing $ ConT <$> [dataN, eqN, genericN, nfdataN, ordN, readN, showN]
+#else
+#if MIN_VERSION_template_haskell(2,11,0)
+    attributes = DataD [] attributesName [] Nothing [RecC attributesName (parametersToVarStrictTypes makeAttr parameters)] $ ConT <$> [dataN, eqN, genericN, nfdataN, ordN, readN, showN]
+#else
     attributes = DataD [] attributesName [] [RecC attributesName (parametersToVarStrictTypes makeAttr parameters)] [dataN, eqN, genericN, nfdataN, ordN, readN, showN]
+#endif
+#endif
 
     -- | @instance Default FooAttributes where def = FooAttributes def ...@
+#if MIN_VERSION_template_haskell(2,11,0)
+    instanceDefaultForAttributes = InstanceD Nothing [] (AppT defaultC $ ConT attributesName) [ValD (VarP $ mkName "def") (NormalB $ attributesToDefExp (ConE attributesName) parameters) []]
+#else
     instanceDefaultForAttributes = InstanceD [] (AppT defaultC $ ConT attributesName) [ValD (VarP $ mkName "def") (NormalB $ attributesToDefExp (ConE attributesName) parameters) []]
+#endif
 
+#if MIN_VERSION_template_haskell(2,11,0)
+    instanceToAttrsForAttributes = InstanceD Nothing [] (AppT toAttrsC $ ConT attributesName) [ValD (VarP $ mkName "toAttrs") (NormalB (AppE (AppE (VarE $ mkName "flip") (VarE $ mkName "makeAttrs")) (specToAttributesListE spec))) []]
+#else
     instanceToAttrsForAttributes = InstanceD [] (AppT toAttrsC $ ConT attributesName) [ValD (VarP $ mkName "toAttrs") (NormalB (AppE (AppE (VarE $ mkName "flip") (VarE $ mkName "makeAttrs")) (specToAttributesListE spec))) []]
+#endif

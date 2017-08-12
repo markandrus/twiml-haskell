@@ -10,7 +10,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE OverlappingInstances #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -42,7 +41,6 @@ module Text.XML.Twiml.Types
 
 import Control.DeepSeq (NFData(..))
 import Data.Data
-import Data.Default
 import GHC.Generics (Generic)
 import Network.URI (URI(..), parseURIReference)
 

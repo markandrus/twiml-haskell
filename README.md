@@ -10,9 +10,11 @@ This package provides a library for constructing
 $ cabal install twiml
 ```
 
-Documentation soon to be available on Hackage. For now, see [markandrus.github.io/twiml-haskell](http://markandrus.github.io/twiml-haskell).
+Documentation is available through [GitHub](https://markandrus.github.io/twiml-haskell)
+(for HEAD) or [Hackage](https://hackage.haskell.org/package/twiml) for the
+current and preceding releases.
 
-For the Twilio REST API, see [twilio-haskell](//github.com/markandrus/twilio-haskell).
+For the Twilio REST API, see [twilio-haskell](https://github.com/markandrus/twilio-haskell).
 
 Example
 -------
@@ -40,8 +42,7 @@ is transformed into
 Contributing
 ------------
 
-Feel free to contribute to any of the open [issues]
-(https://github.com/markandrus/twiml-haskell/issues), bugfixes, etc. When you
-think you're ready to merge, ensure the tests are passing and open a pull
-request. If you are adding new functionality, please include new tests as well.
-Finally, add yourself to the `AUTHORS` file.
+Feel free to contribute to any of the open [issues](https://github.com/markandrus/twiml-haskell/issues),
+bugfixes, etc. When you think you're ready to merge, ensure the tests are
+passing and open a pull request. If you are adding new functionality, please
+include new tests as well. Finally, add yourself to the `AUTHORS` file.

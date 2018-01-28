@@ -45,6 +45,7 @@ module Text.XML.Twiml.Internal.Twiml
   , TwimlLike
   , TwimlLike'
   , response
+  , responseMsg
     -- ** Nouns
   , DialNoun(..)
   , DialNounF(..)
@@ -697,3 +698,7 @@ type TwimlLike' f = IxFree f
 
 response :: IxFree VoiceVerbsF i Void -> VoiceTwiml
 response = VoiceTwiml
+
+responseMsg :: IxFree MessagingVerbsF i Void -> MessagingTwiml
+responseMsg = MessagingTwiml
+

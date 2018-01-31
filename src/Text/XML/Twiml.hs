@@ -10,7 +10,8 @@ module Text.XML.Twiml
   ( MessagingTwiml(..)
   , VoiceTwiml(..)
   , response
-  , responseMsg
+  , voiceResponse
+  , messagingResponse
   , module X
   ) where
 

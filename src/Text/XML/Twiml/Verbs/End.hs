@@ -3,7 +3,7 @@
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.End
--- Copyright   :  (C) 2014-15 Mark Andrus Roberts
+-- Copyright   :  (C) 2018 Mark Andrus Roberts
 -- License     :  BSD-style (see the file LICENSE)
 -- Maintainer  :  Mark Andrus Roberts <markandrusroberts@gmail.com>
 -- Stability   :  provisional
@@ -15,6 +15,7 @@
 -- {-\# LANGUAGE RecordWildCards \#-}
 -- 
 -- import Prelude
+-- import Data.Default
 -- import Text.XML.Twiml
 -- import qualified Text.XML.Twiml.Syntax as Twiml
 -- @
@@ -30,20 +31,27 @@ module Text.XML.Twiml.Verbs.End
 import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
 
+-- $setup
+-- >>> :set -XRebindableSyntax
+-- >>> :set -XRecordWildCards
+-- >>> import Prelude
+-- >>> import Data.Default
+-- >>> import Text.XML.Twiml
+-- >>> import qualified Text.XML.Twiml.Syntax as Twiml
+
 {- | Terminate a TwiML response, or construct an empty TwiML response. Example:
 
-@
-example :: VoiceTwiml
-example =
-  response $ do
-    'end'
-  where Twiml.Syntax{..} = def
-@
+>>> :{
+let example :: VoiceTwiml
+    example =
+      voiceResponse $ do
+        end
+      where Twiml.Syntax{..} = def
+:}
 
->>> show example
+>>> putStr $ show example
 <?xml version="1.0" encoding="UTF-8"?>
-<Response>
-</Response>
+<Response />
 -}
 end :: IsTwimlLike f End => TwimlLike f End a
 end = iliftF $ inj EndF

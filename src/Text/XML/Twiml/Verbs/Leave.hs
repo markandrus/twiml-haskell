@@ -3,7 +3,7 @@
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.Leave
--- Copyright   :  (C) 2014-15 Mark Andrus Roberts
+-- Copyright   :  (C) 2018 Mark Andrus Roberts
 -- License     :  BSD-style (see the file LICENSE)
 -- Maintainer  :  Mark Andrus Roberts <markandrusroberts@gmail.com>
 -- Stability   :  provisional
@@ -15,6 +15,7 @@
 -- {-\# LANGUAGE RecordWildCards \#-}
 -- 
 -- import Prelude
+-- import Data.Default
 -- import Text.XML.Twiml
 -- import qualified Text.XML.Twiml.Syntax as Twiml
 -- @
@@ -31,9 +32,30 @@ module Text.XML.Twiml.Verbs.Leave
 import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
 
+-- $setup
+-- >>> :set -XRebindableSyntax
+-- >>> :set -XRecordWildCards
+-- >>> import Prelude
+-- >>> import Data.Default
+-- >>> import Text.XML.Twiml
+-- >>> import qualified Text.XML.Twiml.Syntax as Twiml
+
 {- | Leave a queue. Example:
 
-#include "leaveExample1.txt"
+>>> :{
+let example :: VoiceTwiml
+    example =
+      voiceResponse $ do
+        leave
+        end
+      where Twiml.Syntax{..} = def
+:}
+
+>>> putStr $ show example
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Leave />
+</Response>
 -}
 leave :: IsTwimlLike f Leave => TwimlLike f Leave a
 leave = iliftF . inj $ LeaveF

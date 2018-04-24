@@ -3,7 +3,7 @@
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.Message
--- Copyright   :  (C) 2014-15 Mark Andrus Roberts
+-- Copyright   :  (C) 2018 Mark Andrus Roberts
 -- License     :  BSD-style (see the file LICENSE)
 -- Maintainer  :  Mark Andrus Roberts <markandrusroberts@gmail.com>
 -- Stability   :  provisional
@@ -15,6 +15,7 @@
 -- {-\# LANGUAGE RecordWildCards \#-}
 -- 
 -- import Prelude
+-- import Data.Default
 -- import Text.XML.Twiml
 -- import qualified Text.XML.Twiml.Syntax as Twiml
 -- @
@@ -32,20 +33,30 @@ module Text.XML.Twiml.Verbs.Message
 import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
 
+-- $setup
+-- >>> :set -XRebindableSyntax
+-- >>> :set -XRecordWildCards
+-- >>> import Prelude
+-- >>> import Data.Default
+-- >>> import Text.XML.Twiml
+-- >>> import qualified Text.XML.Twiml.Syntax as Twiml
+
 {- | Example:
 
-@
-example :: MessagingTwiml
-example =
-  response $ do
-    'end'
-  where Twiml.Syntax{..} = def
-@
+>>> :{
+let example :: MessagingTwiml
+    example =
+      messagingResponse $ do
+        message "Store Location: 123 Easy St." def
+        end
+      where Twiml.Syntax{..} = def
+:}
 
-> <?xml version="1.0" encoding="UTF-8"?>
-> <Response>
->  <Message>Store Location: 123 Easy St.</Message>
-> </Response>
+>>> putStr $ show example
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Message>Store Location: 123 Easy St.</Message>
+</Response>
 -}
 message :: IsTwimlLike f Message => String -> MessageAttributes -> TwimlLike f Message ()
 message a b = iliftF . inj $ MessageF a b ()

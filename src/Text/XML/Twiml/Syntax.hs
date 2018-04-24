@@ -7,7 +7,7 @@
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Syntax
--- Copyright   :  (C) 2014-15 Mark Andrus Roberts
+-- Copyright   :  (C) 2018 Mark Andrus Roberts
 -- License     :  BSD-style (see the file LICENSE)
 -- Maintainer  :  Mark Andrus Roberts <markandrusroberts@gmail.com>
 -- Stability   :  provisional
@@ -20,6 +20,7 @@
 -- {-\# LANGUAGE RecordWildCards \#-}
 --
 -- import Prelude
+-- import Data.Default
 -- import Text.XML.Twiml
 -- import qualified Text.XML.Twiml.Syntax as Twiml
 --

@@ -62,7 +62,6 @@ install:
      stack --install-ghc $ARGS solver --update-config
    fi
    set +ex
- - make
 
 script:
  - |
@@ -74,6 +73,7 @@ script:
      cabal)
        cabal --version
        travis_retry cabal update
+       sed -i 's/^jobs:/-- jobs:/' ${HOME}/.cabal/config
        cabal install --dependencies-only --enable-tests
        cabal configure --enable-tests --enable-benchmarks -v2
        cabal build

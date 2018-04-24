@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Say>Please leave a message at the beep. Press the star key when finished.</Say>
-  <Record action="http://foo.edu/handleRecording.php" method="GET" finishOnKey="*" maxLength="20" />
-  <Say>I did not receive a recording</Say>
-</Response>

@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Say voice="alice" loop="2" language="pt-BR">Bom dia.</Say>
-</Response>

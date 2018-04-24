@@ -22,8 +22,18 @@ Example
 The following Haskell code
 
 ```hs
+{-# LANGUAGE RebindableSyntax #-}
+{-# LANGUAGE RecordWildCards #-}
+
+import Prelude
+import Control.Lens
+import Data.Default
+import Text.XML.Twiml
+import qualified Text.XML.Twiml.Syntax as Twiml
+
+example :: VoiceTwiml
 example =
-  response $ do
+  voiceResponse $ do
     say "Hello, world" $ def & voice .~ Man
     hangup
   where Twiml.Syntax{..} = def

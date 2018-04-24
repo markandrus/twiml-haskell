@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Internal.TH
--- Copyright   :  (C) 2014-15 Mark Andrus Roberts
+-- Copyright   :  (C) 2018 Mark Andrus Roberts
 -- License     :  BSD-style (see the file LICENSE)
 -- Maintainer  :  Mark Andrus Roberts <markandrusroberts@gmail.com>
 -- Stability   :  provisional
@@ -317,7 +317,7 @@ twimlSpecToData spec@(TwimlSpec{..}) = pure $
 
     -- | @data Foo@
 #if MIN_VERSION_template_haskell(2,12,0)
-    emptyDataDecl = DataD [] conName [] Nothing [] $ DerivClause Nothing []
+    emptyDataDecl = DataD [] conName [] Nothing [] [DerivClause Nothing []]
 #else
 #if MIN_VERSION_template_haskell(2,11,0)
     emptyDataDecl = DataD [] conName [] Nothing [] []
@@ -357,7 +357,7 @@ twimlSpecToData spec@(TwimlSpec{..}) = pure $
 
     -- | @data FooF i a where FooF :: a -> FooF '[Foo] a@
 #if MIN_VERSION_template_haskell(2,12,0)
-    gadt = DataD [] conNameF tyVarBndrs Nothing [con] $ DerivClause Nothing []
+    gadt = DataD [] conNameF tyVarBndrs Nothing [con] [DerivClause Nothing []]
 #else
 #if MIN_VERSION_template_haskell(2,11,0)
     gadt = DataD [] conNameF tyVarBndrs Nothing [con] []
@@ -485,7 +485,7 @@ twimlSpecToData spec@(TwimlSpec{..}) = pure $
     --
     -- All record fields should be camelCased and prefixed with "_foo".
 #if MIN_VERSION_template_haskell(2,12,0)
-    attributes = DataD [] attributesName [] Nothing [RecC attributesName (parametersToVarStrictTypes makeAttr parameters)] . DerivClause Nothing $ ConT <$> [dataN, eqN, genericN, nfdataN, ordN, readN, showN]
+    attributes = DataD [] attributesName [] Nothing [RecC attributesName (parametersToVarStrictTypes makeAttr parameters)] . pure . DerivClause Nothing $ ConT <$> [dataN, eqN, genericN, nfdataN, ordN, readN, showN]
 #else
 #if MIN_VERSION_template_haskell(2,11,0)
     attributes = DataD [] attributesName [] Nothing [RecC attributesName (parametersToVarStrictTypes makeAttr parameters)] $ ConT <$> [dataN, eqN, genericN, nfdataN, ordN, readN, showN]

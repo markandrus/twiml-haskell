@@ -3,7 +3,7 @@
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.Reject
--- Copyright   :  (C) 2014-15 Mark Andrus Roberts
+-- Copyright   :  (C) 2018 Mark Andrus Roberts
 -- License     :  BSD-style (see the file LICENSE)
 -- Maintainer  :  Mark Andrus Roberts <markandrusroberts@gmail.com>
 -- Stability   :  provisional
@@ -15,6 +15,8 @@
 -- {-\# LANGUAGE RecordWildCards \#-}
 -- 
 -- import Prelude
+-- import Control.Lens
+-- import Data.Default
 -- import Text.XML.Twiml
 -- import qualified Text.XML.Twiml.Syntax as Twiml
 -- @
@@ -32,9 +34,31 @@ module Text.XML.Twiml.Verbs.Reject
 import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
 
+-- $setup
+-- >>> :set -XRebindableSyntax
+-- >>> :set -XRecordWildCards
+-- >>> import Prelude
+-- >>> import Control.Lens
+-- >>> import Data.Default
+-- >>> import Text.XML.Twiml
+-- >>> import qualified Text.XML.Twiml.Syntax as Twiml
+
 {- | Example:
 
-#include "rejectExample2.txt"
+>>> :{
+let example :: VoiceTwiml
+    example =
+      voiceResponse $ do
+        reject $ def & reason .~ Just Busy
+        end
+      where Twiml.Syntax{..} = def
+:}
+
+>>> putStr $ show example
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Reject reason="busy" />
+</Response>
 -}
 reject :: IsTwimlLike f Reject => RejectAttributes -> TwimlLike f Reject a
 reject a = iliftF . inj $ RejectF a

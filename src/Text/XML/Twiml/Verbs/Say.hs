@@ -3,7 +3,7 @@
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.Say
--- Copyright   :  (C) 2014-15 Mark Andrus Roberts
+-- Copyright   :  (C) 2018 Mark Andrus Roberts
 -- License     :  BSD-style (see the file LICENSE)
 -- Maintainer  :  Mark Andrus Roberts <markandrusroberts@gmail.com>
 -- Stability   :  provisional
@@ -15,6 +15,8 @@
 -- {-\# LANGUAGE RecordWildCards \#-}
 -- 
 -- import Prelude
+-- import Control.Lens
+-- import Data.Default
 -- import Text.XML.Twiml
 -- import qualified Text.XML.Twiml.Syntax as Twiml
 -- @
@@ -32,9 +34,32 @@ module Text.XML.Twiml.Verbs.Say
 import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
 
+-- $setup
+-- >>> :set -XRebindableSyntax
+-- >>> :set -XRecordWildCards
+-- >>> import Prelude
+-- >>> import Control.Lens
+-- >>> import Data.Default
+-- >>> import Text.XML.Twiml
+-- >>> import qualified Text.XML.Twiml.Syntax as Twiml
+
 {- | Example:
 
-#include "sayExample2.txt"
+>>> :{
+let example :: VoiceTwiml
+    example =
+      voiceResponse $ do
+        say "Bom dia." $ def & voice .~ Just (Alice $ Just PtBR)
+                             & loop  .~ Just 2
+        end
+      where Twiml.Syntax{..} = def
+:}
+
+>>> putStr $ show example
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="alice" loop="2" language="pt-BR">Bom dia.</Say>
+</Response>
 -}
 say :: IsTwimlLike f Say => String -> SayAttributes -> TwimlLike f Say ()
 say a b = iliftF . inj $ SayF a b ()

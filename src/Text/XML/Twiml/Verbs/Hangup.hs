@@ -3,7 +3,7 @@
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.Hangup
--- Copyright   :  (C) 2014-15 Mark Andrus Roberts
+-- Copyright   :  (C) 2018 Mark Andrus Roberts
 -- License     :  BSD-style (see the file LICENSE)
 -- Maintainer  :  Mark Andrus Roberts <markandrusroberts@gmail.com>
 -- Stability   :  provisional
@@ -15,6 +15,7 @@
 -- {-\# LANGUAGE RecordWildCards \#-}
 -- 
 -- import Prelude
+-- import Data.Default
 -- import Text.XML.Twiml
 -- import qualified Text.XML.Twiml.Syntax as Twiml
 -- @
@@ -31,9 +32,30 @@ module Text.XML.Twiml.Verbs.Hangup
 import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
 
+-- $setup
+-- >>> :set -XRebindableSyntax
+-- >>> :set -XRecordWildCards
+-- >>> import Prelude
+-- >>> import Data.Default
+-- >>> import Text.XML.Twiml
+-- >>> import qualified Text.XML.Twiml.Syntax as Twiml
+
 {- | Hangup a call. Example:
 
-#include "hangupExample1.txt"
+>>> :{
+let example :: VoiceTwiml
+    example =
+      voiceResponse $ do
+        hangup
+        end
+      where Twiml.Syntax{..} = def
+:}
+
+>>> putStr $ show example
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Hangup />
+</Response>
 -}
 hangup :: IsTwimlLike f Hangup => TwimlLike f Hangup a
 hangup = iliftF . inj $ HangupF

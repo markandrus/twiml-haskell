@@ -3,7 +3,7 @@
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.Dial
--- Copyright   :  (C) 2014-15 Mark Andrus Roberts
+-- Copyright   :  (C) 2018 Mark Andrus Roberts
 -- License     :  BSD-style (see the file LICENSE)
 -- Maintainer  :  Mark Andrus Roberts <markandrusroberts@gmail.com>
 -- Stability   :  provisional
@@ -15,6 +15,8 @@
 -- {-\# LANGUAGE RecordWildCards \#-}
 -- 
 -- import Prelude
+-- import Control.Lens
+-- import Data.Default
 -- import Text.XML.Twiml
 -- import qualified Text.XML.Twiml.Syntax as Twiml
 -- @
@@ -64,16 +66,56 @@ import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
 import Text.XML.Twiml.Types
 
+-- $setup
+-- >>> :set -XRebindableSyntax
+-- >>> :set -XRecordWildCards
+-- >>> import Prelude
+-- >>> import Control.Lens
+-- >>> import Data.Default
+-- >>> import Text.XML.Twiml
+-- >>> import qualified Text.XML.Twiml.Syntax as Twiml
+
 {- | Dial a number. Example:
 
-#include "dialExample1.txt"
+>>> :{
+let example1 :: VoiceTwiml
+    example1 =
+      voiceResponse $ do
+        dial "415-123-4567" def
+        say "Goodbye" def
+        end
+      where Twiml.Syntax{..} = def
+:}
+
+>>> putStr $ show example1
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Dial>415-123-4567</Dial>
+  <Say>Goodbye</Say>
+</Response>
 -}
 dial :: IsTwimlLike f Dial => String -> DialAttributes -> TwimlLike f Dial ()
 dial a b = iliftF . inj $ DialF (pure a) b ()
 
 {- | Dial a number or 'DialNoun'. Example:
 
-#include "dialExample3.txt"
+>>> :{
+let example2 :: VoiceTwiml
+    example2 =
+      voiceResponse $ do
+        dial' (Left . dialNoun $ number "+15558675309" def) $
+          def & callerId .~ Just "+15551112222"
+        end
+      where Twiml.Syntax{..} = def
+:}
+
+>>> putStr $ show example2
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Dial callerId="+15551112222">
+    <Number>+15558675309</Number>
+  </Dial>
+</Response>
 -}
 dial' :: IsTwimlLike f Dial => Either DialNoun String -> DialAttributes -> TwimlLike f Dial ()
 dial' a b = iliftF . inj $ DialF a b ()

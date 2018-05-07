@@ -3,7 +3,7 @@
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.Play
--- Copyright   :  (C) 2014-15 Mark Andrus Roberts
+-- Copyright   :  (C) 2018 Mark Andrus Roberts
 -- License     :  BSD-style (see the file LICENSE)
 -- Maintainer  :  Mark Andrus Roberts <markandrusroberts@gmail.com>
 -- Stability   :  provisional
@@ -15,6 +15,9 @@
 -- {-\# LANGUAGE RecordWildCards \#-}
 -- 
 -- import Prelude
+-- import Control.Lens
+-- import Data.Default
+-- import Data.Maybe
 -- import Text.XML.Twiml
 -- import qualified Text.XML.Twiml.Syntax as Twiml
 -- @
@@ -34,16 +37,52 @@ import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
 import Text.XML.Twiml.Types
 
+-- $setup
+-- >>> :set -XRebindableSyntax
+-- >>> :set -XRecordWildCards
+-- >>> import Prelude
+-- >>> import Control.Lens
+-- >>> import Data.Default
+-- >>> import Data.Maybe
+-- >>> import Text.XML.Twiml
+-- >>> import qualified Text.XML.Twiml.Syntax as Twiml
+
 {- | Example:
 
-#include "playExample1.txt"
+>>> :{
+let example1 :: VoiceTwiml
+    example1 =
+      voiceResponse $ do
+        play (fromJust $ parseURL "https://api.twilio.com/cowbell.mp3") def
+        end
+      where Twiml.Syntax{..} = def
+:}
+
+>>> putStr $ show example1
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Play>https://api.twilio.com/cowbell.mp3</Play>
+</Response>
 -}
 play :: IsTwimlLike f Play => URL -> PlayAttributes -> TwimlLike f Play ()
 play a b = iliftF . inj $ PlayF (pure a) b ()
 
 {- | Example:
 
-#include "playExample2.txt"
+>>> :{
+let example2 :: VoiceTwiml
+    example2 =
+      voiceResponse $ do
+        play' Nothing $ def & digits .~ Just [W, W, W, W, D3]
+        end
+      where Twiml.Syntax{..} = def
+:}
+
+>>> putStr $ show example2
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Play digits="wwww3" />
+</Response>
 -}
 play' :: IsTwimlLike f Play => Maybe URL -> PlayAttributes -> TwimlLike f Play ()
 play' a b = iliftF . inj $ PlayF a b ()

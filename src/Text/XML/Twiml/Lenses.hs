@@ -5,13 +5,13 @@
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Lenses
--- Copyright   :  (C) 2014-15 Mark Andrus Roberts
+-- Copyright   :  (C) 2018 Mark Andrus Roberts
 -- License     :  BSD-style (see the file LICENSE)
 -- Maintainer  :  Mark Andrus Roberts <markandrusroberts@gmail.com>
 -- Stability   :  provisional
 --
 -- This module defines lenses for use with TwiML attributes. Lenses are
--- re-exported by the @<Text-XML-Twiml-Verbs.html Text.XML.Twiml.Verbs> modules.
+-- re-exported by the <Text-XML-Twiml-Verbs.html Text.XML.Twiml.Verbs> modules.
 -------------------------------------------------------------------------------
 module Text.XML.Twiml.Lenses where
 

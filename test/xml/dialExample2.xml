@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Dial action="/handleDialCallStatus.php" method="GET">415-123-4567</Dial>
-  <Say>I am unreachable</Say>
-</Response>

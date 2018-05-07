@@ -1,8 +1,18 @@
-0.2.1
-=======
+0.2.1.0 (May 7, 2018)
+=====================
 
-* Add `responseMsg` function for building responses which contain
-  `<Message>` in it.
+New Features
+------------
+
+* Added `messagingResponse` function for building MessagingTwiml.
+* Added `voiceResponse` function for building VoiceTwiml. The existing
+  `response` is the same as `voiceResponse`.
+
+Bug Fixes
+---------
+
+* Removed a Makefile that was used to generate examples and replaced it with
+  [doctest](https://hackage.haskell.org/package/doctest). (#9, #10)
 
 0.2.0.1 (August 13, 2017)
 =========================

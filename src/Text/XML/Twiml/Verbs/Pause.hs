@@ -3,7 +3,7 @@
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.XML.Twiml.Verbs.Pause
--- Copyright   :  (C) 2014-15 Mark Andrus Roberts
+-- Copyright   :  (C) 2018 Mark Andrus Roberts
 -- License     :  BSD-style (see the file LICENSE)
 -- Maintainer  :  Mark Andrus Roberts <markandrusroberts@gmail.com>
 -- Stability   :  provisional
@@ -15,6 +15,8 @@
 -- {-\# LANGUAGE RecordWildCards \#-}
 -- 
 -- import Prelude
+-- import Control.Lens
+-- import Data.Default
 -- import Text.XML.Twiml
 -- import qualified Text.XML.Twiml.Syntax as Twiml
 -- @
@@ -32,9 +34,35 @@ module Text.XML.Twiml.Verbs.Pause
 import Text.XML.Twiml.Internal
 import Text.XML.Twiml.Internal.Twiml
 
+-- $setup
+-- >>> :set -XRebindableSyntax
+-- >>> :set -XRecordWildCards
+-- >>> import Prelude
+-- >>> import Control.Lens
+-- >>> import Data.Default
+-- >>> import Text.XML.Twiml
+-- >>> import qualified Text.XML.Twiml.Syntax as Twiml
+
 {- | Example:
 
-#include "pauseExample1.txt"
+>>> :{
+let example :: VoiceTwiml
+    example =
+      voiceResponse $ do
+        say "I will pause 10 seconds starting now!" def
+        pause $ def & duration .~ Just 10
+        say "I just paused 10 seconds" def
+        end
+      where Twiml.Syntax{..} = def
+:}
+
+>>> putStr $ show example
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say>I will pause 10 seconds starting now!</Say>
+  <Pause length="10" />
+  <Say>I just paused 10 seconds</Say>
+</Response>
 -}
 pause :: IsTwimlLike f Pause => PauseAttributes -> TwimlLike f Pause ()
 pause a = iliftF . inj $ PauseF a ()

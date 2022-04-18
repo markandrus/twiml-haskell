@@ -136,7 +136,7 @@ specToGADTArity :: TwimlSpec -> Int
 specToGADTArity spec@(TwimlSpec{..}) = length (getAllRequired parameters) + (if hasAttributes spec then 1 else 0) + (if recursive then 1 else 0)
 
 specToGADTNames :: TwimlSpec -> [Name]
-specToGADTNames spec@(TwimlSpec{..}) =
+specToGADTNames spec@(TwimlSpec{}) =
   take (specToGADTArity spec) $ map (mkName . return) ['a'..'z']
 
 specToGADTAttributesName :: TwimlSpec -> Maybe Name
@@ -152,7 +152,7 @@ specToGADTChildName spec@(TwimlSpec{..}) = go $ zip parameters $ specToGADTNames
   go ((Attributes _, _):rest) = go rest
 
 specToGADTPat :: TwimlSpec -> Pat
-specToGADTPat spec@(TwimlSpec{..}) = ConP (specToGADTName spec) varPs where
+specToGADTPat spec@(TwimlSpec{}) = ConP (specToGADTName spec) [] varPs where
   varPs = map VarP $ specToGADTNames spec
 
 specToAttributesListE :: TwimlSpec -> Exp
@@ -331,7 +331,7 @@ twimlSpecToData spec@(TwimlSpec{..}) = pure $
     a' = mkName "a"
     i = VarT i'
     a = VarT a'
-    tyVarBndrs = [KindedTV i' $ AppT ListT StarT, PlainTV a']
+    tyVarBndrs = [KindedTV i' () $ AppT ListT StarT, PlainTV a' ()]
 
     -- | @Proxy@
     proxy = ConT $ mkName "Proxy"

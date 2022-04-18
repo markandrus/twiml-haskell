@@ -38,10 +38,11 @@
 module Text.XML.Twiml.Syntax where
 
 import Data.Default
+import Data.Kind (Type)
 import Prelude (const)
 import Text.XML.Twiml.Internal
 
-data Syntax (m :: [k] -> * -> *) (i :: [k]) (j :: [k]) (a :: *) (b :: *) = Syntax {
+data Syntax (m :: [k] -> Type -> Type) (i :: [k]) (j :: [k]) (a :: Type) (b :: Type) = Syntax {
     (>>=)  :: m i a -> (a -> m j b) -> m (i <> j) b
   , (>>)   :: m i a -> m j b -> m (i <> j) b
   , return :: a -> m Identity a

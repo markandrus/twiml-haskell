@@ -152,8 +152,13 @@ specToGADTChildName spec@(TwimlSpec{..}) = go $ zip parameters $ specToGADTNames
   go ((Attributes _, _):rest) = go rest
 
 specToGADTPat :: TwimlSpec -> Pat
+#if MIN_VERSION_template_haskell(2,19,0)
 specToGADTPat spec@(TwimlSpec{}) = ConP (specToGADTName spec) [] varPs where
   varPs = map VarP $ specToGADTNames spec
+#else
+specToGADTPat spec@(TwimlSpec{}) = ConP (specToGADTName spec) varPs where
+  varPs = map VarP $ specToGADTNames spec
+#endif
 
 specToAttributesListE :: TwimlSpec -> Exp
 specToAttributesListE (TwimlSpec{..}) = ListE . map go $ getAllAttributes parameters where
@@ -331,8 +336,11 @@ twimlSpecToData spec@(TwimlSpec{..}) = pure $
     a' = mkName "a"
     i = VarT i'
     a = VarT a'
+#if MIN_VERSION_template_haskell(2,19,0)
     tyVarBndrs = [KindedTV i' () $ AppT ListT StarT, PlainTV a' ()]
-
+#else
+    tyVarBndrs = [KindedTV i' $ AppT ListT StarT, PlainTV a']
+#endif
     -- | @Proxy@
     proxy = ConT $ mkName "Proxy"
 

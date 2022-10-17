@@ -1,10 +1,15 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
+
+#if MIN_VERSION_base(4,9,0)
 {-# LANGUAGE FlexibleContexts #-}
+#endif
+
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
@@ -64,7 +69,11 @@ module Text.XML.Twiml.Internal
 
 import Control.DeepSeq (NFData(..))
 import Data.Data
+
+#if MIN_VERSION_base(4,9,0)
 import Data.Kind (Type)
+#endif
+
 import Data.Maybe (mapMaybe)
 import GHC.Generics (Generic)
 import Text.XML.Light
@@ -148,7 +157,11 @@ class Show1 f where
 -- (\<*>) :: 'IxApplicative' f => f i (a -> b) -> f j a -> f (i '<>' j) b
 -- (\<*>) = 'iap'
 -- @
+#if MIN_VERSION_base(4,9,0)
 class Functor1 f => IxApplicative (f :: k -> Type -> Type) where
+#elseif
+class Functor1 f => IxApplicative (f :: k -> * -> *) where
+#endif
   type Identity :: k
 
   type (i :: k) <> (j :: k) :: k
@@ -183,7 +196,11 @@ class Functor1 f => IxApplicative (f :: k -> Type -> Type) where
 --
 -- This is the technique employed by the
 -- <Text-XML-Twiml-Syntax.html Text.XML.Twiml.Syntax> module.
+#if MIN_VERSION_base(4,9,0)
 class IxApplicative m => IxMonad (m :: k -> Type -> Type) where
+#elseif
+class IxApplicative m => IxMonad (m :: k -> * -> *) where
+#endif
   -- | The indexed equivalent of @(>>=)@
   ibind :: m i a -> (a -> m j b) -> m (i <> j) b
 

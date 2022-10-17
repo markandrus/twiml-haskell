@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-#LANGUAGE DataKinds #-}
 {-#LANGUAGE KindSignatures #-}
 {-#LANGUAGE NoImplicitPrelude #-}
@@ -38,11 +39,17 @@
 module Text.XML.Twiml.Syntax where
 
 import Data.Default
+#if MIN_VERSION_base(4,9,0)
 import Data.Kind (Type)
+#endif
 import Prelude (const)
 import Text.XML.Twiml.Internal
 
+#if MIN_VERSION_base(4,9,0)
 data Syntax (m :: [k] -> Type -> Type) (i :: [k]) (j :: [k]) (a :: Type) (b :: Type) = Syntax {
+#else
+data Syntax (m :: [k] -> * -> *) (i :: [k]) (j :: [k]) (a :: *) (b :: *) = Syntax {
+#endif
     (>>=)  :: m i a -> (a -> m j b) -> m (i <> j) b
   , (>>)   :: m i a -> m j b -> m (i <> j) b
   , return :: a -> m Identity a
